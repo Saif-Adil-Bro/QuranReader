@@ -1,0 +1,83 @@
+package com.example.di
+
+import android.content.Context
+import com.example.data.api.QuranApi
+import com.example.data.repository.QuranRepository
+import com.example.data.repository.SettingsRepository
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+
+import okhttp3.OkHttpClient
+import okhttp3.Interceptor
+
+/**
+ * A manual Dependency Injection container.
+ * In a more complex app, we could use Hilt or Koin.
+ * Using manual DI here for simplicity and fewer build configurations.
+ */
+class AppContainer(private val context: Context) {
+    private val BASE_URL = "https://api.alquran.cloud/v1/"
+    private val QURAN_COM_BASE_URL = "https://api.quran.com/api/v4/"
+
+    private val okHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder().addInterceptor { chain ->
+            val request = chain.request().newBuilder()
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .header("Accept", "application/json")
+                .build()
+            chain.proceed(request)
+        }.build()
+    }
+
+    private val retrofit: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    private val quranComRetrofit: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl(QURAN_COM_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    private val quranApi: QuranApi by lazy {
+        retrofit.create(QuranApi::class.java)
+    }
+
+    private val quranComApi: com.example.data.api.QuranComApi by lazy {
+        quranComRetrofit.create(com.example.data.api.QuranComApi::class.java)
+    }
+
+    val quranRepository: QuranRepository by lazy {
+        QuranRepository(quranApi, quranComApi)
+    }
+
+    val settingsRepository: SettingsRepository by lazy {
+        SettingsRepository(context)
+    }
+
+    val quranDatabase: com.example.data.local.QuranDatabase by lazy {
+        com.example.data.local.QuranDatabase.getDatabase(context)
+    }
+
+    val bookmarkDao by lazy {
+        quranDatabase.bookmarkDao()
+    }
+
+    val memorizedPageDao by lazy {
+        quranDatabase.memorizedPageDao()
+    }
+
+    val audioRepository: com.example.data.repository.AudioRepository by lazy {
+        com.example.data.repository.AudioRepository(context)
+    }
+
+    val aiRepository: com.example.data.repository.AiRepository by lazy {
+        com.example.data.repository.AiRepository()
+    }
+}
