@@ -42,7 +42,7 @@ class MushafViewerViewModel(
         }
     }
     
-    fun getPagePath(pageNumber: Int): String? {
-        return repository.getMushafPagePath(currentMushafId, pageNumber)
+    fun getPagePath(mushafId: String, pageNumber: Int): String? {
+        return repository.getMushafPagePath(mushafId, pageNumber)
     }
 }

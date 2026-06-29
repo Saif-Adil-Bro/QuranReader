@@ -9,7 +9,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import coil.compose.SubcomposeAsyncImage
 import java.io.File
 
 @Composable
@@ -37,7 +41,7 @@ fun PageViewer(
         contentAlignment = Alignment.Center
     ) {
         if (pagePath != null) {
-            AsyncImage(
+            SubcomposeAsyncImage(
                 model = File(pagePath),
                 contentDescription = "Mushaf Page",
                 contentScale = ContentScale.Fit,
@@ -48,7 +52,17 @@ fun PageViewer(
                         scaleY = scale,
                         translationX = offsetX,
                         translationY = offsetY
-                    )
+                    ),
+                loading = {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                },
+                error = {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Error, contentDescription = "Error loading image")
+                    }
+                }
             )
         }
     }

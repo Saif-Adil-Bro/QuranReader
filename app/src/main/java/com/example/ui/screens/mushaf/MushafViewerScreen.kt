@@ -79,7 +79,7 @@ fun MushafViewerScreen(
                 reverseLayout = true // Quran is read right-to-left
             ) { page ->
                 val pageNum = page + 1
-                val path = viewModel.getPagePath(pageNum)
+                val path = viewModel.getPagePath(mushafId, pageNum)
                 if (path != null) {
                     PageViewer(pagePath = path)
                 } else {

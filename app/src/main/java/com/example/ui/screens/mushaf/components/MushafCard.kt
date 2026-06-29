@@ -78,7 +78,8 @@ fun MushafCard(
                 text = mushaf.nameBengali,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                color = Color.Black
             )
             
             Spacer(modifier = Modifier.height(4.dp))
