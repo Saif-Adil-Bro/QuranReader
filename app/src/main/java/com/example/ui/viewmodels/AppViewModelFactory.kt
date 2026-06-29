@@ -20,7 +20,8 @@ class AppViewModelFactory(
     private val audioRepository: AudioRepository,
     private val aiRepository: AiRepository,
     private val bookmarkDao: BookmarkDao,
-    private val memorizedPageDao: MemorizedPageDao
+    private val memorizedPageDao: MemorizedPageDao,
+    private val mushafRepository: com.example.data.repository.MushafRepository
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -52,6 +53,12 @@ class AppViewModelFactory(
                     bookmarkDao = bookmarkDao,
                     memorizedPageDao = memorizedPageDao
                 ) as T
+            }
+            modelClass.isAssignableFrom(MushafSelectionViewModel::class.java) -> {
+                MushafSelectionViewModel(mushafRepository) as T
+            }
+            modelClass.isAssignableFrom(MushafViewerViewModel::class.java) -> {
+                MushafViewerViewModel(mushafRepository) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

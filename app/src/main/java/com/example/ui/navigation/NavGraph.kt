@@ -33,12 +33,18 @@ import com.example.ui.viewmodels.SettingsViewModel
 import com.example.ui.viewmodels.SurahDetailViewModel
 import kotlinx.coroutines.delay
 
+import com.example.ui.screens.mushaf.MushafTabScreen
+import com.example.ui.screens.mushaf.MushafViewerScreen
+import com.example.ui.viewmodels.MushafSelectionViewModel
+import com.example.ui.viewmodels.MushafViewerViewModel
+
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    viewModelFactory: AppViewModelFactory
+    viewModelFactory: AppViewModelFactory,
+    modifier: Modifier = Modifier
 ) {
-    NavHost(navController = navController, startDestination = "splash") {
+    NavHost(navController = navController, startDestination = "splash", modifier = modifier) {
         
         composable("splash") {
             SplashScreen {
@@ -46,6 +52,30 @@ fun AppNavGraph(
                     popUpTo("splash") { inclusive = true }
                 }
             }
+        }
+
+        composable("mushaf") {
+            val viewModel: MushafSelectionViewModel = viewModel(factory = viewModelFactory)
+            MushafTabScreen(
+                onMushafSelected = { mushaf ->
+                    navController.navigate("mushaf/viewer/${mushaf.id}")
+                },
+                viewModel = viewModel
+            )
+        }
+
+        composable(
+            route = "mushaf/viewer/{mushafId}",
+            arguments = listOf(navArgument("mushafId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val mushafId = backStackEntry.arguments?.getString("mushafId") ?: "madani"
+            val viewModel: MushafViewerViewModel = viewModel(factory = viewModelFactory)
+            MushafViewerScreen(
+                mushafId = mushafId,
+                initialPage = 1,
+                onBack = { navController.popBackStack() },
+                viewModel = viewModel
+            )
         }
 
         composable("home") {

@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
@@ -32,7 +34,7 @@ import com.example.ui.state.UiState
 import com.example.ui.theme.*
 import com.example.ui.viewmodels.SurahDetailViewModel
 
-enum class ViewMode { LIST, READING, MUSHAF }
+enum class ViewMode { LIST, READING, MUSHAF, TAFSIR }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -309,7 +311,8 @@ fun HeaderCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 ViewModeToggle("লিস্ট", Icons.Default.List, viewMode == ViewMode.LIST) { onModeChange(ViewMode.LIST) }
-                ViewModeToggle("শব্দে শব্দে", Icons.Outlined.Book, viewMode == ViewMode.READING) { onModeChange(ViewMode.READING) }
+                ViewModeToggle("শব্দার্থ", Icons.Outlined.Book, viewMode == ViewMode.READING) { onModeChange(ViewMode.READING) }
+                ViewModeToggle("তাফসির", Icons.Outlined.Info, viewMode == ViewMode.TAFSIR) { onModeChange(ViewMode.TAFSIR) }
                 ViewModeToggle("মুসহাফ", Icons.Outlined.MenuBook, viewMode == ViewMode.MUSHAF) { onModeChange(ViewMode.MUSHAF) }
             }
         }
@@ -362,9 +365,10 @@ fun BismillahSection() {
     ) {
         Text(
             text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-            fontSize = 32.sp,
+            fontSize = 36.sp,
             color = DarkText,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            fontFamily = com.example.ui.theme.amiriQuranFont
         )
     }
 }
@@ -372,6 +376,51 @@ fun BismillahSection() {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
+    var showTafsirDialog by remember { mutableStateOf(false) }
+
+    if (showTafsirDialog) {
+        AlertDialog(
+            onDismissRequest = { showTafsirDialog = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+            modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.9f),
+            title = {
+                Column {
+                    Text(text = "তাফসীরে ইবনে কাসীর", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = DarkText)
+                    Text(text = "আয়াত ${ayah.numberInSurah}", fontSize = 14.sp, color = GrayText)
+                }
+            },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    if (ayah.tafsirText != null) {
+                        val paragraphs = ayah.tafsirText.split(Regex("\\n+"))
+                        paragraphs.forEach { paragraph ->
+                            if (paragraph.isNotBlank()) {
+                                Text(
+                                    text = paragraph.trim(),
+                                    fontSize = 16.sp,
+                                    lineHeight = 24.sp,
+                                    color = DarkText,
+                                    textAlign = TextAlign.Justify
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
+                    } else {
+                        Text(text = "এই আয়াতের তাফসীর পাওয়া যায়নি।", fontSize = 16.sp, color = GrayText)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTafsirDialog = false }) {
+                    Text("বন্ধ করুন", color = PrimaryGreen)
+                }
+            },
+            containerColor = White,
+            titleContentColor = DarkText,
+            textContentColor = DarkText
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -392,11 +441,19 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("পারা ${ayah.juz} • পৃষ্ঠা ${ayah.page}", color = PrimaryGreen, fontSize = 10.sp)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = GrayText)
-                        Icon(Icons.Outlined.Book, contentDescription = null, tint = GrayText)
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = GrayText)
-                        Icon(Icons.Default.MoreVert, contentDescription = null, tint = GrayText)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { /* TODO: Bookmark */ }) {
+                            Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Bookmark", tint = GrayText)
+                        }
+                        IconButton(onClick = { showTafsirDialog = true }) {
+                            Icon(Icons.Outlined.Book, contentDescription = "Tafsir", tint = GrayText)
+                        }
+                        IconButton(onClick = { /* TODO: Play */ }) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = GrayText)
+                        }
+                        IconButton(onClick = { /* TODO: More */ }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = GrayText)
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -414,11 +471,19 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("পারা ${ayah.juz} • পৃষ্ঠা ${ayah.page}", color = PrimaryGreen, fontSize = 10.sp)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = GrayText)
-                        Icon(Icons.Outlined.Book, contentDescription = null, tint = GrayText)
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = GrayText)
-                        Icon(Icons.Default.MoreVert, contentDescription = null, tint = GrayText)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { /* TODO: Bookmark */ }) {
+                            Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Bookmark", tint = GrayText)
+                        }
+                        IconButton(onClick = { showTafsirDialog = true }) {
+                            Icon(Icons.Outlined.Book, contentDescription = "Tafsir", tint = GrayText)
+                        }
+                        IconButton(onClick = { /* TODO: Play */ }) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = GrayText)
+                        }
+                        IconButton(onClick = { /* TODO: More */ }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = GrayText)
+                        }
                     }
                 }
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
@@ -431,9 +496,15 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                             ayah.words.forEach { word ->
                                 if (word.charTypeName != "end") {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(word.textUthmani ?: "", fontSize = 24.sp, color = DarkText)
+                                        Text(word.textUthmani ?: "", fontSize = 32.sp, color = DarkText, fontFamily = com.example.ui.theme.amiriQuranFont)
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(word.translation?.text ?: "", fontSize = 12.sp, color = GrayText)
+                                    }
+                                } else {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("\u06DD${ayah.numberInSurah.toArabicNumerals()}", fontSize = 32.sp, color = DarkText, fontFamily = com.example.ui.theme.amiriQuranFont)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text("", fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -442,7 +513,7 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                             val words = ayah.arabicText.split(" ")
                             words.forEach { word ->
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(word, fontSize = 24.sp, color = DarkText)
+                                    Text(word, fontSize = 32.sp, color = DarkText, fontFamily = com.example.ui.theme.amiriQuranFont)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text("শব্দ", fontSize = 12.sp, color = GrayText)
                                 }
@@ -458,13 +529,49 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                     textAlign = TextAlign.Right,
                     modifier = Modifier.fillMaxWidth()
                 )
-            } else {
+            } else if (viewMode == ViewMode.TAFSIR) {
                 Text(
-                    text = ayah.arabicText,
-                    fontSize = 28.sp,
-                    lineHeight = 44.sp,
+                    text = "${ayah.arabicText} \u06DD${ayah.numberInSurah.toArabicNumerals()}",
+                    fontSize = 32.sp,
+                    lineHeight = 56.sp,
                     textAlign = TextAlign.Right,
                     color = DarkText,
+                    fontFamily = com.example.ui.theme.amiriQuranFont,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = ayah.bengaliText,
+                    fontSize = 16.sp,
+                    color = PrimaryGreen,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (ayah.tafsirText != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    val paragraphs = ayah.tafsirText.split(Regex("\\n+"))
+                    paragraphs.forEach { paragraph ->
+                        if (paragraph.isNotBlank()) {
+                            Text(
+                                text = paragraph.trim(),
+                                fontSize = 15.sp,
+                                color = DarkText,
+                                lineHeight = 24.sp,
+                                textAlign = TextAlign.Justify,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+                }
+            } else {
+                Text(
+                    text = "${ayah.arabicText} \u06DD${ayah.numberInSurah.toArabicNumerals()}",
+                    fontSize = 32.sp,
+                    lineHeight = 56.sp,
+                    textAlign = TextAlign.Right,
+                    color = DarkText,
+                    fontFamily = com.example.ui.theme.amiriQuranFont,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -518,22 +625,13 @@ fun FloatingAudioPlayer() {
     }
 }
 
-fun Int.toArabicNumerals(): String {
-    val englishNumerals = "0123456789"
-    val arabicNumerals = "٠١٢٣٤٥٦٧٨٩"
-    return this.toString().map { char ->
-        val index = englishNumerals.indexOf(char)
-        if (index != -1) arabicNumerals[index] else char
-    }.joinToString("")
-}
-
 @Composable
 fun MushafPageView(page: Int, ayahs: List<CombinedAyah>) {
     Column(modifier = Modifier.fillMaxWidth()) {
         val combinedText = androidx.compose.ui.text.buildAnnotatedString {
             ayahs.forEach { ayah ->
                 append(ayah.arabicText)
-                append(" ﴿${ayah.numberInSurah.toArabicNumerals()}﴾ ")
+                append(" \u06DD${ayah.numberInSurah.toArabicNumerals()} ")
             }
         }
 
@@ -543,6 +641,7 @@ fun MushafPageView(page: Int, ayahs: List<CombinedAyah>) {
             lineHeight = 56.sp,
             textAlign = TextAlign.Justify,
             color = DarkText,
+            fontFamily = com.example.ui.theme.amiriQuranFont,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             style = androidx.compose.ui.text.TextStyle(
                 textDirection = androidx.compose.ui.text.style.TextDirection.Rtl
@@ -571,4 +670,9 @@ fun MushafPageView(page: Int, ayahs: List<CombinedAyah>) {
         }
         Spacer(modifier = Modifier.height(24.dp))
     }
+}
+
+fun Int.toArabicNumerals(): String {
+    val arabicDigits = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
+    return this.toString().map { if (it.isDigit()) arabicDigits[it - '0'] else it }.joinToString("")
 }

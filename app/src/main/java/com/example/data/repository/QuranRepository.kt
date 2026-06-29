@@ -68,6 +68,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                 // Combine them
                 arabicAyahs.mapIndexed { index, arabicAyah ->
                     val quranComVerse = quranComResponse?.verses?.find { it.verseNumber == arabicAyah.numberInSurah }
+                    val tafsir = quranComVerse?.tafsirs?.firstOrNull()?.text?.let { android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_COMPACT).toString() }
                     CombinedAyah(
                         number = arabicAyah.number,
                         numberInSurah = arabicAyah.numberInSurah,
@@ -75,6 +76,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                         juz = arabicAyah.juz,
                         arabicText = processArabicText(arabicAyah, surahNumber),
                         bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
+                        tafsirText = tafsir,
                         audioUrl = audioAyahs?.getOrNull(index)?.audio,
                         words = quranComVerse?.words ?: emptyList()
                     )
@@ -107,6 +109,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                     
                     arabicAyahs.mapIndexed { index, arabicAyah ->
                         val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
+                        val tafsir = quranComVerse?.tafsirs?.firstOrNull()?.text?.let { android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_COMPACT).toString() }
                         CombinedAyah(
                             number = arabicAyah.number,
                             numberInSurah = arabicAyah.numberInSurah,
@@ -114,6 +117,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                             juz = arabicAyah.juz,
                             arabicText = processArabicText(arabicAyah),
                             bengaliText = "", // Hafezi mode doesn't need translation
+                            tafsirText = tafsir,
                             audioUrl = audioAyahs.getOrNull(index)?.audio,
                             words = quranComVerse?.words ?: emptyList()
                         )
@@ -154,6 +158,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                     
                     arabicAyahs.mapIndexed { index, arabicAyah ->
                         val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
+                        val tafsir = quranComVerse?.tafsirs?.firstOrNull()?.text?.let { android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_COMPACT).toString() }
                         CombinedAyah(
                             number = arabicAyah.number,
                             numberInSurah = arabicAyah.numberInSurah,
@@ -161,6 +166,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                             juz = arabicAyah.juz,
                             arabicText = processArabicText(arabicAyah),
                             bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
+                            tafsirText = tafsir,
                             audioUrl = audioAyahs.getOrNull(index)?.audio,
                             words = quranComVerse?.words ?: emptyList()
                         )

@@ -1,6 +1,7 @@
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
+
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
@@ -69,7 +70,6 @@ secrets {
   defaultPropertiesFileName = ".env.example"
 }
 
-// Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
@@ -96,7 +96,7 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.media3.exoplayer)
   implementation(libs.media3.ui)
-  // implementation(libs.coil.compose)
+  implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.converter.gson)
   // implementation(libs.firebase.ai)
@@ -124,6 +124,7 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
   implementation(libs.generativeai)
+  implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
   implementation(libs.androidx.core.splashscreen)
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)

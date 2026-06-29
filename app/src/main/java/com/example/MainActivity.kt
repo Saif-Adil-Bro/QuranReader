@@ -14,6 +14,12 @@ import com.example.ui.navigation.AppNavGraph
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodels.AppViewModelFactory
 
+import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.padding
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.runtime.getValue
+import com.example.ui.components.BottomNavBar
+
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     installSplashScreen()
@@ -32,14 +38,24 @@ class MainActivity : ComponentActivity() {
             audioRepository = appContainer.audioRepository,
             aiRepository = appContainer.aiRepository,
             bookmarkDao = appContainer.bookmarkDao,
-            memorizedPageDao = appContainer.memorizedPageDao
+            memorizedPageDao = appContainer.memorizedPageDao,
+            mushafRepository = appContainer.mushafRepository
           )
           val navController = rememberNavController()
+          val navBackStackEntry by navController.currentBackStackEntryAsState()
+          val currentRoute = navBackStackEntry?.destination?.route
 
-          AppNavGraph(
-            navController = navController,
-            viewModelFactory = viewModelFactory
-          )
+          Scaffold(
+            bottomBar = {
+              BottomNavBar(navController = navController, currentRoute = currentRoute)
+            }
+          ) { innerPadding ->
+            AppNavGraph(
+              navController = navController,
+              viewModelFactory = viewModelFactory,
+              modifier = Modifier.padding(innerPadding)
+            )
+          }
         }
       }
     }

@@ -91,6 +91,7 @@ data class CombinedAyah(
     val juz: Int = 0, // Juz number of the Ayah
     val arabicText: String,
     val bengaliText: String,
+    val tafsirText: String? = null,
     val audioUrl: String? = null,
     val words: List<QuranComWord> = emptyList()
 )
@@ -122,8 +123,14 @@ data class QuranComVerse(
     @SerializedName("id") val id: Int,
     @SerializedName("verse_key") val verseKey: String,
     @SerializedName("verse_number") val verseNumber: Int,
-    @SerializedName("words") val words: List<QuranComWord>,
-    @SerializedName("translations") val translations: List<QuranComTranslation>? = null
+    @SerializedName("words") val words: List<QuranComWord> = emptyList(),
+    @SerializedName("translations") val translations: List<QuranComTranslation>? = null,
+    @SerializedName("tafsirs") val tafsirs: List<QuranComTafsir>? = null
+)
+
+data class QuranComTafsir(
+    @SerializedName("resource_id") val resourceId: Int,
+    @SerializedName("text") val text: String
 )
 
 data class QuranComWord(

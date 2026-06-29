@@ -93,9 +93,6 @@ fun HomeScreen(
                 )
             )
         },
-        // bottomBar = {
-        //     BottomNavBar()
-        // },
         containerColor = OffWhite
     ) { padding ->
         BoxWithConstraints(
@@ -483,55 +480,4 @@ fun SurahCard(modifier: Modifier = Modifier, number: String, title: String, tran
     }
 }
 
-@Composable
-fun BottomNavBar() {
-    NavigationBar(
-        containerColor = White,
-        tonalElevation = 8.dp,
-        modifier = Modifier.shadow(8.dp)
-    ) {
-        NavigationBarItem(
-            selected = true,
-            onClick = { },
-            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-            label = { Text("হোম") },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PrimaryGreen,
-                selectedTextColor = PrimaryGreen,
-                indicatorColor = BackgroundGreen,
-                unselectedIconColor = GrayText,
-                unselectedTextColor = GrayText
-            )
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = { },
-            icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-            label = { Text("সার্চ") },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = GrayText,
-                unselectedTextColor = GrayText
-            )
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = { },
-            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-            label = { Text("প্রোফাইল") },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = GrayText,
-                unselectedTextColor = GrayText
-            )
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = { },
-            icon = { Icon(Icons.Default.Menu, contentDescription = "Menu") },
-            label = { Text("মেনু") },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = GrayText,
-                unselectedTextColor = GrayText
-            )
-        )
-    }
-}
+// Removed old BottomNavBar

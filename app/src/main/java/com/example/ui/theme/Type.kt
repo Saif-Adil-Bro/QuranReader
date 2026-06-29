@@ -5,6 +5,23 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.googlefonts.GoogleFont
+import androidx.compose.ui.text.googlefonts.Font
+import com.example.R
+
+val provider = GoogleFont.Provider(
+    providerAuthority = "com.google.android.gms.fonts",
+    providerPackage = "com.google.android.gms",
+    certificates = R.array.com_google_android_gms_fonts_certs
+)
+
+val amiriQuranFont = FontFamily(
+    androidx.compose.ui.text.font.Font(com.example.R.font.amiri_quran)
+)
+
+val amiriFont = FontFamily(
+    androidx.compose.ui.text.font.Font(com.example.R.font.amiri_quran)
+)
 
 // Set of Material typography styles to start with
 val Typography =

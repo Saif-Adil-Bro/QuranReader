@@ -14,6 +14,7 @@ interface QuranComApi {
         @Query("translations") translations: Int = 161,
         @Query("language") language: String = "bn",
         @Query("word_translation_language") wordTranslationLanguage: String = "bn",
+        @Query("tafsirs") tafsirs: String = "164",
         @Query("per_page") perPage: Int = 1000
     ): QuranComResponse
 
@@ -25,6 +26,7 @@ interface QuranComApi {
         @Query("translations") translations: Int = 161,
         @Query("language") language: String = "bn",
         @Query("word_translation_language") wordTranslationLanguage: String = "bn",
+        @Query("tafsirs") tafsirs: String = "164",
         @Query("per_page") perPage: Int = 1000
     ): QuranComResponse
 
@@ -36,6 +38,7 @@ interface QuranComApi {
         @Query("translations") translations: Int = 161,
         @Query("language") language: String = "bn",
         @Query("word_translation_language") wordTranslationLanguage: String = "bn",
+        @Query("tafsirs") tafsirs: String = "164",
         @Query("per_page") perPage: Int = 1000
     ): QuranComResponse
 }
