@@ -14,6 +14,12 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
 
     private val BISMILLAH_PREFIX = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ "
 
+    // In-memory caching structures to optimize loading times and prevent repeated network calls
+    private var cachedSurahs: List<Surah>? = null
+    private val cachedSurahDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
+    private val cachedPageDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
+    private val cachedJuzDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
+
     private fun processArabicText(ayah: com.example.data.model.Ayah, defaultSurahNumber: Int = -1): String {
         val surahNumber = ayah.surah?.number ?: defaultSurahNumber
         var text = ayah.text
@@ -27,10 +33,11 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
      * Fetches the list of all Surahs
      */
     suspend fun getSurahs(): List<Surah> {
+        cachedSurahs?.let { return it }
         return withContext(Dispatchers.IO) {
             val response = api.getSurahs()
             if (response.code == 200) {
-                response.data
+                response.data.also { cachedSurahs = it }
             } else {
                 throw Exception("Failed to load Surahs: ${response.status}")
             }
@@ -42,6 +49,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
      * and combines them into a list of CombinedAyah for easy UI consumption.
      */
     suspend fun getSurahDetailsCombined(surahNumber: Int): List<CombinedAyah> {
+        cachedSurahDetails[surahNumber]?.let { return it }
         return withContext(Dispatchers.IO) {
             val response = api.getSurahWithTranslation(surahNumber)
             val quranComResponse = try {
@@ -66,7 +74,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                 val audioAyahs = audioEdition?.ayahs
 
                 // Combine them
-                arabicAyahs.mapIndexed { index, arabicAyah ->
+                val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
                     val quranComVerse = quranComResponse?.verses?.find { it.verseNumber == arabicAyah.numberInSurah }
                     val tafsir = quranComVerse?.tafsirs?.firstOrNull()?.text?.let { android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_COMPACT).toString() }
                     CombinedAyah(
@@ -81,6 +89,8 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                         words = quranComVerse?.words ?: emptyList()
                     )
                 }
+                cachedSurahDetails[surahNumber] = combined
+                combined
             } else {
                 throw Exception("Failed to load Surah details: Invalid response structure.")
             }
@@ -91,6 +101,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
      * Fetches a specific page of the Quran
      */
     suspend fun getPageCombined(pageNumber: Int): List<CombinedAyah> {
+        cachedPageDetails[pageNumber]?.let { return it }
         return withContext(Dispatchers.IO) {
             try {
                 val arabicResponse = api.getPageArabic(pageNumber)
@@ -107,7 +118,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                     val arabicAyahs = arabicResponse.data.ayahs
                     val audioAyahs = audioResponse.data.ayahs
                     
-                    arabicAyahs.mapIndexed { index, arabicAyah ->
+                    val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
                         val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
                         val tafsir = quranComVerse?.tafsirs?.firstOrNull()?.text?.let { android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_COMPACT).toString() }
                         CombinedAyah(
@@ -122,6 +133,8 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                             words = quranComVerse?.words ?: emptyList()
                         )
                     }
+                    cachedPageDetails[pageNumber] = combined
+                    combined
                 } else {
                     throw Exception("Failed to load Page details: Invalid response.")
                 }
@@ -138,6 +151,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
      * Fetches a specific Juz of the Quran
      */
     suspend fun getJuzCombined(juzNumber: Int): List<CombinedAyah> {
+        cachedJuzDetails[juzNumber]?.let { return it }
         return withContext(Dispatchers.IO) {
             try {
                 val arabicResponse = api.getJuzArabic(juzNumber)
@@ -156,7 +170,7 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                     val bengaliAyahs = bengaliResponse.data.ayahs
                     val audioAyahs = audioResponse.data.ayahs
                     
-                    arabicAyahs.mapIndexed { index, arabicAyah ->
+                    val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
                         val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
                         val tafsir = quranComVerse?.tafsirs?.firstOrNull()?.text?.let { android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_COMPACT).toString() }
                         CombinedAyah(
@@ -171,6 +185,8 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                             words = quranComVerse?.words ?: emptyList()
                         )
                     }
+                    cachedJuzDetails[juzNumber] = combined
+                    combined
                 } else {
                     throw Exception("Failed to load Juz details: Invalid response structure.")
                 }

@@ -30,6 +30,17 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -281,7 +292,10 @@ fun SurahDetailScreen(
                                 }
                             }
                         } else {
-                            items(displayedData) { ayah ->
+                            items(
+                                items = displayedData,
+                                key = { it.number }
+                            ) { ayah ->
                                 val isAyahPlaying = isPlaying && currentPlayingAyahNumber == ayah.numberInSurah
                                 AyahCard(
                                     ayah = ayah,
@@ -680,7 +694,11 @@ fun AyahCard(
                                     }
                                 } else {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("\u06DD${ayah.numberInSurah.toArabicNumerals()}", fontSize = arabicFontSize.sp, color = DarkText, fontFamily = arabicFont)
+                                        AyahCircle(
+                                            number = ayah.numberInSurah,
+                                            fontSize = arabicFontSize.toFloat(),
+                                            color = PrimaryGreen
+                                        )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text("", fontSize = 12.sp)
                                     }
@@ -710,13 +728,12 @@ fun AyahCard(
                     )
                 }
             } else if (viewMode == ViewMode.TAFSIR) {
-                Text(
-                    text = "${ayah.arabicText} \u06DD${ayah.numberInSurah.toArabicNumerals()}",
-                    fontSize = arabicFontSize.sp,
-                    lineHeight = (arabicFontSize * 1.6f).sp,
-                    textAlign = TextAlign.Right,
-                    color = DarkText,
+                AyahInlineText(
+                    arabicText = ayah.arabicText,
+                    ayahNumber = ayah.numberInSurah,
+                    fontSize = arabicFontSize.toFloat(),
                     fontFamily = arabicFont,
+                    color = DarkText,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (showTranslation) {
@@ -747,13 +764,12 @@ fun AyahCard(
                     }
                 }
             } else {
-                Text(
-                    text = "${ayah.arabicText} \u06DD${ayah.numberInSurah.toArabicNumerals()}",
-                    fontSize = arabicFontSize.sp,
-                    lineHeight = (arabicFontSize * 1.6f).sp,
-                    textAlign = TextAlign.Right,
-                    color = DarkText,
+                AyahInlineText(
+                    arabicText = ayah.arabicText,
+                    ayahNumber = ayah.numberInSurah,
+                    fontSize = arabicFontSize.toFloat(),
                     fontFamily = arabicFont,
+                    color = DarkText,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (showTranslation) {
@@ -1182,11 +1198,10 @@ fun MushafPageView(
                                         .background(PrimaryGreen.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
-                                    Text(
-                                        text = "\u06DD${ayah.numberInSurah.toArabicNumerals()}",
-                                        fontSize = 28.sp,
-                                        color = PrimaryGreen,
-                                        fontFamily = arabicFont
+                                    AyahCircle(
+                                        number = ayah.numberInSurah,
+                                        fontSize = 24f,
+                                        color = PrimaryGreen
                                     )
                                 }
                             }
@@ -1198,11 +1213,12 @@ fun MushafPageView(
                                 .clickable { onPlayAyah(ayah) }
                                 .padding(4.dp)
                         ) {
-                            Text(
-                                text = "${ayah.arabicText} \u06DD${ayah.numberInSurah.toArabicNumerals()} ",
-                                fontSize = 28.sp,
-                                color = DarkText,
-                                fontFamily = arabicFont
+                            AyahInlineText(
+                                arabicText = ayah.arabicText,
+                                ayahNumber = ayah.numberInSurah,
+                                fontSize = 28f,
+                                fontFamily = arabicFont,
+                                color = DarkText
                             )
                         }
                     }
@@ -1237,4 +1253,104 @@ fun MushafPageView(
 fun Int.toArabicNumerals(): String {
     val arabicDigits = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
     return this.toString().map { if (it.isDigit()) arabicDigits[it - '0'] else it }.joinToString("")
+}
+
+@Composable
+fun AyahCircle(
+    number: Int,
+    fontSize: Float,
+    color: Color = PrimaryGreen,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    // Size is proportional to font size to ensure it scales perfectly and stays compact
+    val boxSize = (fontSize * 1.35f).dp
+    val textFontSize = (fontSize * 0.55f).sp
+    
+    Box(
+        modifier = modifier
+            .size(boxSize)
+            .padding(1.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = this.center
+            val radius = size.minDimension / 2f
+            
+            // Outer dynamic circle
+            drawCircle(
+                color = color,
+                radius = radius - 1.dp.toPx(),
+                style = Stroke(width = 1.5.dp.toPx())
+            )
+            
+            // Inner decorative dynamic dots (Islamic pattern)
+            val innerRadius = radius - 3.dp.toPx()
+            if (innerRadius > 0) {
+                drawCircle(
+                    color = color.copy(alpha = 0.5f),
+                    radius = innerRadius,
+                    style = Stroke(
+                        width = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()), 0f)
+                    )
+                )
+            }
+        }
+        Text(
+            text = number.toArabicNumerals(),
+            color = DarkText,
+            fontSize = textFontSize,
+            fontWeight = FontWeight.Bold,
+            fontFamily = amiriFont,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 1.dp)
+        )
+    }
+}
+
+@Composable
+fun AyahInlineText(
+    arabicText: String,
+    ayahNumber: Int,
+    fontSize: Float,
+    fontFamily: androidx.compose.ui.text.font.FontFamily,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val inlineContentId = "ayah_circle_${ayahNumber}"
+    val annotatedString = buildAnnotatedString {
+        append(arabicText)
+        append(" ")
+        appendInlineContent(inlineContentId, "\uFFFC")
+    }
+    
+    val inlineContent = mapOf(
+        inlineContentId to InlineTextContent(
+            Placeholder(
+                width = (fontSize * 1.35f).sp,
+                height = (fontSize * 1.35f).sp,
+                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+            )
+        ) {
+            AyahCircle(
+                number = ayahNumber,
+                fontSize = fontSize,
+                color = PrimaryGreen
+            )
+        }
+    )
+    
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        Text(
+            text = annotatedString,
+            inlineContent = inlineContent,
+            fontSize = fontSize.sp,
+            lineHeight = (fontSize * 1.6f).sp,
+            fontFamily = fontFamily,
+            color = color,
+            textAlign = TextAlign.Right,
+            modifier = modifier
+        )
+    }
 }
