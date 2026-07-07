@@ -5,23 +5,52 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.googlefonts.GoogleFont
-import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.font.Font
 import com.example.R
 
-val provider = GoogleFont.Provider(
-    providerAuthority = "com.google.android.gms.fonts",
-    providerPackage = "com.google.android.gms",
-    certificates = R.array.com_google_android_gms_fonts_certs
-)
-
 val amiriQuranFont = FontFamily(
-    androidx.compose.ui.text.font.Font(com.example.R.font.amiri_quran)
+    Font(R.font.amiri_quran)
 )
 
 val amiriFont = FontFamily(
-    androidx.compose.ui.text.font.Font(com.example.R.font.amiri_quran)
+    Font(R.font.amiri_regular)
 )
+
+val scheherazadeFont = FontFamily(
+    Font(R.font.scheherazade_new)
+)
+
+val lateefFont = FontFamily(
+    Font(R.font.lateef_regular)
+)
+
+val almaraiFont = FontFamily(
+    Font(R.font.almarai_regular)
+)
+
+val tajawalFont = FontFamily(
+    Font(R.font.tajawal_regular)
+)
+
+val arabicFontsList = listOf(
+    "Amiri Quran",
+    "Amiri",
+    "Scheherazade New",
+    "Lateef",
+    "Almarai",
+    "Tajawal"
+)
+
+fun getArabicFont(name: String): FontFamily {
+    return when (name) {
+        "Amiri" -> amiriFont
+        "Scheherazade New" -> scheherazadeFont
+        "Lateef" -> lateefFont
+        "Almarai" -> almaraiFont
+        "Tajawal" -> tajawalFont
+        else -> amiriQuranFont
+    }
+}
 
 // Set of Material typography styles to start with
 val Typography =

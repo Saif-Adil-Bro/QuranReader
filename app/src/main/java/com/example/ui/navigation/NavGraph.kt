@@ -65,14 +65,18 @@ fun AppNavGraph(
         }
 
         composable(
-            route = "mushaf/viewer/{mushafId}",
-            arguments = listOf(navArgument("mushafId") { type = NavType.StringType })
+            route = "mushaf/viewer/{mushafId}?page={page}",
+            arguments = listOf(
+                navArgument("mushafId") { type = NavType.StringType },
+                navArgument("page") { type = NavType.IntType; defaultValue = 1 }
+            )
         ) { backStackEntry ->
             val mushafId = backStackEntry.arguments?.getString("mushafId") ?: "madani"
+            val page = backStackEntry.arguments?.getInt("page") ?: 1
             val viewModel: MushafViewerViewModel = viewModel(factory = viewModelFactory)
             MushafViewerScreen(
                 mushafId = mushafId,
-                initialPage = 1,
+                initialPage = page,
                 onBack = { navController.popBackStack() },
                 viewModel = viewModel
             )
@@ -88,7 +92,12 @@ fun AppNavGraph(
                 onNavigateToReadingMode = { navController.navigate("list/reading") },
                 onNavigateToHafeziMode = { page -> navController.navigate("hafezi/$page") },
                 onNavigateToSearch = { navController.navigate("search") },
-                onSettingsClick = { navController.navigate("settings") }
+                onSettingsClick = { navController.navigate("settings") },
+                onNavigateToMushaf = { navController.navigate("mushaf") },
+                onNavigateToMushafPage = { mushafId, page -> navController.navigate("mushaf/viewer/$mushafId?page=$page") },
+                onNavigateToSurahWithAyah = { surahNumber, viewMode, initialAyah ->
+                    navController.navigate("detail/$surahNumber?viewMode=$viewMode&initialAyah=$initialAyah")
+                }
             )
         }
 
@@ -114,14 +123,22 @@ fun AppNavGraph(
         }
 
         composable(
-            route = "detail/{surahNumber}",
-            arguments = listOf(navArgument("surahNumber") { type = NavType.IntType })
+            route = "detail/{surahNumber}?viewMode={viewMode}&initialAyah={initialAyah}",
+            arguments = listOf(
+                navArgument("surahNumber") { type = NavType.IntType },
+                navArgument("viewMode") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("initialAyah") { type = NavType.IntType; defaultValue = -1 }
+            )
         ) { backStackEntry ->
             val surahNumber = backStackEntry.arguments?.getInt("surahNumber") ?: 1
+            val viewMode = backStackEntry.arguments?.getString("viewMode")
+            val initialAyah = backStackEntry.arguments?.getInt("initialAyah") ?: -1
             val viewModel: SurahDetailViewModel = viewModel(factory = viewModelFactory)
             SurahDetailScreen(
                 surahNumber = surahNumber,
                 isJuz = false,
+                initialViewMode = viewMode,
+                initialAyah = initialAyah,
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )

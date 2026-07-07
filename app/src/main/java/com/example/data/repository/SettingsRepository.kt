@@ -15,7 +15,7 @@ private val Context.dataStore by preferencesDataStore(name = "settings")
 /**
  * Repository for handling app-wide settings like translation toggles.
  */
-class SettingsRepository(private val context: Context) {
+class SettingsRepository(val context: Context) {
 
     private val SHOW_TRANSLATION_KEY = booleanPreferencesKey("show_translation")
     private val LAST_READ_SURAH_KEY = intPreferencesKey("last_read_surah")
@@ -26,6 +26,7 @@ class SettingsRepository(private val context: Context) {
     private val BENGALI_FONT_SIZE_KEY = floatPreferencesKey("bengali_font_size")
     private val THEME_KEY = stringPreferencesKey("theme")
     private val AUTO_SCROLL_SPEED_KEY = floatPreferencesKey("auto_scroll_speed")
+    private val ARABIC_FONT_NAME_KEY = stringPreferencesKey("arabic_font_name")
     
     // Hafezi Mode Settings
     private val REPEAT_COUNT_KEY = intPreferencesKey("repeat_count")
@@ -44,6 +45,9 @@ class SettingsRepository(private val context: Context) {
 
     val bengaliFontSizeFlow: Flow<Float> = context.dataStore.data
         .map { preferences -> preferences[BENGALI_FONT_SIZE_KEY] ?: 16f }
+
+    val arabicFontNameFlow: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[ARABIC_FONT_NAME_KEY] ?: "Amiri Quran" }
 
     val themeFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[THEME_KEY] ?: "Light" }
@@ -72,6 +76,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setBengaliFontSize(size: Float) {
         context.dataStore.edit { preferences -> preferences[BENGALI_FONT_SIZE_KEY] = size }
+    }
+
+    suspend fun setArabicFontName(fontName: String) {
+        context.dataStore.edit { preferences -> preferences[ARABIC_FONT_NAME_KEY] = fontName }
     }
 
     suspend fun setTheme(theme: String) {

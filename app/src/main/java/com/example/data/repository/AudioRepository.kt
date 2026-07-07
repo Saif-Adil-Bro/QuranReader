@@ -21,23 +21,16 @@ class AudioRepository(private val context: Context) {
     private val _currentPlayingAyahNumber = MutableStateFlow<Int?>(null)
     val currentPlayingAyahNumber: StateFlow<Int?> = _currentPlayingAyahNumber.asStateFlow()
 
+    var onPlaybackEnded: (() -> Unit)? = null
+
     fun initializePlayer() {
         if (exoPlayer == null) {
-            val attributionContext = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                try {
-                    context.createAttributionContext("audio_playback")
-                } catch (e: Exception) {
-                    context
-                }
-            } else {
-                context
-            }
             val audioAttributes = androidx.media3.common.AudioAttributes.Builder()
                 .setUsage(androidx.media3.common.C.USAGE_MEDIA)
                 .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC)
                 .build()
 
-            exoPlayer = ExoPlayer.Builder(attributionContext).build().apply {
+            exoPlayer = ExoPlayer.Builder(context).build().apply {
                 setAudioAttributes(audioAttributes, true)
                 addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlayingState: Boolean) {
@@ -48,6 +41,7 @@ class AudioRepository(private val context: Context) {
                         if (playbackState == Player.STATE_ENDED) {
                             _isPlaying.value = false
                             _currentPlayingAyahNumber.value = null
+                            onPlaybackEnded?.invoke()
                         }
                     }
                 })

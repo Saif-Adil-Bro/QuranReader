@@ -28,11 +28,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.launch
 import com.example.data.model.CombinedAyah
 import com.example.ui.state.UiState
 import com.example.ui.theme.*
 import com.example.ui.viewmodels.SurahDetailViewModel
+import com.example.ui.viewmodels.PlaybackMode
 
 enum class ViewMode { LIST, READING, MUSHAF, TAFSIR }
 
@@ -41,12 +50,34 @@ enum class ViewMode { LIST, READING, MUSHAF, TAFSIR }
 fun SurahDetailScreen(
     surahNumber: Int,
     isJuz: Boolean = false,
+    initialViewMode: String? = null,
+    initialAyah: Int = -1,
     viewModel: SurahDetailViewModel,
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val showTranslation by viewModel.showTranslation.collectAsState()
-    var viewMode by remember { mutableStateOf(ViewMode.LIST) }
+    val arabicFontSize by viewModel.arabicFontSize.collectAsState()
+    val bengaliFontSize by viewModel.bengaliFontSize.collectAsState()
+    val arabicFontName by viewModel.arabicFontName.collectAsState()
+    
+    val isPlaying by viewModel.isPlaying.collectAsState()
+    val currentPlayingAyahNumber by viewModel.currentPlayingAyahNumber.collectAsState()
+    val playbackMode by viewModel.playbackMode.collectAsState()
+    
+    val parsedViewMode = when (initialViewMode) {
+        "MUSHAF" -> ViewMode.MUSHAF
+        "READING" -> ViewMode.READING
+        "TAFSIR" -> ViewMode.TAFSIR
+        else -> ViewMode.LIST
+    }
+    var viewMode by remember { mutableStateOf(parsedViewMode) }
+    var showPlayerBottomSheet by remember { mutableStateOf(false) }
+    var showSettingsBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    val settingsSheetState = rememberModalBottomSheetState()
+    
+    val currentPlayingAyah = (uiState as? UiState.Success)?.data?.find { it.numberInSurah == currentPlayingAyahNumber }
 
     LaunchedEffect(surahNumber, isJuz) {
         if (isJuz) {
@@ -83,8 +114,8 @@ fun SurahDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Dark Mode */ }) {
-                        Icon(Icons.Outlined.DarkMode, contentDescription = "Dark Mode", tint = GrayText)
+                    IconButton(onClick = { showSettingsBottomSheet = true }) {
+                        Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = GrayText)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -93,7 +124,32 @@ fun SurahDetailScreen(
             )
         },
         bottomBar = {
-            FloatingAudioPlayer()
+            FloatingAudioPlayer(
+                isPlaying = isPlaying,
+                currentPlayingAyahNum = currentPlayingAyahNumber,
+                playbackMode = playbackMode,
+                onPlayPauseClick = {
+                    val currentAyah = currentPlayingAyah ?: (uiState as? UiState.Success)?.data?.firstOrNull()
+                    viewModel.togglePlayPause(currentAyah, surahNumber)
+                },
+                onPreviousClick = {
+                    val currentAyah = currentPlayingAyah ?: (uiState as? UiState.Success)?.data?.firstOrNull()
+                    viewModel.playPrevious(currentAyah, surahNumber)
+                },
+                onNextClick = {
+                    val currentAyah = currentPlayingAyah ?: (uiState as? UiState.Success)?.data?.firstOrNull()
+                    viewModel.playNext(currentAyah, surahNumber)
+                },
+                onModeToggleClick = {
+                    viewModel.setPlaybackMode(
+                        if (playbackMode == PlaybackMode.SURAH) PlaybackMode.AYAH else PlaybackMode.SURAH
+                    )
+                },
+                onPlayerTabClick = {
+                    showPlayerBottomSheet = true
+                },
+                onBackClick = onNavigateBack
+            )
         },
         containerColor = OffWhite
     ) { padding ->
@@ -129,6 +185,34 @@ fun SurahDetailScreen(
                     val coroutineScope = rememberCoroutineScope()
                     var searchQuery by remember { mutableStateOf("") }
                     
+                    val displayedData = if (initialAyah > 0) {
+                        state.data.filter { it.numberInSurah == initialAyah }
+                    } else {
+                        state.data
+                    }
+                    
+                    LaunchedEffect(displayedData) {
+                        if (initialAyah > 0) {
+                            val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && initialAyah <= 0) 2 else 1
+                            if (viewMode == ViewMode.MUSHAF) {
+                                val targetAyah = displayedData.find { it.numberInSurah == initialAyah }
+                                if (targetAyah != null) {
+                                    val ayahsByPage = displayedData.groupBy { it.page }
+                                    val pagesList = ayahsByPage.keys.toList()
+                                    val pageIndex = pagesList.indexOf(targetAyah.page)
+                                    if (pageIndex != -1) {
+                                        listState.scrollToItem(pageIndex + headerCount)
+                                    }
+                                }
+                            } else {
+                                val ayahIndex = displayedData.indexOfFirst { it.numberInSurah == initialAyah }
+                                if (ayahIndex != -1) {
+                                    listState.scrollToItem(ayahIndex + headerCount)
+                                }
+                            }
+                        }
+                    }
+                    
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
@@ -138,11 +222,17 @@ fun SurahDetailScreen(
                         item {
                             val surahData = com.example.data.QuranData.surahNames.find { it.first == surahNumber }
                             val surahName = surahData?.second?.first ?: "সূরা $surahNumber"
-                            val title = if (isJuz) "পারা $surahNumber" else surahName
-                            val subtitle = if (isJuz) "" else (surahData?.second?.second ?: "")
+                            val title = if (isJuz) {
+                                "পারা $surahNumber"
+                            } else if (surahNumber == 2 && initialAyah == 255) {
+                                "আয়াতুল কুরসি"
+                            } else {
+                                surahName
+                            }
+                            val subtitle = if (isJuz) "" else if (surahNumber == 2 && initialAyah == 255) "সূরা আল-বাকারাহ, আয়াত ২৫৫" else (surahData?.second?.second ?: "")
                             val info1 = if (isJuz) "পারা: $surahNumber" else "সূরা: $surahNumber"
                             val info2 = if (isJuz) "" else com.example.data.QuranData.getSurahType(surahNumber)
-                            val info3 = "মোট আয়াত: ${state.data.size}"
+                            val info3 = if (surahNumber == 2 && initialAyah == 255) "১টি আয়াত" else "মোট আয়াত: ${displayedData.size}"
                             
                             HeaderCard(
                                 title = title,
@@ -156,36 +246,96 @@ fun SurahDetailScreen(
                                 onSearchQueryChange = { searchQuery = it },
                                 onSearch = {
                                     if (viewMode != ViewMode.MUSHAF) {
-                                        val ayahIndex = state.data.indexOfFirst { it.numberInSurah.toString() == searchQuery }
+                                        val ayahIndex = displayedData.indexOfFirst { it.numberInSurah.toString() == searchQuery }
                                         if (ayahIndex != -1) {
-                                            val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9) 2 else 1
+                                            val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && initialAyah <= 0) 2 else 1
                                             coroutineScope.launch {
                                                 listState.animateScrollToItem(ayahIndex + headerCount)
                                             }
                                         }
                                     }
+                                },
+                                onPlayerClick = {
+                                    val currentAyah = currentPlayingAyah ?: displayedData.firstOrNull()
+                                    viewModel.togglePlayPause(currentAyah, surahNumber)
                                 }
                             )
                         }
-                        if (!isJuz && surahNumber != 1 && surahNumber != 9) {
+                        if (!isJuz && surahNumber != 1 && surahNumber != 9 && initialAyah <= 0) {
                             item {
-                                BismillahSection()
+                                BismillahSection(arabicFontName = arabicFontName)
                             }
                         }
                         if (viewMode == ViewMode.MUSHAF) {
-                            val ayahsByPage = state.data.groupBy { it.page }
+                            val ayahsByPage = displayedData.groupBy { it.page }
                             ayahsByPage.forEach { (page, ayahs) ->
                                 item {
-                                    MushafPageView(page, ayahs)
+                                    MushafPageView(
+                                        page = page,
+                                        ayahs = ayahs,
+                                        surahNumber = surahNumber,
+                                        onPlayWord = { viewModel.playWord(it) },
+                                        onPlayAyah = { viewModel.togglePlayPause(it, surahNumber) },
+                                        arabicFontName = arabicFontName
+                                    )
                                 }
                             }
                         } else {
-                            items(state.data) { ayah ->
-                                AyahCard(ayah, viewMode)
+                            items(displayedData) { ayah ->
+                                val isAyahPlaying = isPlaying && currentPlayingAyahNumber == ayah.numberInSurah
+                                AyahCard(
+                                    ayah = ayah,
+                                    viewMode = viewMode,
+                                    surahNumber = surahNumber,
+                                    playAudio = { viewModel.togglePlayPause(ayah, surahNumber) },
+                                    onPlayWord = { viewModel.playWord(it) },
+                                    isPlaying = isAyahPlaying,
+                                    showTranslation = showTranslation,
+                                    arabicFontSize = arabicFontSize,
+                                    bengaliFontSize = bengaliFontSize,
+                                    arabicFontName = arabicFontName
+                                )
                             }
                         }
                     }
                 }
+            }
+        }
+        
+        if (showPlayerBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showPlayerBottomSheet = false },
+                sheetState = sheetState,
+                containerColor = White
+            ) {
+                PlayerBottomSheetContent(
+                    currentPlayingAyahNum = currentPlayingAyahNumber,
+                    playbackMode = playbackMode,
+                    onModeChange = { viewModel.setPlaybackMode(it) },
+                    onClose = { showPlayerBottomSheet = false },
+                    currentAyah = currentPlayingAyah,
+                    arabicFontName = arabicFontName
+                )
+            }
+        }
+
+        if (showSettingsBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showSettingsBottomSheet = false },
+                sheetState = settingsSheetState,
+                containerColor = White
+            ) {
+                ReaderSettingsBottomSheetContent(
+                    showTranslation = showTranslation,
+                    onShowTranslationToggle = { viewModel.toggleTranslation() },
+                    arabicFontSize = arabicFontSize,
+                    onArabicFontSizeChange = { viewModel.setArabicFontSize(it) },
+                    bengaliFontSize = bengaliFontSize,
+                    onBengaliFontSizeChange = { viewModel.setBengaliFontSize(it) },
+                    arabicFontName = arabicFontName,
+                    onArabicFontNameChange = { viewModel.setArabicFontName(it) },
+                    onClose = { showSettingsBottomSheet = false }
+                )
             }
         }
     }
@@ -202,7 +352,8 @@ fun HeaderCard(
     onModeChange: (ViewMode) -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onSearch: () -> Unit
+    onSearch: () -> Unit,
+    onPlayerClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -260,7 +411,7 @@ fun HeaderCard(
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
                     .shadow(2.dp, RoundedCornerShape(100.dp))
                     .background(PrimaryGreen, RoundedCornerShape(100.dp))
-                    .clickable {  }
+                    .clickable { onPlayerClick() }
                     .padding(horizontal = 12.dp, vertical = 4.dp)) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, tint = White, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -354,7 +505,7 @@ fun RowScope.ViewModeToggle(text: String, icon: androidx.compose.ui.graphics.vec
 }
 
 @Composable
-fun BismillahSection() {
+fun BismillahSection(arabicFontName: String = "Amiri Quran") {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -368,15 +519,27 @@ fun BismillahSection() {
             fontSize = 36.sp,
             color = DarkText,
             textAlign = TextAlign.Center,
-            fontFamily = com.example.ui.theme.amiriQuranFont
+            fontFamily = com.example.ui.theme.getArabicFont(arabicFontName)
         )
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
+fun AyahCard(
+    ayah: CombinedAyah,
+    viewMode: ViewMode,
+    surahNumber: Int,
+    playAudio: () -> Unit,
+    onPlayWord: (String) -> Unit,
+    isPlaying: Boolean,
+    showTranslation: Boolean,
+    arabicFontSize: Float,
+    bengaliFontSize: Float,
+    arabicFontName: String = "Amiri Quran"
+) {
     var showTafsirDialog by remember { mutableStateOf(false) }
+    val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
 
     if (showTafsirDialog) {
         AlertDialog(
@@ -425,7 +588,8 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
         modifier = Modifier
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(20.dp))
-            .background(White, RoundedCornerShape(20.dp))
+            .background(if (isPlaying) PrimaryGreen.copy(alpha = 0.05f) else White, RoundedCornerShape(20.dp))
+            .border(if (isPlaying) 1.dp else 0.dp, if (isPlaying) PrimaryGreen else White, RoundedCornerShape(20.dp))
             .padding(20.dp)
     ) {
         Column {
@@ -448,8 +612,12 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                         IconButton(onClick = { showTafsirDialog = true }) {
                             Icon(Icons.Outlined.Book, contentDescription = "Tafsir", tint = GrayText)
                         }
-                        IconButton(onClick = { /* TODO: Play */ }) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = GrayText)
+                        IconButton(onClick = playAudio) {
+                            Icon(
+                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, 
+                                contentDescription = "Play", 
+                                tint = if (isPlaying) PrimaryGreen else GrayText
+                            )
                         }
                         IconButton(onClick = { /* TODO: More */ }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More", tint = GrayText)
@@ -478,8 +646,12 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                         IconButton(onClick = { showTafsirDialog = true }) {
                             Icon(Icons.Outlined.Book, contentDescription = "Tafsir", tint = GrayText)
                         }
-                        IconButton(onClick = { /* TODO: Play */ }) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = GrayText)
+                        IconButton(onClick = playAudio) {
+                            Icon(
+                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, 
+                                contentDescription = "Play", 
+                                tint = if (isPlaying) PrimaryGreen else GrayText
+                            )
                         }
                         IconButton(onClick = { /* TODO: More */ }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More", tint = GrayText)
@@ -495,14 +667,20 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                         if (ayah.words.isNotEmpty()) {
                             ayah.words.forEach { word ->
                                 if (word.charTypeName != "end") {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(word.textUthmani ?: "", fontSize = 32.sp, color = DarkText, fontFamily = com.example.ui.theme.amiriQuranFont)
+                                                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.clickable {
+                                            val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
+                                            onPlayWord(url)
+                                        }.padding(4.dp)
+                                    ) {
+                                        Text(word.textUthmani ?: "", fontSize = arabicFontSize.sp, color = DarkText, fontFamily = arabicFont)
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(word.translation?.text ?: "", fontSize = 12.sp, color = GrayText)
                                     }
                                 } else {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("\u06DD${ayah.numberInSurah.toArabicNumerals()}", fontSize = 32.sp, color = DarkText, fontFamily = com.example.ui.theme.amiriQuranFont)
+                                        Text("\u06DD${ayah.numberInSurah.toArabicNumerals()}", fontSize = arabicFontSize.sp, color = DarkText, fontFamily = arabicFont)
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text("", fontSize = 12.sp)
                                     }
@@ -513,7 +691,7 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                             val words = ayah.arabicText.split(" ")
                             words.forEach { word ->
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(word, fontSize = 32.sp, color = DarkText, fontFamily = com.example.ui.theme.amiriQuranFont)
+                                    Text(word, fontSize = arabicFontSize.sp, color = DarkText, fontFamily = arabicFont)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text("শব্দ", fontSize = 12.sp, color = GrayText)
                                 }
@@ -521,32 +699,36 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = ayah.bengaliText,
-                    fontSize = 16.sp,
-                    color = GrayText,
-                    textAlign = TextAlign.Right,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if (showTranslation) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = ayah.bengaliText,
+                        fontSize = bengaliFontSize.sp,
+                        color = GrayText,
+                        textAlign = TextAlign.Right,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             } else if (viewMode == ViewMode.TAFSIR) {
                 Text(
                     text = "${ayah.arabicText} \u06DD${ayah.numberInSurah.toArabicNumerals()}",
-                    fontSize = 32.sp,
-                    lineHeight = 56.sp,
+                    fontSize = arabicFontSize.sp,
+                    lineHeight = (arabicFontSize * 1.6f).sp,
                     textAlign = TextAlign.Right,
                     color = DarkText,
-                    fontFamily = com.example.ui.theme.amiriQuranFont,
+                    fontFamily = arabicFont,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = ayah.bengaliText,
-                    fontSize = 16.sp,
-                    color = PrimaryGreen,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if (showTranslation) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = ayah.bengaliText,
+                        fontSize = bengaliFontSize.sp,
+                        color = PrimaryGreen,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 if (ayah.tafsirText != null) {
                     Spacer(modifier = Modifier.height(16.dp))
                     val paragraphs = ayah.tafsirText.split(Regex("\\n+"))
@@ -567,86 +749,466 @@ fun AyahCard(ayah: CombinedAyah, viewMode: ViewMode) {
             } else {
                 Text(
                     text = "${ayah.arabicText} \u06DD${ayah.numberInSurah.toArabicNumerals()}",
-                    fontSize = 32.sp,
-                    lineHeight = 56.sp,
+                    fontSize = arabicFontSize.sp,
+                    lineHeight = (arabicFontSize * 1.6f).sp,
                     textAlign = TextAlign.Right,
                     color = DarkText,
-                    fontFamily = com.example.ui.theme.amiriQuranFont,
+                    fontFamily = arabicFont,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = ayah.bengaliText,
-                    fontSize = 16.sp,
-                    color = GrayText,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if (showTranslation) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = ayah.bengaliText,
+                        fontSize = bengaliFontSize.sp,
+                        color = GrayText,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun FloatingAudioPlayer() {
-    NavigationBar(
-        containerColor = DarkText,
-        contentColor = White,
-        tonalElevation = 8.dp
+fun FloatingAudioPlayer(
+    isPlaying: Boolean,
+    currentPlayingAyahNum: Int?,
+    playbackMode: PlaybackMode,
+    onPlayPauseClick: () -> Unit,
+    onPreviousClick: () -> Unit,
+    onNextClick: () -> Unit,
+    onModeToggleClick: () -> Unit,
+    onPlayerTabClick: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = White,
+        tonalElevation = 8.dp,
+        shadowElevation = 8.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.Home, contentDescription = "Home", tint = White)
-                Text("হোম", color = White, fontSize = 10.sp)
-            }
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(PrimaryGreen, CircleShape)
-                    .offset(y = (-20).dp),
-                contentAlignment = Alignment.Center
+            // 1. Back Button
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.size(48.dp)
             ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = White, modifier = Modifier.size(32.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = GrayText,
+                    modifier = Modifier.size(24.dp)
+                )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = White)
-                    Text("সেটিংস", color = White, fontSize = 10.sp)
+
+            // 2. Center Pill controller
+            Row(
+                modifier = Modifier
+                    .background(OffWhite, RoundedCornerShape(30.dp))
+                    .border(1.dp, GrayText.copy(alpha = 0.15f), RoundedCornerShape(30.dp))
+                    .clickable { onPlayerTabClick() }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Mode toggle
+                IconButton(
+                    onClick = onModeToggleClick, 
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (playbackMode == PlaybackMode.SURAH) Icons.Default.Repeat else Icons.Default.RepeatOne,
+                        contentDescription = "Mode",
+                        tint = if (playbackMode == PlaybackMode.SURAH) PrimaryGreen else GrayText,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menu", tint = White)
-                    Text("মেনু", color = White, fontSize = 10.sp)
+
+                // Previous
+                IconButton(
+                    onClick = onPreviousClick, 
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.SkipPrevious,
+                        contentDescription = "Previous",
+                        tint = GrayText,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // Play/Pause
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(PrimaryGreen, CircleShape)
+                        .clickable { onPlayPauseClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        tint = White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // Next
+                IconButton(
+                    onClick = onNextClick, 
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.SkipNext,
+                        contentDescription = "Next",
+                        tint = GrayText,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
+
+            // Symmetrical spacer to balance the back button
+            Spacer(modifier = Modifier.size(48.dp))
         }
     }
 }
 
 @Composable
-fun MushafPageView(page: Int, ayahs: List<CombinedAyah>) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        val combinedText = androidx.compose.ui.text.buildAnnotatedString {
-            ayahs.forEach { ayah ->
-                append(ayah.arabicText)
-                append(" \u06DD${ayah.numberInSurah.toArabicNumerals()} ")
+fun PlayerBottomSheetContent(
+    currentPlayingAyahNum: Int?,
+    playbackMode: PlaybackMode,
+    onModeChange: (PlaybackMode) -> Unit,
+    onClose: () -> Unit,
+    currentAyah: CombinedAyah?,
+    arabicFontName: String = "Amiri Quran"
+) {
+    val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "কুরআন প্লেয়ার",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkText
+            )
+            IconButton(onClick = onClose) {
+                Icon(Icons.Default.Close, contentDescription = "Close", tint = GrayText)
             }
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (currentAyah != null) {
+            Text(
+                text = currentAyah.arabicText,
+                fontSize = 24.sp,
+                fontFamily = arabicFont,
+                textAlign = TextAlign.Center,
+                color = DarkText,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = currentAyah.bengaliText,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+                color = GrayText,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
+        } else {
+            Text(
+                text = "কোনো আয়াত বাজানো হচ্ছে না",
+                fontSize = 16.sp,
+                color = GrayText
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Mode Toggles (Single Ayah vs Continuous Surah)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(OffWhite, RoundedCornerShape(12.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (playbackMode == PlaybackMode.AYAH) PrimaryGreen else Color.Transparent)
+                    .clickable { onModeChange(PlaybackMode.AYAH) }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "সিঙ্গেল আয়াত",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (playbackMode == PlaybackMode.AYAH) White else DarkText
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (playbackMode == PlaybackMode.SURAH) PrimaryGreen else Color.Transparent)
+                    .clickable { onModeChange(PlaybackMode.SURAH) }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "সূরা কন্টিনিউয়াস",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (playbackMode == PlaybackMode.SURAH) White else DarkText
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+fun ReaderSettingsBottomSheetContent(
+    showTranslation: Boolean,
+    onShowTranslationToggle: (Boolean) -> Unit,
+    arabicFontSize: Float,
+    onArabicFontSizeChange: (Float) -> Unit,
+    bengaliFontSize: Float,
+    onBengaliFontSizeChange: (Float) -> Unit,
+    arabicFontName: String = "Amiri Quran",
+    onArabicFontNameChange: (String) -> Unit = {},
+    onClose: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "রিডার সেটিংস",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkText
+            )
+            IconButton(onClick = onClose) {
+                Icon(Icons.Default.Close, contentDescription = "Close", tint = GrayText)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Translation Toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "বাংলা অনুবাদ প্রদর্শন",
+                fontSize = 16.sp,
+                color = DarkText
+            )
+            Switch(
+                checked = showTranslation,
+                onCheckedChange = onShowTranslationToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = White,
+                    checkedTrackColor = PrimaryGreen,
+                    uncheckedThumbColor = GrayText,
+                    uncheckedTrackColor = OffWhite
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Arabic Font Size
         Text(
-            text = combinedText,
-            fontSize = 32.sp,
-            lineHeight = 56.sp,
-            textAlign = TextAlign.Justify,
-            color = DarkText,
-            fontFamily = com.example.ui.theme.amiriQuranFont,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            style = androidx.compose.ui.text.TextStyle(
-                textDirection = androidx.compose.ui.text.style.TextDirection.Rtl
+            text = "আরবি হরফের আকার: ${arabicFontSize.toInt()} sp",
+            fontSize = 14.sp,
+            color = GrayText
+        )
+        Slider(
+            value = arabicFontSize,
+            onValueChange = onArabicFontSizeChange,
+            valueRange = 24f..48f,
+            colors = SliderDefaults.colors(
+                thumbColor = PrimaryGreen,
+                activeTrackColor = PrimaryGreen,
+                inactiveTrackColor = OffWhite
             )
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Bengali Font Size
+        Text(
+            text = "বাংলা হরফের আকার: ${bengaliFontSize.toInt()} sp",
+            fontSize = 14.sp,
+            color = GrayText
+        )
+        Slider(
+            value = bengaliFontSize,
+            onValueChange = onBengaliFontSizeChange,
+            valueRange = 12f..28f,
+            colors = SliderDefaults.colors(
+                thumbColor = PrimaryGreen,
+                activeTrackColor = PrimaryGreen,
+                inactiveTrackColor = OffWhite
+            )
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Arabic Font Style Selection
+        Text(
+            text = "আরবি ফন্ট নির্বাচন করুন",
+            fontSize = 14.sp,
+            color = GrayText
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(com.example.ui.theme.arabicFontsList) { font ->
+                val isSelected = font == arabicFontName
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (isSelected) PrimaryGreen else OffWhite,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .border(
+                            1.dp,
+                            if (isSelected) PrimaryGreen else Border,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { onArabicFontNameChange(font) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = font,
+                            color = if (isSelected) White else DarkText,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "الحمد لله",
+                            color = if (isSelected) White else GrayText,
+                            fontSize = 18.sp,
+                            fontFamily = com.example.ui.theme.getArabicFont(font)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun MushafPageView(
+    page: Int,
+    ayahs: List<CombinedAyah>,
+    surahNumber: Int,
+    onPlayWord: (String) -> Unit,
+    onPlayAyah: (CombinedAyah) -> Unit,
+    arabicFontName: String = "Amiri Quran"
+) {
+    val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                ayahs.forEach { ayah ->
+                    if (ayah.words.isNotEmpty()) {
+                        ayah.words.forEach { word ->
+                            if (word.charTypeName != "end") {
+                                Box(
+                                    modifier = Modifier
+                                        .clickable {
+                                            val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
+                                            onPlayWord(url)
+                                        }
+                                        .padding(2.dp)
+                                ) {
+                                    Text(
+                                        text = word.textUthmani ?: "",
+                                        fontSize = 28.sp,
+                                        color = DarkText,
+                                        fontFamily = arabicFont
+                                    )
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .clickable { onPlayAyah(ayah) }
+                                        .background(PrimaryGreen.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "\u06DD${ayah.numberInSurah.toArabicNumerals()}",
+                                        fontSize = 28.sp,
+                                        color = PrimaryGreen,
+                                        fontFamily = arabicFont
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback if words empty
+                        Box(
+                            modifier = Modifier
+                                .clickable { onPlayAyah(ayah) }
+                                .padding(4.dp)
+                        ) {
+                            Text(
+                                text = "${ayah.arabicText} \u06DD${ayah.numberInSurah.toArabicNumerals()} ",
+                                fontSize = 28.sp,
+                                color = DarkText,
+                                fontFamily = arabicFont
+                            )
+                        }
+                    }
+                }
+            }
+        }
         
         Spacer(modifier = Modifier.height(24.dp))
         

@@ -31,16 +31,16 @@ class AppViewModelFactory(
                 QuranListViewModel(quranRepository) as T
             }
             modelClass.isAssignableFrom(SurahDetailViewModel::class.java) -> {
-                SurahDetailViewModel(quranRepository, settingsRepository, aiRepository) as T
+                SurahDetailViewModel(quranRepository, settingsRepository, aiRepository, audioRepository) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
-                SettingsViewModel(settingsRepository) as T
+                SettingsViewModel(settingsRepository, bookmarkDao) as T
             }
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
                 SearchViewModel(quranRepository) as T
             }
             modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
-                HomeViewModel(settingsRepository) as T
+                HomeViewModel(settingsRepository, quranRepository, mushafRepository) as T
             }
             modelClass.isAssignableFrom(ReadingModeViewModel::class.java) -> {
                 ReadingModeViewModel(GetSurahDetailsUseCase(quranRepository), settingsRepository) as T
