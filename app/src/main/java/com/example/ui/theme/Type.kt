@@ -4,32 +4,33 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontLoadingStrategy
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.Font
 import com.example.R
 
 val amiriQuranFont = FontFamily(
-    Font(R.font.amiri_quran)
+    Font(R.font.amiri_quran, loadingStrategy = FontLoadingStrategy.OptionalLocal)
 )
 
 val amiriFont = FontFamily(
-    Font(R.font.amiri_regular)
+    Font(R.font.amiri_regular, loadingStrategy = FontLoadingStrategy.OptionalLocal)
 )
 
 val scheherazadeFont = FontFamily(
-    Font(R.font.scheherazade_new)
+    Font(R.font.scheherazade_new, loadingStrategy = FontLoadingStrategy.OptionalLocal)
 )
 
 val lateefFont = FontFamily(
-    Font(R.font.lateef_regular)
+    Font(R.font.lateef_regular, loadingStrategy = FontLoadingStrategy.OptionalLocal)
 )
 
 val almaraiFont = FontFamily(
-    Font(R.font.almarai_regular)
+    Font(R.font.almarai_regular, loadingStrategy = FontLoadingStrategy.OptionalLocal)
 )
 
 val tajawalFont = FontFamily(
-    Font(R.font.tajawal_regular)
+    Font(R.font.tajawal_regular, loadingStrategy = FontLoadingStrategy.OptionalLocal)
 )
 
 val arabicFontsList = listOf(
