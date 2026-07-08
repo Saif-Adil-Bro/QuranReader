@@ -14,6 +14,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import java.io.File
+import java.net.URL
 
 enum class PlaybackMode { AYAH, SURAH }
 
@@ -29,6 +34,21 @@ class SurahDetailViewModel(
 
     private val _tafsirState = MutableStateFlow<UiState<String>>(UiState.Loading)
     val tafsirState: StateFlow<UiState<String>> = _tafsirState.asStateFlow()
+
+    // --- Manual offline caching state for current surah ---
+    private val _isDownloadingOffline = MutableStateFlow(false)
+    val isDownloadingOffline: StateFlow<Boolean> = _isDownloadingOffline.asStateFlow()
+
+    private val _downloadProgress = MutableStateFlow(0) // 0 to 100%
+    val downloadProgress: StateFlow<Int> = _downloadProgress.asStateFlow()
+
+    private val _downloadStatus = MutableStateFlow<String?>(null)
+    val downloadStatus: StateFlow<String?> = _downloadStatus.asStateFlow()
+
+    private val _downloadError = MutableStateFlow<String?>(null)
+    val downloadError: StateFlow<String?> = _downloadError.asStateFlow()
+
+    private var downloadJob: Job? = null
 
     // Observe translation toggle
     val showTranslation: StateFlow<Boolean> = settingsRepository.showTranslationFlow
@@ -200,8 +220,68 @@ class SurahDetailViewModel(
         }
     }
 
+    fun downloadSurahOffline(surahNumber: Int, surahName: String) {
+        downloadJob?.cancel()
+        downloadJob = viewModelScope.launch {
+            _isDownloadingOffline.value = true
+            _downloadProgress.value = 0
+            _downloadStatus.value = "সুরা ডাটা ও অনুবাদ ডাউনলোড হচ্ছে..."
+            _downloadError.value = null
+            try {
+                // 1. Pre-cache text data
+                val combinedAyahs = repository.getSurahDetailsCombined(surahNumber)
+                val totalAyahs = combinedAyahs.size
+                if (totalAyahs == 0) {
+                    _downloadStatus.value = "কোনো আয়াত পাওয়া যায়নি"
+                    return@launch
+                }
+
+                _downloadStatus.value = "অডিও ফাইল ডাউনলোড হচ্ছে..."
+                withContext(Dispatchers.IO) {
+                    for ((index, ayah) in combinedAyahs.withIndex()) {
+                        val url = ayah.audioUrl
+                        if (url != null && url.isNotEmpty()) {
+                            val localFile = audioRepository.getLocalAudioFile(url)
+                            if (!localFile.exists() || localFile.length() == 0L) {
+                                val tempFile = File(localFile.parent, localFile.name + ".temp")
+                                try {
+                                    URL(url).openStream().use { input ->
+                                        tempFile.outputStream().use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+                                    if (tempFile.exists() && tempFile.length() > 0) {
+                                        tempFile.renameTo(localFile)
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    if (tempFile.exists()) tempFile.delete()
+                                }
+                            }
+                        }
+                        val progress = ((index + 1) * 100) / totalAyahs
+                        _downloadProgress.value = progress
+                    }
+                }
+                _downloadStatus.value = "সম্পূর্ণ সুরা অফলাইন ডাউনলোড সফল হয়েছে!"
+            } catch (e: Exception) {
+                _downloadError.value = e.localizedMessage ?: "ডাউনলোড ব্যর্থ হয়েছে"
+                _downloadStatus.value = null
+            } finally {
+                _isDownloadingOffline.value = false
+            }
+        }
+    }
+
+    fun cancelOfflineDownload() {
+        downloadJob?.cancel()
+        _isDownloadingOffline.value = false
+        _downloadStatus.value = "ডাউনলোড বাতিল করা হয়েছে"
+    }
+
     override fun onCleared() {
         super.onCleared()
+        downloadJob?.cancel()
         audioRepository.onPlaybackEnded = null
         audioRepository.stopAudio()
     }

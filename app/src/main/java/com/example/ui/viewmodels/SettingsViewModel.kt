@@ -13,6 +13,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import java.net.URL
+
+import com.example.data.repository.QuranRepository
+import com.example.data.repository.AudioRepository
+import com.example.data.model.Surah
+import java.io.File
 
 data class UserNote(
     val id: String,
@@ -29,8 +38,187 @@ data class WordQuestion(
 
 class SettingsViewModel(
     private val repository: SettingsRepository,
-    private val bookmarkDao: BookmarkDao
+    private val bookmarkDao: BookmarkDao,
+    val quranRepository: QuranRepository,
+    val audioRepository: AudioRepository
 ) : ViewModel() {
+
+    // ---------------- Offline Sync States ----------------
+    private val _isDownloadingQuran = MutableStateFlow(false)
+    val isDownloadingQuran: StateFlow<Boolean> = _isDownloadingQuran.asStateFlow()
+
+    private val _quranDownloadProgress = MutableStateFlow(0) // 0 to 114
+    val quranDownloadProgress: StateFlow<Int> = _quranDownloadProgress.asStateFlow()
+
+    private val _quranDownloadError = MutableStateFlow<String?>(null)
+    val quranDownloadError: StateFlow<String?> = _quranDownloadError.asStateFlow()
+
+    private val _downloadedSurahsCount = MutableStateFlow(0)
+    val downloadedSurahsCount: StateFlow<Int> = _downloadedSurahsCount.asStateFlow()
+
+    private val _audioCacheSize = MutableStateFlow(0L)
+    val audioCacheSize: StateFlow<Long> = _audioCacheSize.asStateFlow()
+
+    // --- Audio manual download states ---
+    private val _isDownloadingAudio = MutableStateFlow(false)
+    val isDownloadingAudio: StateFlow<Boolean> = _isDownloadingAudio.asStateFlow()
+
+    private val _audioDownloadProgress = MutableStateFlow(0) // 0 to 100%
+    val audioDownloadProgress: StateFlow<Int> = _audioDownloadProgress.asStateFlow()
+
+    private val _audioDownloadStatus = MutableStateFlow<String?>(null)
+    val audioDownloadStatus: StateFlow<String?> = _audioDownloadStatus.asStateFlow()
+
+    private val _audioDownloadError = MutableStateFlow<String?>(null)
+    val audioDownloadError: StateFlow<String?> = _audioDownloadError.asStateFlow()
+
+    private val _surahList = MutableStateFlow<List<Surah>>(emptyList())
+    val surahList: StateFlow<List<Surah>> = _surahList.asStateFlow()
+
+    private var audioDownloadJob: Job? = null
+
+    fun loadSurahList() {
+        viewModelScope.launch {
+            try {
+                _surahList.value = quranRepository.getSurahs()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun downloadAudioForSurah(surahNumber: Int, surahName: String) {
+        audioDownloadJob?.cancel()
+        audioDownloadJob = viewModelScope.launch {
+            _isDownloadingAudio.value = true
+            _audioDownloadProgress.value = 0
+            _audioDownloadStatus.value = "সুরা $surahName-এর অডিও ফাইল ডাউনলোড হচ্ছে..."
+            _audioDownloadError.value = null
+            try {
+                // Ensure surah details are cached or loaded
+                val combinedAyahs = quranRepository.getSurahDetailsCombined(surahNumber)
+                val totalAyahs = combinedAyahs.size
+                if (totalAyahs == 0) {
+                    _audioDownloadStatus.value = "কোনো আয়াত পাওয়া যায়নি"
+                    return@launch
+                }
+
+                withContext(Dispatchers.IO) {
+                    for ((index, ayah) in combinedAyahs.withIndex()) {
+                        val url = ayah.audioUrl
+                        if (url != null && url.isNotEmpty()) {
+                            val localFile = audioRepository.getLocalAudioFile(url)
+                            if (!localFile.exists() || localFile.length() == 0L) {
+                                val tempFile = File(localFile.parent, localFile.name + ".temp")
+                                try {
+                                    URL(url).openStream().use { input ->
+                                        tempFile.outputStream().use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+                                    if (tempFile.exists() && tempFile.length() > 0) {
+                                        tempFile.renameTo(localFile)
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    if (tempFile.exists()) tempFile.delete()
+                                    // Let's not crash/stop download of subsequent files for minor errors, but log
+                                }
+                            }
+                        }
+                        val progress = ((index + 1) * 100) / totalAyahs
+                        _audioDownloadProgress.value = progress
+                        updateAudioCacheSize()
+                    }
+                }
+                _audioDownloadStatus.value = "সুরা $surahName-এর অডিও ডাউনলোড সফল হয়েছে!"
+            } catch (e: Exception) {
+                _audioDownloadError.value = e.localizedMessage ?: "অডিও ডাউনলোড ব্যর্থ হয়েছে"
+                _audioDownloadStatus.value = null
+            } finally {
+                _isDownloadingAudio.value = false
+                updateAudioCacheSize()
+            }
+        }
+    }
+
+    fun cancelAudioDownload() {
+        audioDownloadJob?.cancel()
+        _isDownloadingAudio.value = false
+        _audioDownloadStatus.value = "ডাউনলোড বাতিল করা হয়েছে"
+        updateAudioCacheSize()
+    }
+
+    fun updateDownloadedSurahsCount() {
+        _downloadedSurahsCount.value = quranRepository.getDownloadedSurahsCount()
+    }
+
+    fun updateAudioCacheSize() {
+        val dir = File(repository.context.filesDir, "quran_audio")
+        _audioCacheSize.value = getFolderSize(dir)
+    }
+
+    private fun getFolderSize(folder: File): Long {
+        var length = 0L
+        val files = folder.listFiles()
+        if (files != null) {
+            for (file in files) {
+                if (file.isFile) {
+                    length += file.length()
+                } else {
+                    length += getFolderSize(file)
+                }
+            }
+        }
+        return length
+    }
+
+    fun downloadAllQuranData() {
+        viewModelScope.launch {
+            _isDownloadingQuran.value = true
+            _quranDownloadProgress.value = 0
+            _quranDownloadError.value = null
+            try {
+                // First download Surah list
+                quranRepository.getSurahs()
+                
+                // Then download each of the 114 Surahs
+                for (i in 1..114) {
+                    if (!quranRepository.isSurahDownloaded(i)) {
+                        try {
+                            quranRepository.getSurahDetailsCombined(i)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    _quranDownloadProgress.value = i
+                    _downloadedSurahsCount.value = quranRepository.getDownloadedSurahsCount()
+                }
+            } catch (e: Exception) {
+                _quranDownloadError.value = e.localizedMessage ?: "ডাউনলোড ব্যর্থ হয়েছে"
+            } finally {
+                _isDownloadingQuran.value = false
+                updateDownloadedSurahsCount()
+            }
+        }
+    }
+
+    fun deleteDownloadedQuranData() {
+        viewModelScope.launch {
+            quranRepository.deleteDownloadedSurahs()
+            updateDownloadedSurahsCount()
+        }
+    }
+
+    fun clearAudioCache() {
+        viewModelScope.launch {
+            val dir = File(repository.context.filesDir, "quran_audio")
+            if (dir.exists()) {
+                dir.deleteRecursively()
+            }
+            updateAudioCacheSize()
+        }
+    }
 
     val showTranslation: StateFlow<Boolean> = repository.showTranslationFlow
         .stateIn(
@@ -209,5 +397,7 @@ class SettingsViewModel(
         }
 
         loadNotesFromPrefs()
+        updateDownloadedSurahsCount()
+        updateAudioCacheSize()
     }
 }

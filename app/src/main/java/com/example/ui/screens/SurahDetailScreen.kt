@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -75,6 +76,12 @@ fun SurahDetailScreen(
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentPlayingAyahNumber by viewModel.currentPlayingAyahNumber.collectAsState()
     val playbackMode by viewModel.playbackMode.collectAsState()
+
+    // Download States
+    val isDownloadingOffline by viewModel.isDownloadingOffline.collectAsState()
+    val downloadProgress by viewModel.downloadProgress.collectAsState()
+    val downloadStatus by viewModel.downloadStatus.collectAsState()
+    val downloadError by viewModel.downloadError.collectAsState()
     
     val parsedViewMode = when (initialViewMode) {
         "MUSHAF" -> ViewMode.MUSHAF
@@ -348,6 +355,14 @@ fun SurahDetailScreen(
                     onBengaliFontSizeChange = { viewModel.setBengaliFontSize(it) },
                     arabicFontName = arabicFontName,
                     onArabicFontNameChange = { viewModel.setArabicFontName(it) },
+                    isDownloadingOffline = isDownloadingOffline,
+                    downloadProgress = downloadProgress,
+                    downloadStatus = downloadStatus,
+                    downloadError = downloadError,
+                    onDownloadClick = {
+                        viewModel.downloadSurahOffline(surahNumber, "এই")
+                    },
+                    onCancelDownloadClick = { viewModel.cancelOfflineDownload() },
                     onClose = { showSettingsBottomSheet = false }
                 )
             }
@@ -1014,6 +1029,12 @@ fun ReaderSettingsBottomSheetContent(
     onBengaliFontSizeChange: (Float) -> Unit,
     arabicFontName: String = "Amiri Quran",
     onArabicFontNameChange: (String) -> Unit = {},
+    isDownloadingOffline: Boolean,
+    downloadProgress: Int,
+    downloadStatus: String?,
+    downloadError: String?,
+    onDownloadClick: () -> Unit,
+    onCancelDownloadClick: () -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -1149,6 +1170,122 @@ fun ReaderSettingsBottomSheetContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider(color = Border)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Offline Download Section
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Download, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "অফলাইন ডাউনলোড",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkText
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (isDownloadingOffline) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF06B6D4).copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFF06B6D4).copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = downloadStatus ?: "অডিও ও ডাটা ফাইল ডাউনলোড হচ্ছে...",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = DarkText
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "ডাউনলোড অগ্রগতি:",
+                        fontSize = 11.sp,
+                        color = GrayText
+                    )
+                    Text(
+                        text = "$downloadProgress%",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF06B6D4)
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { downloadProgress / 100f },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF06B6D4),
+                    trackColor = Border
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onCancelDownloadClick,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                    border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("ডাউনলোড বাতিল করুন", fontSize = 12.sp)
+                }
+            }
+        } else {
+            downloadStatus?.let { status ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PrimaryGreen.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = status,
+                        color = PrimaryGreen,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            downloadError?.let { err ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Red.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = "ত্রুটি: $err",
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            Button(
+                onClick = onDownloadClick,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06B6D4)),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("সম্পূর্ণ সুরার অফলাইন অডিও ও ডাটা নামান", fontSize = 12.sp, color = Color.White)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 

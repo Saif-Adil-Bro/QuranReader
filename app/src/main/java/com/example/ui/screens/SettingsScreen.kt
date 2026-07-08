@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.local.entity.BookmarkEntity
+import com.example.data.model.Surah
 import com.example.ui.theme.*
 import com.example.ui.viewmodels.SettingsViewModel
 import com.example.ui.viewmodels.UserNote
@@ -71,6 +72,7 @@ fun SettingsScreen(
         MenuItem("hifz", "কুরআন হিফজ", Icons.Default.CheckCircle, Color(0xFF6366F1)),
         MenuItem("learn", "কুরআন শিক্ষা", Icons.Default.Book, Color(0xFF4F46E5)),
         MenuItem("video", "কুরআন ভিডিও", Icons.Default.Videocam, Color(0xFFEF4444)),
+        MenuItem("offline_sync", "অফলাইন ডাউনলোড", Icons.Default.Download, Color(0xFFF59E0B)),
         MenuItem("backup", "ক্লাউড ব্যাকআপ", Icons.Default.Cloud, Color(0xFF6B7280))
     )
     
@@ -378,6 +380,7 @@ fun MenuDetailDialog(
                     "hifz" -> "হিফজ ট্র্যাকার"
                     "learn" -> "কুরআন শিক্ষা"
                     "video" -> "ভিডিও ক্লাস"
+                    "offline_sync" -> "কুরআন অফলাইন ডাউনলোড"
                     "backup" -> "ক্লাউড ব্যাকআপ"
                     else -> "বিস্তারিত"
                 }
@@ -424,6 +427,7 @@ fun MenuDetailDialog(
                         "hifz" -> HifzDialogContent(viewModel)
                         "learn" -> LearnDialogContent()
                         "video" -> VideoDialogContent()
+                        "offline_sync" -> OfflineSyncDialogContent(viewModel)
                         "backup" -> BackupDialogContent()
                     }
                 }
@@ -1285,4 +1289,546 @@ fun BackupDialogContent() {
             }
         }
     }
+}
+
+// --- OFFLINE SYNC DIALOG ---
+@Composable
+fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
+    val isDownloading by viewModel.isDownloadingQuran.collectAsState()
+    val progress by viewModel.quranDownloadProgress.collectAsState()
+    val error by viewModel.quranDownloadError.collectAsState()
+    val downloadedCount by viewModel.downloadedSurahsCount.collectAsState()
+    val audioCacheSize by viewModel.audioCacheSize.collectAsState()
+
+    // Audio Manual Download States
+    val surahList by viewModel.surahList.collectAsState()
+    val isDownloadingAudio by viewModel.isDownloadingAudio.collectAsState()
+    val audioDownloadProgress by viewModel.audioDownloadProgress.collectAsState()
+    val audioDownloadStatus by viewModel.audioDownloadStatus.collectAsState()
+    val audioDownloadError by viewModel.audioDownloadError.collectAsState()
+
+    var showSurahSelectorSheet by remember { mutableStateOf(false) }
+
+    // Refresh states
+    LaunchedEffect(Unit) {
+        viewModel.updateDownloadedSurahsCount()
+        viewModel.updateAudioCacheSize()
+        viewModel.loadSurahList()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.CloudQueue,
+            contentDescription = null,
+            tint = PrimaryGreen,
+            modifier = Modifier.size(64.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "কুরআন অফলাইন ডাউনলোড ও ক্যাশ",
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            color = DarkText
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "আপনার কুরআন রিডিং ডাটা এবং অডিও অফলাইন ব্যবহারের জন্য ডাউনলোড করে রাখুন যাতে ইন্টারনেট না থাকলেও পড়তে ও শুনতে পারেন।",
+            color = GrayText,
+            fontSize = 13.sp,
+            textAlign = TextAlign.Center,
+            lineHeight = 18.sp,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 1. Quran Texts Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, Border),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(PrimaryGreen.copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Book,
+                            contentDescription = null,
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "কুরআন রিডিং ডাটা (সুরা ও অর্থ)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = DarkText
+                        )
+                        Text(
+                            text = "১১৪টি সুরার আরবি ও বাংলা অনুবাদ ডাটা",
+                            fontSize = 11.sp,
+                            color = GrayText
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Download Status UI
+                val statusText: String
+                val statusColor: Color
+                val statusIcon: ImageVector
+
+                if (downloadedCount == 114) {
+                    statusText = "সম্পূর্ণ ডাউনলোড করা হয়েছে (১১৪টি সুরা)"
+                    statusColor = PrimaryGreen
+                    statusIcon = Icons.Default.CheckCircle
+                } else if (downloadedCount > 0) {
+                    statusText = "আংশিক ডাউনলোড হয়েছে ($downloadedCount/১১৪ সুরা)"
+                    statusColor = Color(0xFFF59E0B)
+                    statusIcon = Icons.Default.Warning
+                } else {
+                    statusText = "কোনো অফলাইন ডাটা নেই"
+                    statusColor = Color.Red
+                    statusIcon = Icons.Default.Info
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(statusColor.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Icon(
+                        imageVector = statusIcon,
+                        contentDescription = null,
+                        tint = statusColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = statusText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor
+                    )
+                }
+
+                if (isDownloading) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "সুরা ডাউনলোড হচ্ছে...",
+                                fontSize = 12.sp,
+                                color = DarkText
+                            )
+                            Text(
+                                text = "$progress / 114",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryGreen
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        val progressPct = progress.toFloat() / 114f
+                        LinearProgressIndicator(
+                            progress = { progressPct },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = PrimaryGreen,
+                            trackColor = Border
+                        )
+                    }
+                }
+
+                error?.let { err ->
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "ত্রুটি: $err",
+                        color = Color.Red,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (!isDownloading && downloadedCount < 114) {
+                        Button(
+                            onClick = { viewModel.downloadAllQuranData() },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("ডাউনলোড শুরু করুন", color = Color.White, fontSize = 12.sp)
+                        }
+                    }
+
+                    if (!isDownloading && downloadedCount > 0) {
+                        OutlinedButton(
+                            onClick = { viewModel.deleteDownloadedQuranData() },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                            border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f)),
+                            modifier = Modifier.weight(0.8f)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("মুছে ফেলুন", fontSize = 12.sp, color = Color.Red)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 2. Audio Cache Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, Border),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFF06B6D4).copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = Color(0xFF06B6D4),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "অডিও প্লেব্যাক অফলাইন ক্যাশ",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = DarkText
+                        )
+                        Text(
+                            text = "প্লে হওয়া আয়াতে অফলাইন ফাইল সংরক্ষণ",
+                            fontSize = 11.sp,
+                            color = GrayText
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "ব্যবহৃত ক্যাশ মেমোরি:",
+                            fontSize = 12.sp,
+                            color = GrayText
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        val formattedSize = formatBytesLocal(audioCacheSize)
+                        Text(
+                            text = formattedSize,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFF06B6D4)
+                        )
+                    }
+
+                    if (audioCacheSize > 0) {
+                        OutlinedButton(
+                            onClick = { viewModel.clearAudioCache() },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                            border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.3f))
+                        ) {
+                            Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("ক্যাশ মুছুন", fontSize = 12.sp, color = Color.Red)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Border)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Manual Audio Download Progress & Status
+                if (isDownloadingAudio) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF06B6D4).copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+                            .border(1.dp, Color(0xFF06B6D4).copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            text = audioDownloadStatus ?: "অডিও ফাইল ডাউনলোড করা হচ্ছে...",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = DarkText
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "অগ্রগতি:",
+                                fontSize = 11.sp,
+                                color = GrayText
+                            )
+                            Text(
+                                text = "$audioDownloadProgress%",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF06B6D4)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        LinearProgressIndicator(
+                            progress = { audioDownloadProgress / 100f },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color(0xFF06B6D4),
+                            trackColor = Border
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.cancelAudioDownload() },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                            border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("ডাউনলোড বাতিল করুন", fontSize = 12.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                } else {
+                    // Show last status/result if downloaded successfully
+                    audioDownloadStatus?.let { status ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(PrimaryGreen.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = status,
+                                color = PrimaryGreen,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Show error if failed
+                    audioDownloadError?.let { err ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.Red.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = "ত্রুটি: $err",
+                                color = Color.Red,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Button to manually select and download surah audio
+                    Button(
+                        onClick = { showSurahSelectorSheet = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06B6D4)),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("ম্যানুয়ালি সুরা অডিও ডাউনলোড করুন", fontSize = 12.sp, color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                Text(
+                    text = "নিয়ম: অ্যাপে যেকোনো সুরা বা আয়াত শোনার সময় সেটি স্বয়ংক্রিয়ভাবে ব্যাকগ্রাউন্ডে ক্যাশ হয়ে যাবে। তবে আপনি চাইলে উপরোক্ত বাটন ব্যবহার করে যেকোনো সুরার সম্পূর্ণ অডিও আগে থেকেই অফলাইনে প্লে করার জন্য ডাউনলোড করে রাখতে পারবেন।",
+                    fontSize = 11.sp,
+                    color = GrayText,
+                    lineHeight = 16.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    // Searchable Surah Selector Dialog
+    if (showSurahSelectorSheet) {
+        var searchQuery by remember { mutableStateOf("") }
+        val filteredSurahs = if (searchQuery.isEmpty()) {
+            surahList
+        } else {
+            surahList.filter { 
+                it.name.contains(searchQuery, ignoreCase = true) || 
+                it.englishName.contains(searchQuery, ignoreCase = true) || 
+                it.number.toString() == searchQuery
+            }
+        }
+        
+        AlertDialog(
+            onDismissRequest = { showSurahSelectorSheet = false },
+            title = {
+                Column {
+                    Text(
+                        text = "অডিও ডাউনলোডের জন্য সুরা নির্বাচন",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = DarkText
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("সুরা খুঁজুন (যেমন: ফাতিহা বা 1)", fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF06B6D4),
+                            unfocusedBorderColor = Border
+                        ),
+                        singleLine = true
+                    )
+                }
+            },
+            text = {
+                if (filteredSurahs.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("কোনো সুরা পাওয়া যায়নি", color = GrayText, fontSize = 13.sp)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(filteredSurahs) { surah ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.downloadAudioForSurah(surah.number, surah.name)
+                                        showSurahSelectorSheet = false
+                                    }
+                                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(Color(0xFF06B6D4).copy(alpha = 0.1f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = surah.number.toString(),
+                                            color = Color(0xFF06B6D4),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Column {
+                                        Text(
+                                            text = surah.name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = DarkText
+                                        )
+                                        Text(
+                                            text = "${surah.englishName} • ${surah.numberOfAyahs} আয়াত",
+                                            fontSize = 11.sp,
+                                            color = GrayText
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = null,
+                                    tint = Color(0xFF06B6D4),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            HorizontalDivider(color = Border)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSurahSelectorSheet = false }) {
+                    Text("বন্ধ করুন", color = Color(0xFF06B6D4))
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+}
+
+fun formatBytesLocal(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    val units = arrayOf("B", "KB", "MB", "GB")
+    val i = (java.lang.Math.log10(bytes.toDouble()) / java.lang.Math.log10(1024.0)).toInt()
+    val cappedI = if (i >= units.size) units.size - 1 else i
+    return String.format(java.util.Locale.US, "%.1f %s", bytes / java.lang.Math.pow(1024.0, cappedI.toDouble()), units[cappedI])
 }

@@ -1,16 +1,24 @@
 package com.example.data.repository
 
+import android.content.Context
 import com.example.data.api.QuranApi
 import com.example.data.api.QuranComApi
 import com.example.data.model.CombinedAyah
 import com.example.data.model.Surah
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Repository to manage data operations for the Quran Reader app
  */
-class QuranRepository(private val api: QuranApi, private val quranComApi: QuranComApi) {
+class QuranRepository(
+    private val api: QuranApi,
+    private val quranComApi: QuranComApi,
+    val context: Context
+) {
 
     private val BISMILLAH_PREFIX = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ "
 
@@ -29,15 +37,84 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
         return text
     }
 
+    private val surahCacheFile by lazy {
+        File(context.filesDir, "quran_text_cache/surahs.json")
+    }
+
+    private fun getSurahDetailsCacheFile(surahNumber: Int): File {
+        return File(context.filesDir, "quran_text_cache/surah_details_$surahNumber.json")
+    }
+
+    private fun getPageDetailsCacheFile(pageNumber: Int): File {
+        return File(context.filesDir, "quran_text_cache/page_details_$pageNumber.json")
+    }
+
+    private fun getJuzDetailsCacheFile(juzNumber: Int): File {
+        return File(context.filesDir, "quran_text_cache/juz_details_$juzNumber.json")
+    }
+
+    fun getDownloadedSurahsCount(): Int {
+        var count = 0
+        for (i in 1..114) {
+            if (getSurahDetailsCacheFile(i).exists()) {
+                count++
+            }
+        }
+        return count
+    }
+
+    fun isSurahDownloaded(surahNumber: Int): Boolean {
+        return getSurahDetailsCacheFile(surahNumber).exists()
+    }
+
+    fun isAllSurahsDownloaded(): Boolean {
+        return getDownloadedSurahsCount() == 114
+    }
+
+    fun deleteDownloadedSurahs() {
+        val dir = File(context.filesDir, "quran_text_cache")
+        if (dir.exists()) {
+            dir.deleteRecursively()
+        }
+        cachedSurahs = null
+        cachedSurahDetails.clear()
+        cachedPageDetails.clear()
+        cachedJuzDetails.clear()
+    }
+
     /**
      * Fetches the list of all Surahs
      */
     suspend fun getSurahs(): List<Surah> {
         cachedSurahs?.let { return it }
         return withContext(Dispatchers.IO) {
+            // First, try loading from cache
+            if (surahCacheFile.exists() && surahCacheFile.length() > 0) {
+                try {
+                    val json = surahCacheFile.readText()
+                    val type = object : TypeToken<List<Surah>>() {}.type
+                    val list = Gson().fromJson<List<Surah>>(json, type)
+                    if (!list.isNullOrEmpty()) {
+                        cachedSurahs = list
+                        return@withContext list
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // Fetch from network
             val response = api.getSurahs()
             if (response.code == 200) {
-                response.data.also { cachedSurahs = it }
+                val data = response.data
+                cachedSurahs = data
+                try {
+                    surahCacheFile.parentFile?.mkdirs()
+                    surahCacheFile.writeText(Gson().toJson(data))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                data
             } else {
                 throw Exception("Failed to load Surahs: ${response.status}")
             }
@@ -51,6 +128,21 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
     suspend fun getSurahDetailsCombined(surahNumber: Int): List<CombinedAyah> {
         cachedSurahDetails[surahNumber]?.let { return it }
         return withContext(Dispatchers.IO) {
+            val cacheFile = getSurahDetailsCacheFile(surahNumber)
+            if (cacheFile.exists() && cacheFile.length() > 0) {
+                try {
+                    val json = cacheFile.readText()
+                    val type = object : TypeToken<List<CombinedAyah>>() {}.type
+                    val list = Gson().fromJson<List<CombinedAyah>>(json, type)
+                    if (!list.isNullOrEmpty()) {
+                        cachedSurahDetails[surahNumber] = list
+                        return@withContext list
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
             val response = api.getSurahWithTranslation(surahNumber)
             val quranComResponse = try {
                 quranComApi.getSurahVerses(surahNumber)
@@ -90,6 +182,13 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                     )
                 }
                 cachedSurahDetails[surahNumber] = combined
+                
+                try {
+                    cacheFile.parentFile?.mkdirs()
+                    cacheFile.writeText(Gson().toJson(combined))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
                 combined
             } else {
                 throw Exception("Failed to load Surah details: Invalid response structure.")
@@ -103,6 +202,21 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
     suspend fun getPageCombined(pageNumber: Int): List<CombinedAyah> {
         cachedPageDetails[pageNumber]?.let { return it }
         return withContext(Dispatchers.IO) {
+            val cacheFile = getPageDetailsCacheFile(pageNumber)
+            if (cacheFile.exists() && cacheFile.length() > 0) {
+                try {
+                    val json = cacheFile.readText()
+                    val type = object : TypeToken<List<CombinedAyah>>() {}.type
+                    val list = Gson().fromJson<List<CombinedAyah>>(json, type)
+                    if (!list.isNullOrEmpty()) {
+                        cachedPageDetails[pageNumber] = list
+                        return@withContext list
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
             try {
                 val arabicResponse = api.getPageArabic(pageNumber)
                 val audioResponse = api.getPageAudio(pageNumber)
@@ -134,6 +248,13 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                         )
                     }
                     cachedPageDetails[pageNumber] = combined
+                    
+                    try {
+                        cacheFile.parentFile?.mkdirs()
+                        cacheFile.writeText(Gson().toJson(combined))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                     combined
                 } else {
                     throw Exception("Failed to load Page details: Invalid response.")
@@ -153,6 +274,21 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
     suspend fun getJuzCombined(juzNumber: Int): List<CombinedAyah> {
         cachedJuzDetails[juzNumber]?.let { return it }
         return withContext(Dispatchers.IO) {
+            val cacheFile = getJuzDetailsCacheFile(juzNumber)
+            if (cacheFile.exists() && cacheFile.length() > 0) {
+                try {
+                    val json = cacheFile.readText()
+                    val type = object : TypeToken<List<CombinedAyah>>() {}.type
+                    val list = Gson().fromJson<List<CombinedAyah>>(json, type)
+                    if (!list.isNullOrEmpty()) {
+                        cachedJuzDetails[juzNumber] = list
+                        return@withContext list
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
             try {
                 val arabicResponse = api.getJuzArabic(juzNumber)
                 val bengaliResponse = api.getJuzBengali(juzNumber)
@@ -186,6 +322,13 @@ class QuranRepository(private val api: QuranApi, private val quranComApi: QuranC
                         )
                     }
                     cachedJuzDetails[juzNumber] = combined
+                    
+                    try {
+                        cacheFile.parentFile?.mkdirs()
+                        cacheFile.writeText(Gson().toJson(combined))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                     combined
                 } else {
                     throw Exception("Failed to load Juz details: Invalid response structure.")

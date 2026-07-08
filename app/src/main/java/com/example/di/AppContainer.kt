@@ -54,7 +54,7 @@ class AppContainer(private val context: Context) {
     }
 
     val quranRepository: QuranRepository by lazy {
-        QuranRepository(quranApi, quranComApi)
+        QuranRepository(quranApi, quranComApi, context)
     }
 
     val settingsRepository: SettingsRepository by lazy {
