@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
             AppNavGraph(
               navController = navController,
               viewModelFactory = viewModelFactory,
-              modifier = Modifier.padding(innerPadding)
+              modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
             )
           }
         }
