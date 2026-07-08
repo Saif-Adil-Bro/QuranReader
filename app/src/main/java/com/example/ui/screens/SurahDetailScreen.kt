@@ -41,6 +41,9 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -302,7 +305,8 @@ fun SurahDetailScreen(
                                         surahNumber = surahNumber,
                                         onPlayWord = { viewModel.playWord(it) },
                                         onPlayAyah = { viewModel.togglePlayPause(it, surahNumber) },
-                                        arabicFontName = arabicFontName
+                                        arabicFontName = arabicFontName,
+                                        arabicFontSize = arabicFontSize
                                     )
                                 }
                             }
@@ -1330,97 +1334,154 @@ fun MushafPageView(
     surahNumber: Int,
     onPlayWord: (String) -> Unit,
     onPlayAyah: (CombinedAyah) -> Unit,
-    arabicFontName: String = "Amiri Quran"
+    arabicFontName: String = "Amiri Quran",
+    arabicFontSize: Float = 28f
 ) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
-    Column(modifier = Modifier.fillMaxWidth()) {
-        CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                ayahs.forEach { ayah ->
-                    if (ayah.words.isNotEmpty()) {
-                        val processedWords = remember(ayah.words) {
-                            val list = mutableListOf<ProcessedWord>()
-                            ayah.words.forEach { word ->
-                                val text = word.textUthmani ?: ""
-                                val isPause = word.charTypeName == "pause" || 
-                                              word.charTypeName == "stop" ||
-                                              text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج")
-                                
-                                if (isPause) {
-                                    val lastWordIndex = list.indexOfLast { it.charTypeName == "word" }
-                                    if (lastWordIndex != -1) {
-                                        val lastWord = list[lastWordIndex]
-                                        list[lastWordIndex] = lastWord.copy(
-                                            textUthmani = lastWord.textUthmani + " " + text
-                                        )
-                                    } else {
-                                        list.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
-                                    }
-                                } else {
-                                    list.add(ProcessedWord(word.id, word.position, word.charTypeName, text, word.translation?.text))
-                                }
-                            }
-                            list
-                        }
-
-                        processedWords.forEach { word ->
-                            if (word.charTypeName != "end") {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.CenterVertically)
-                                        .clickable {
-                                            val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
-                                            onPlayWord(url)
-                                        }
-                                        .padding(2.dp)
-                                ) {
-                                    Text(
-                                        text = word.textUthmani,
-                                        fontSize = 28.sp,
-                                        color = DarkText,
-                                        fontFamily = arabicFont
-                                    )
-                                }
+    
+    // Build a single, unified annotated string for all ayahs of this page to ensure continuous flow
+    val annotatedString = remember(ayahs, surahNumber) {
+        buildAnnotatedString {
+            ayahs.forEachIndexed { index, ayah ->
+                val ayahStart = length
+                
+                if (ayah.words.isNotEmpty()) {
+                    val processedWords = mutableListOf<ProcessedWord>()
+                    ayah.words.forEach { word ->
+                        val text = word.textUthmani ?: ""
+                        val isPause = word.charTypeName == "pause" || 
+                                      word.charTypeName == "stop" ||
+                                      text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج")
+                        
+                        if (isPause) {
+                            val lastWordIndex = processedWords.indexOfLast { it.charTypeName == "word" }
+                            if (lastWordIndex != -1) {
+                                val lastWord = processedWords[lastWordIndex]
+                                processedWords[lastWordIndex] = lastWord.copy(
+                                    textUthmani = lastWord.textUthmani + text
+                                )
                             } else {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.CenterVertically)
-                                        .clickable { onPlayAyah(ayah) }
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                                ) {
-                                    AyahCircle(
-                                        number = ayah.numberInSurah,
-                                        fontSize = 24f,
-                                        color = PrimaryGreen
-                                    )
-                                }
+                                processedWords.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
                             }
-                        }
-                    } else {
-                        // Fallback if words empty
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.CenterVertically)
-                                .clickable { onPlayAyah(ayah) }
-                                .padding(4.dp)
-                        ) {
-                            AyahInlineText(
-                                arabicText = ayah.arabicText,
-                                ayahNumber = ayah.numberInSurah,
-                                fontSize = 28f,
-                                fontFamily = arabicFont,
-                                color = DarkText
-                            )
+                        } else {
+                            processedWords.add(ProcessedWord(word.id, word.position, word.charTypeName, text, word.translation?.text))
                         }
                     }
+                    
+                    processedWords.forEachIndexed { wIndex, word ->
+                        if (word.charTypeName != "end") {
+                            val wordStart = length
+                            append(word.textUthmani)
+                            val wordEnd = length
+                            
+                            val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
+                            addStringAnnotation(
+                                tag = "word_url",
+                                annotation = url,
+                                start = wordStart,
+                                end = wordEnd
+                            )
+                            
+                            if (wIndex < processedWords.lastIndex) {
+                                append(" ")
+                            }
+                        }
+                    }
+                } else {
+                    // Fallback to full Arabic text if words are empty
+                    append(ayah.arabicText)
                 }
+                
+                append(" ")
+                
+                // Add the inline Ayah Circle
+                val circleId = "circle_${ayah.numberInSurah}"
+                appendInlineContent(circleId, "\uFFFC")
+                
+                // Add a space between ayahs
+                if (index < ayahs.lastIndex) {
+                    append("  ")
+                }
+                
+                val ayahEnd = length
+                // Add base ayah_index annotation covering the entire ayah text, circle, and spacing
+                addStringAnnotation(
+                    tag = "ayah_index",
+                    annotation = index.toString(),
+                    start = ayahStart,
+                    end = ayahEnd
+                )
             }
+        }
+    }
+    
+    val inlineContent = remember(ayahs) {
+        ayahs.associate { ayah ->
+            val circleId = "circle_${ayah.numberInSurah}"
+            circleId to InlineTextContent(
+                Placeholder(
+                    width = (arabicFontSize * 1.35f).sp,
+                    height = (arabicFontSize * 1.35f).sp,
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                )
+            ) {
+                AyahCircle(
+                    number = ayah.numberInSurah,
+                    fontSize = arabicFontSize,
+                    color = PrimaryGreen,
+                    modifier = Modifier.clickable { onPlayAyah(ayah) }
+                )
+            }
+        }
+    }
+    
+    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    
+    Column(modifier = Modifier.fillMaxWidth()) {
+        CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+            Text(
+                text = annotatedString,
+                inlineContent = inlineContent,
+                fontSize = arabicFontSize.sp,
+                lineHeight = (arabicFontSize * 1.65f).sp,
+                fontFamily = arabicFont,
+                color = DarkText,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .pointerInput(annotatedString) {
+                        detectTapGestures { offset ->
+                            val currentLayoutResult = layoutResult ?: return@detectTapGestures
+                            val charIndex = currentLayoutResult.getOffsetForPosition(offset)
+                            
+                            // Check if word_url annotation exists at click offset
+                            val wordUrlAnnotations = annotatedString.getStringAnnotations(
+                                tag = "word_url",
+                                start = charIndex,
+                                end = charIndex
+                            )
+                            
+                            if (wordUrlAnnotations.isNotEmpty()) {
+                                onPlayWord(wordUrlAnnotations.first().item)
+                            } else {
+                                // Fallback: check if ayah_index annotation exists
+                                val ayahAnnotations = annotatedString.getStringAnnotations(
+                                    tag = "ayah_index",
+                                    start = charIndex,
+                                    end = charIndex
+                                )
+                                if (ayahAnnotations.isNotEmpty()) {
+                                    val idx = ayahAnnotations.first().item.toIntOrNull()
+                                    if (idx != null && idx in ayahs.indices) {
+                                        onPlayAyah(ayahs[idx])
+                                    }
+                                }
+                            }
+                        }
+                    },
+                onTextLayout = { layoutResult = it }
+            )
         }
         
         Spacer(modifier = Modifier.height(24.dp))
