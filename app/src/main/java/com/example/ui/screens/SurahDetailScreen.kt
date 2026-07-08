@@ -1178,6 +1178,7 @@ fun MushafPageView(
                             if (word.charTypeName != "end") {
                                 Box(
                                     modifier = Modifier
+                                        .align(Alignment.CenterVertically)
                                         .clickable {
                                             val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
                                             onPlayWord(url)
@@ -1194,9 +1195,9 @@ fun MushafPageView(
                             } else {
                                 Box(
                                     modifier = Modifier
+                                        .align(Alignment.CenterVertically)
                                         .clickable { onPlayAyah(ayah) }
-                                        .background(PrimaryGreen.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
                                 ) {
                                     AyahCircle(
                                         number = ayah.numberInSurah,
@@ -1210,6 +1211,7 @@ fun MushafPageView(
                         // Fallback if words empty
                         Box(
                             modifier = Modifier
+                                .align(Alignment.CenterVertically)
                                 .clickable { onPlayAyah(ayah) }
                                 .padding(4.dp)
                         ) {
@@ -1284,15 +1286,14 @@ fun AyahCircle(
                 style = Stroke(width = 1.5.dp.toPx())
             )
             
-            // Inner decorative dynamic dots (Islamic pattern)
+            // Inner decorative dynamic solid line
             val innerRadius = radius - 3.dp.toPx()
             if (innerRadius > 0) {
                 drawCircle(
-                    color = color.copy(alpha = 0.5f),
+                    color = color.copy(alpha = 0.35f),
                     radius = innerRadius,
                     style = Stroke(
-                        width = 1.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()), 0f)
+                        width = 0.8.dp.toPx()
                     )
                 )
             }

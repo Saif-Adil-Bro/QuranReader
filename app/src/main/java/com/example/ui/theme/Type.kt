@@ -4,33 +4,46 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.FontLoadingStrategy
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.googlefonts.GoogleFont
+import androidx.compose.ui.text.font.Font as ResourceFont
+import androidx.compose.ui.text.googlefonts.Font as GoogleFontFile
 import com.example.R
 
+val provider = GoogleFont.Provider(
+    providerAuthority = "com.google.android.gms.fonts",
+    providerPackage = "com.google.android.gms",
+    certificates = R.array.com_google_android_gms_fonts_certs
+)
+
 val amiriQuranFont = FontFamily(
-    Font(R.font.amiri_quran)
+    ResourceFont(R.font.amiri_quran),
+    GoogleFontFile(googleFont = GoogleFont("Amiri Quran"), fontProvider = provider)
 )
 
 val amiriFont = FontFamily(
-    Font(R.font.amiri_regular)
+    ResourceFont(R.font.amiri_regular),
+    GoogleFontFile(googleFont = GoogleFont("Amiri"), fontProvider = provider)
 )
 
 val scheherazadeFont = FontFamily(
-    Font(R.font.scheherazade_new)
+    ResourceFont(R.font.scheherazade_new),
+    GoogleFontFile(googleFont = GoogleFont("Scheherazade New"), fontProvider = provider)
 )
 
 val lateefFont = FontFamily(
-    Font(R.font.lateef_regular)
+    ResourceFont(R.font.lateef_regular),
+    GoogleFontFile(googleFont = GoogleFont("Lateef"), fontProvider = provider)
 )
 
 val almaraiFont = FontFamily(
-    Font(R.font.almarai_regular)
+    ResourceFont(R.font.almarai_regular),
+    GoogleFontFile(googleFont = GoogleFont("Almarai"), fontProvider = provider)
 )
 
 val tajawalFont = FontFamily(
-    Font(R.font.tajawal_regular)
+    ResourceFont(R.font.tajawal_regular),
+    GoogleFontFile(googleFont = GoogleFont("Tajawal"), fontProvider = provider)
 )
 
 val arabicFontsList = listOf(
