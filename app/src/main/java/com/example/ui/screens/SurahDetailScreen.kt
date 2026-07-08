@@ -57,6 +57,14 @@ import com.example.ui.viewmodels.PlaybackMode
 
 enum class ViewMode { LIST, READING, MUSHAF, TAFSIR }
 
+data class ProcessedWord(
+    val id: Int,
+    val position: Int,
+    val charTypeName: String,
+    val textUthmani: String,
+    val translationText: String?
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SurahDetailScreen(
@@ -688,24 +696,49 @@ fun AyahCard(
                     }
                 }
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        if (ayah.words.isNotEmpty()) {
+                    if (ayah.words.isNotEmpty()) {
+                        val processedWords = remember(ayah.words) {
+                            val list = mutableListOf<ProcessedWord>()
                             ayah.words.forEach { word ->
+                                val text = word.textUthmani ?: ""
+                                val isPause = word.charTypeName == "pause" || 
+                                              word.charTypeName == "stop" ||
+                                              text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج")
+                                
+                                if (isPause) {
+                                    val lastWordIndex = list.indexOfLast { it.charTypeName == "word" }
+                                    if (lastWordIndex != -1) {
+                                        val lastWord = list[lastWordIndex]
+                                        list[lastWordIndex] = lastWord.copy(
+                                            textUthmani = lastWord.textUthmani + " " + text
+                                        )
+                                    } else {
+                                        list.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
+                                    }
+                                } else {
+                                    list.add(ProcessedWord(word.id, word.position, word.charTypeName, text, word.translation?.text))
+                                }
+                            }
+                            list
+                        }
+
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            processedWords.forEach { word ->
                                 if (word.charTypeName != "end") {
-                                                                    Column(
+                                    Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier.clickable {
                                             val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
                                             onPlayWord(url)
                                         }.padding(4.dp)
                                     ) {
-                                        Text(word.textUthmani ?: "", fontSize = arabicFontSize.sp, color = DarkText, fontFamily = arabicFont)
+                                        Text(word.textUthmani, fontSize = arabicFontSize.sp, color = DarkText, fontFamily = arabicFont)
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text(word.translation?.text ?: "", fontSize = 12.sp, color = GrayText)
+                                        Text(word.translationText ?: "", fontSize = 12.sp, color = GrayText)
                                     }
                                 } else {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -719,17 +752,17 @@ fun AyahCard(
                                     }
                                 }
                             }
-                        } else {
-                            // Fallback if words not available
-                            val words = ayah.arabicText.split(" ")
-                            words.forEach { word ->
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(word, fontSize = arabicFontSize.sp, color = DarkText, fontFamily = arabicFont)
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text("শব্দ", fontSize = 12.sp, color = GrayText)
-                                }
-                            }
                         }
+                    } else {
+                        // Fallback to beautiful cohesive AyahInlineText instead of splitting by space and showing "শব্দ" placeholders
+                        AyahInlineText(
+                            arabicText = ayah.arabicText,
+                            ayahNumber = ayah.numberInSurah,
+                            fontSize = arabicFontSize.toFloat(),
+                            fontFamily = arabicFont,
+                            color = DarkText,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
                 if (showTranslation) {
@@ -1311,7 +1344,32 @@ fun MushafPageView(
             ) {
                 ayahs.forEach { ayah ->
                     if (ayah.words.isNotEmpty()) {
-                        ayah.words.forEach { word ->
+                        val processedWords = remember(ayah.words) {
+                            val list = mutableListOf<ProcessedWord>()
+                            ayah.words.forEach { word ->
+                                val text = word.textUthmani ?: ""
+                                val isPause = word.charTypeName == "pause" || 
+                                              word.charTypeName == "stop" ||
+                                              text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج")
+                                
+                                if (isPause) {
+                                    val lastWordIndex = list.indexOfLast { it.charTypeName == "word" }
+                                    if (lastWordIndex != -1) {
+                                        val lastWord = list[lastWordIndex]
+                                        list[lastWordIndex] = lastWord.copy(
+                                            textUthmani = lastWord.textUthmani + " " + text
+                                        )
+                                    } else {
+                                        list.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
+                                    }
+                                } else {
+                                    list.add(ProcessedWord(word.id, word.position, word.charTypeName, text, word.translation?.text))
+                                }
+                            }
+                            list
+                        }
+
+                        processedWords.forEach { word ->
                             if (word.charTypeName != "end") {
                                 Box(
                                     modifier = Modifier
@@ -1323,7 +1381,7 @@ fun MushafPageView(
                                         .padding(2.dp)
                                 ) {
                                     Text(
-                                        text = word.textUthmani ?: "",
+                                        text = word.textUthmani,
                                         fontSize = 28.sp,
                                         color = DarkText,
                                         fontFamily = arabicFont
