@@ -26,6 +26,9 @@ class AudioRepository(private val context: Context) {
     private val _currentPlayingAyahNumber = MutableStateFlow<Int?>(null)
     val currentPlayingAyahNumber: StateFlow<Int?> = _currentPlayingAyahNumber.asStateFlow()
 
+    private val _currentPlayingWordUrl = MutableStateFlow<String?>(null)
+    val currentPlayingWordUrl: StateFlow<String?> = _currentPlayingWordUrl.asStateFlow()
+
     var onPlaybackEnded: (() -> Unit)? = null
 
     fun getLocalAudioFile(url: String): File {
@@ -49,12 +52,16 @@ class AudioRepository(private val context: Context) {
                 addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlayingState: Boolean) {
                         _isPlaying.value = isPlayingState
+                        if (!isPlayingState) {
+                            _currentPlayingWordUrl.value = null
+                        }
                     }
 
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (playbackState == Player.STATE_ENDED) {
                             _isPlaying.value = false
                             _currentPlayingAyahNumber.value = null
+                            _currentPlayingWordUrl.value = null
                             onPlaybackEnded?.invoke()
                         }
                     }
@@ -65,6 +72,12 @@ class AudioRepository(private val context: Context) {
 
     fun playAudio(url: String, ayahNumber: Int) {
         initializePlayer()
+        
+        if (ayahNumber == -1) {
+            _currentPlayingWordUrl.value = url
+        } else {
+            _currentPlayingWordUrl.value = null
+        }
         
         val localFile = getLocalAudioFile(url)
         val uri = if (localFile.exists() && localFile.length() > 0) {

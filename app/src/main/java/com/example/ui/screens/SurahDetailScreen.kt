@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.PathEffect
@@ -86,6 +88,7 @@ fun SurahDetailScreen(
     
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentPlayingAyahNumber by viewModel.currentPlayingAyahNumber.collectAsState()
+    val currentPlayingWordUrl by viewModel.audioRepository.currentPlayingWordUrl.collectAsState()
     val playbackMode by viewModel.playbackMode.collectAsState()
 
     // Download States
@@ -241,6 +244,30 @@ fun SurahDetailScreen(
                             }
                         }
                     }
+
+                    // Auto-scroll to currently playing ayah during audio play
+                    LaunchedEffect(currentPlayingAyahNumber) {
+                        val playingAyahNum = currentPlayingAyahNumber
+                        if (playingAyahNum != null && playingAyahNum > 0) {
+                            val targetAyah = displayedData.find { it.numberInSurah == playingAyahNum }
+                            if (targetAyah != null) {
+                                val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && initialAyah <= 0) 2 else 1
+                                if (viewMode == ViewMode.MUSHAF) {
+                                    val ayahsByPage = displayedData.groupBy { it.page }
+                                    val pagesList = ayahsByPage.keys.toList()
+                                    val pageIndex = pagesList.indexOf(targetAyah.page)
+                                    if (pageIndex != -1) {
+                                        listState.animateScrollToItem(pageIndex + headerCount)
+                                    }
+                                } else {
+                                    val ayahIndex = displayedData.indexOfFirst { it.numberInSurah == playingAyahNum }
+                                    if (ayahIndex != -1) {
+                                        listState.animateScrollToItem(ayahIndex + headerCount)
+                                    }
+                                }
+                            }
+                        }
+                    }
                     
                     LazyColumn(
                         state = listState,
@@ -306,7 +333,8 @@ fun SurahDetailScreen(
                                         onPlayWord = { viewModel.playWord(it) },
                                         onPlayAyah = { viewModel.togglePlayPause(it, surahNumber) },
                                         arabicFontName = arabicFontName,
-                                        arabicFontSize = arabicFontSize
+                                        arabicFontSize = arabicFontSize,
+                                        currentPlayingWordUrl = currentPlayingWordUrl
                                     )
                                 }
                             }
@@ -326,7 +354,8 @@ fun SurahDetailScreen(
                                     showTranslation = showTranslation,
                                     arabicFontSize = arabicFontSize,
                                     bengaliFontSize = bengaliFontSize,
-                                    arabicFontName = arabicFontName
+                                    arabicFontName = arabicFontName,
+                                    currentPlayingWordUrl = currentPlayingWordUrl
                                 )
                             }
                         }
@@ -577,7 +606,8 @@ fun AyahCard(
     showTranslation: Boolean,
     arabicFontSize: Float,
     bengaliFontSize: Float,
-    arabicFontName: String = "Amiri Quran"
+    arabicFontName: String = "Amiri Quran",
+    currentPlayingWordUrl: String? = null
 ) {
     var showTafsirDialog by remember { mutableStateOf(false) }
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
@@ -733,16 +763,39 @@ fun AyahCard(
                         ) {
                             processedWords.forEach { word ->
                                 if (word.charTypeName != "end") {
+                                    val wordUrl = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
+                                    val isHighlighted = currentPlayingWordUrl == wordUrl
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.clickable {
-                                            val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
-                                            onPlayWord(url)
-                                        }.padding(4.dp)
+                                        modifier = Modifier
+                                            .clickable {
+                                                onPlayWord(wordUrl)
+                                            }
+                                            .background(
+                                                color = if (isHighlighted) PrimaryGreen.copy(alpha = 0.2f) else Color.Transparent,
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .border(
+                                                width = if (isHighlighted) 1.dp else 0.dp,
+                                                color = if (isHighlighted) PrimaryGreen.copy(alpha = 0.6f) else Color.Transparent,
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
                                     ) {
-                                        Text(word.textUthmani, fontSize = arabicFontSize.sp, color = DarkText, fontFamily = arabicFont)
+                                        Text(
+                                            text = word.textUthmani,
+                                            fontSize = arabicFontSize.sp,
+                                            color = if (isHighlighted) PrimaryGreen else DarkText,
+                                            fontFamily = arabicFont,
+                                            fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal
+                                        )
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text(word.translationText ?: "", fontSize = 12.sp, color = GrayText)
+                                        Text(
+                                            text = word.translationText ?: "",
+                                            fontSize = 12.sp,
+                                            color = if (isHighlighted) PrimaryGreen.copy(alpha = 0.8f) else GrayText,
+                                            fontWeight = if (isHighlighted) FontWeight.Medium else FontWeight.Normal
+                                        )
                                     }
                                 } else {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1335,12 +1388,13 @@ fun MushafPageView(
     onPlayWord: (String) -> Unit,
     onPlayAyah: (CombinedAyah) -> Unit,
     arabicFontName: String = "Amiri Quran",
-    arabicFontSize: Float = 28f
+    arabicFontSize: Float = 28f,
+    currentPlayingWordUrl: String? = null
 ) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     
     // Build a single, unified annotated string for all ayahs of this page to ensure continuous flow
-    val annotatedString = remember(ayahs, surahNumber) {
+    val annotatedString = remember(ayahs, surahNumber, currentPlayingWordUrl) {
         buildAnnotatedString {
             ayahs.forEachIndexed { index, ayah ->
                 val ayahStart = length
@@ -1351,7 +1405,7 @@ fun MushafPageView(
                         val text = word.textUthmani ?: ""
                         val isPause = word.charTypeName == "pause" || 
                                       word.charTypeName == "stop" ||
-                                      text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج", "لا", "صلى", "صلے", "قلے", "قلى")
+                                      text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج", "لا", "صلى", "صلے", " his", "qaly", "qala", "صلے", "কুত", "صلى", "صلے", "قلے", "قلى")
                         
                         if (isPause) {
                             val lastWordIndex = processedWords.indexOfLast { it.charTypeName == "word" }
@@ -1371,10 +1425,25 @@ fun MushafPageView(
                     processedWords.forEachIndexed { wIndex, word ->
                         if (word.charTypeName != "end") {
                             val wordStart = length
-                            append(word.textUthmani)
+                            val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
+                            val isHighlighted = url == currentPlayingWordUrl
+                            
+                            if (isHighlighted) {
+                                withStyle(
+                                    style = SpanStyle(
+                                        background = PrimaryGreen.copy(alpha = 0.25f),
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryGreen
+                                    )
+                                ) {
+                                    append(word.textUthmani)
+                                }
+                            } else {
+                                append(word.textUthmani)
+                            }
+                            
                             val wordEnd = length
                             
-                            val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
                             addStringAnnotation(
                                 tag = "word_url",
                                 annotation = url,
