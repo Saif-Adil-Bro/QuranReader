@@ -707,7 +707,7 @@ fun AyahCard(
                                 val text = word.textUthmani ?: ""
                                 val isPause = word.charTypeName == "pause" || 
                                               word.charTypeName == "stop" ||
-                                              text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج")
+                                              text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج", "لا", "صلى", "صلے", "قلے", "قلى")
                                 
                                 if (isPause) {
                                     val lastWordIndex = list.indexOfLast { it.charTypeName == "word" }
@@ -1351,14 +1351,14 @@ fun MushafPageView(
                         val text = word.textUthmani ?: ""
                         val isPause = word.charTypeName == "pause" || 
                                       word.charTypeName == "stop" ||
-                                      text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج")
+                                      text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج", "لا", "صلى", "صلے", "قلے", "قلى")
                         
                         if (isPause) {
                             val lastWordIndex = processedWords.indexOfLast { it.charTypeName == "word" }
                             if (lastWordIndex != -1) {
                                 val lastWord = processedWords[lastWordIndex]
                                 processedWords[lastWordIndex] = lastWord.copy(
-                                    textUthmani = lastWord.textUthmani + text
+                                    textUthmani = lastWord.textUthmani + " " + text
                                 )
                             } else {
                                 processedWords.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))

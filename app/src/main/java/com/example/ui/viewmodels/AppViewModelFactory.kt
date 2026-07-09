@@ -37,7 +37,7 @@ class AppViewModelFactory(
                 SettingsViewModel(settingsRepository, bookmarkDao, quranRepository, audioRepository) as T
             }
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
-                SearchViewModel(quranRepository) as T
+                SearchViewModel(quranRepository, settingsRepository) as T
             }
             modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
                 HomeViewModel(settingsRepository, quranRepository, mushafRepository) as T

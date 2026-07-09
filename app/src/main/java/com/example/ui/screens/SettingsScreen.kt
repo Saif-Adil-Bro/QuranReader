@@ -77,14 +77,14 @@ fun SettingsScreen(
     )
     
     Scaffold(
-        containerColor = OffWhite,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Column {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(horizontal = 20.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -93,13 +93,13 @@ fun SettingsScreen(
                         text = "মেনু অপশন",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = DarkText
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     IconButton(
                         onClick = onNavigateBack,
                         modifier = Modifier
                             .size(36.dp)
-                            .background(OffWhite, CircleShape)
+                            .background(MaterialTheme.colorScheme.background, CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -127,7 +127,7 @@ fun SettingsScreen(
                     .padding(bottom = 16.dp)
                     .border(1.dp, PrimaryGreen.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
                     .clickable { activeDialog = "profile" },
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
@@ -161,7 +161,7 @@ fun SettingsScreen(
                             text = username,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = DarkText
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
@@ -210,7 +210,7 @@ fun SettingsScreen(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .background(OffWhite, CircleShape),
+                            .background(MaterialTheme.colorScheme.background, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -230,6 +230,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     rowItems.forEach { item ->
@@ -238,7 +239,7 @@ fun SettingsScreen(
                                 .weight(1f)
                                 .shadow(2.dp, RoundedCornerShape(16.dp))
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White)
+                                .background(MaterialTheme.colorScheme.surface)
                                 .clickable { activeDialog = item.id }
                                 .padding(12.dp),
                             contentAlignment = Alignment.Center
@@ -266,7 +267,7 @@ fun SettingsScreen(
                                     text = item.title,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = DarkText,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     textAlign = TextAlign.Center,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -293,13 +294,13 @@ fun SettingsScreen(
                 text = "অ্যাপ সেটিংস",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = DarkText,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, Border)
             ) {
@@ -315,7 +316,7 @@ fun SettingsScreen(
                             text = "অনুবাদ প্রদর্শন করুন (Show Translation)",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = DarkText
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -363,8 +364,8 @@ fun MenuDetailDialog(
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .background(OffWhite),
-            color = OffWhite
+                .background(MaterialTheme.colorScheme.background),
+            color = MaterialTheme.colorScheme.background
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Dialog Header
@@ -389,19 +390,19 @@ fun MenuDetailDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = DarkText)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
                     }
                     Text(
                         text = title,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = DarkText
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.size(48.dp)) // Symmetrical spacer
                 }

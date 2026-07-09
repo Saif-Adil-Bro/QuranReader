@@ -1,21 +1,37 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.data.QuranData
 import com.example.data.model.SearchMatch
 import com.example.ui.state.UiState
 import com.example.ui.theme.PrimaryGreen
@@ -30,25 +46,44 @@ fun SearchScreen(
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val theme by viewModel.theme.collectAsState()
+    val focusManager = LocalFocusManager.current
+
+    val isDark = theme == "Dark"
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Search Quran") },
+                title = { 
+                    Text(
+                        "কুরআন অনুসন্ধান", 
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = if (isDark) Color.White else Color(0xFF1F2937)
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                            contentDescription = "Back",
+                            tint = if (isDark) Color.White else Color(0xFF1F2937)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier.shadow(2.dp)
             )
         }
     ) { paddingValues ->
         BoxWithConstraints(
-            modifier = Modifier.fillMaxSize().padding(paddingValues)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
             val isTablet = maxWidth > 600.dp
             val horizontalPadding = if (isTablet) 32.dp else 0.dp
@@ -58,95 +93,454 @@ fun SearchScreen(
                     .fillMaxSize()
                     .padding(horizontal = horizontalPadding)
             ) {
+                // Search Input Box
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { viewModel.onQueryChange(it) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                placeholder = { Text("Search by keyword...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PrimaryGreen,
-                    focusedLabelColor = PrimaryGreen
-                )
-            )
-
-            when (val state = uiState) {
-                is UiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is UiState.Success -> {
-                    val matches = state.data
-                    if (matches.isEmpty() && searchQuery.isNotBlank()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No matches found.", style = MaterialTheme.typography.bodyLarge)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    placeholder = { 
+                        Text(
+                            "বাংলা বা ইংরেজি শব্দ দিয়ে খুঁজুন...", 
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        ) 
+                    },
+                    leadingIcon = { 
+                        Icon(
+                            Icons.Default.Search, 
+                            contentDescription = "Search",
+                            tint = PrimaryGreen
+                        ) 
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onQueryChange("") }) {
+                                Icon(
+                                    Icons.Default.Clear, 
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
                         }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(matches) { match ->
-                                SearchResultItem(match = match, onClick = {
-                                    onNavigateToSurah(match.surah.number)
-                                })
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(30.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = PrimaryGreen,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
+                        focusedLabelColor = PrimaryGreen
+                    )
+                )
+
+                if (searchQuery.isBlank()) {
+                    // Initial Welcome / Suggestion Screen
+                    InitialSearchLayout(
+                        onTagClick = { tag ->
+                            viewModel.onQueryChange(tag)
+                            focusManager.clearFocus()
+                        },
+                        isDark = isDark
+                    )
+                } else {
+                    // Search Content Results
+                    when (val state = uiState) {
+                        is UiState.Loading -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(), 
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    CircularProgressIndicator(color = PrimaryGreen)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "অনুসন্ধান করা হচ্ছে...", 
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                        is UiState.Success -> {
+                            val matches = state.data
+                            if (matches.isEmpty()) {
+                                EmptySearchResultsLayout(searchQuery, isDark)
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    item {
+                                        Text(
+                                            text = "মোট ফলাফল: ${matches.size} টি মিল পাওয়া গেছে",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = PrimaryGreen,
+                                            modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
+                                        )
+                                    }
+                                    items(matches) { match ->
+                                        SearchResultItem(
+                                            match = match, 
+                                            searchQuery = searchQuery,
+                                            isDark = isDark,
+                                            onClick = {
+                                                onNavigateToSurah(match.surah.number)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        is UiState.Error -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(), 
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(24.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Info, 
+                                        contentDescription = "Error", 
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "দুঃখিত, অনুসন্ধান ব্যর্থ হয়েছে", 
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        state.message, 
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }
                 }
-                is UiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
-                    }
-                }
             }
-        }
         }
     }
 }
 
 @Composable
-fun SearchResultItem(match: SearchMatch, onClick: () -> Unit) {
+fun InitialSearchLayout(
+    onTagClick: (String) -> Unit,
+    isDark: Boolean
+) {
+    val popularTags = listOf(
+        "সালাত", "ঈমান", "জান্নাত", "জাহান্নাম", 
+        "তওবা", "ধৈর্য", "রমজান", "দোয়া", 
+        "হজ্জ", "ক্ষমা", "তাকওয়া", "ইনসাফ"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Cozy welcome icon
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .background(PrimaryGreen.copy(alpha = 0.1f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = PrimaryGreen,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "কুরআনের যেকোনো বিষয় খুঁজুন",
+            fontWeight = FontWeight.Bold,
+            fontSize = 17.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "কুরআনের যেকোনো আয়াত বা শিক্ষা সহজেই বাংলা অথবা ইংরেজি কীওয়ার্ড দিয়ে অনুসন্ধান করুন।",
+            textAlign = TextAlign.Center,
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "জনপ্রিয় বিষয়সমূহ (Popular Topics)",
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = PrimaryGreen,
+            modifier = Modifier.align(Alignment.Start)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Dynamic Tag Cloud Flow
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Chunked tags into rows for a cleaner, structured look
+            val rows = popularTags.chunked(4)
+            rows.forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    row.forEach { tag ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .shadow(1.dp, RoundedCornerShape(100.dp))
+                                .background(
+                                    if (isDark) Color(0xFF1E293B) else Color.White, 
+                                    RoundedCornerShape(100.dp)
+                                )
+                                .border(
+                                    1.dp, 
+                                    PrimaryGreen.copy(alpha = 0.15f), 
+                                    RoundedCornerShape(100.dp)
+                                )
+                                .clickable { onTagClick(tag) }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = tag,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptySearchResultsLayout(query: String, isDark: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .background(
+                    if (isDark) Color(0xFF1E293B) else Color(0xFFF3F4F6), 
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                modifier = Modifier.size(32.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "কোনো ফলাফল পাওয়া যায়নি",
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "আমরা \"$query\" শব্দটির জন্য কোনো আয়াত খুঁজে পাইনি। অনুগ্রহ করে সঠিক বানানটি নিশ্চিত করুন অথবা অন্য কোনো শব্দ ব্যবহার করুন।",
+            textAlign = TextAlign.Center,
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.padding(horizontal = 12.dp)
+        )
+    }
+}
+
+@Composable
+fun SearchResultItem(
+    match: SearchMatch, 
+    searchQuery: String, 
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    // Look up Bengali Surah Name & Translation Meaning from local QuranData mapping
+    val surahPair = QuranData.surahNames.find { it.first == match.surah.number }
+    val banglaSurahName = surahPair?.second?.first ?: match.surah.englishName
+    val banglaSurahMeaning = surahPair?.second?.second ?: match.surah.englishNameTranslation
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(2.dp, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDark) Color(0xFF1E293B) else Color.White
+        ),
+        border = BorderStroke(
+            1.dp, 
+            PrimaryGreen.copy(alpha = 0.12f)
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${match.surah.englishName} (${match.surah.name})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Ayah ${match.numberInSurah}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                // Surah Index Badge
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(PrimaryGreen.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = match.surah.number.toString(),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryGreen
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Surah names
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "সূরা $banglaSurahName",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        text = "${match.surah.englishName} • $banglaSurahMeaning",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+
+                // Ayah Index Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(PrimaryGreen.copy(alpha = 0.08f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "আয়াত ${match.numberInSurah}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryGreen
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Subdued divider line
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Verse Text with Keyword Highlighting!
+            val highlightedText = highlightText(
                 text = match.text,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 3,
+                query = searchQuery,
+                highlightColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706) // Soft warm gold/amber accent for high readability
+            )
+
+            Text(
+                text = highlightedText,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+/**
+ * Builds an AnnotatedString that highlights matches of the query string in the text.
+ */
+fun highlightText(text: String, query: String, highlightColor: Color): AnnotatedString {
+    if (query.isBlank()) return AnnotatedString(text)
+    
+    return buildAnnotatedString {
+        var startIdx = 0
+        val lowerText = text.lowercase()
+        val lowerQuery = query.lowercase()
+        
+        while (true) {
+            val idx = lowerText.indexOf(lowerQuery, startIdx)
+            if (idx == -1) {
+                append(text.substring(startIdx))
+                break
+            }
+            
+            // Append the plain text before match
+            append(text.substring(startIdx, idx))
+            
+            // Append the highlighted matched substring
+            withStyle(
+                style = SpanStyle(
+                    color = highlightColor, 
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append(text.substring(idx, idx + query.length))
+            }
+            
+            startIdx = idx + query.length
         }
     }
 }

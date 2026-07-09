@@ -68,7 +68,7 @@ fun BottomNavBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(elevation = 8.dp),
-            color = Color.White
+            color = MaterialTheme.colorScheme.surface
         ) {
             Row(
                 modifier = Modifier
@@ -117,11 +117,10 @@ fun BottomNavIcon(
     modifier: Modifier = Modifier
 ) {
     val emeraldGreen = Color(0xFF10B981)
-    val gray400 = Color(0xFF9CA3AF)
-    val gray500 = Color(0xFF6B7280)
+    val unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
 
-    val color = if (isSelected) emeraldGreen else gray500
-    val iconColor = if (isSelected) emeraldGreen else gray400
+    val color = if (isSelected) emeraldGreen else unselectedColor
+    val iconColor = if (isSelected) emeraldGreen else unselectedColor
     val icon = if (isSelected) item.activeIcon else item.inactiveIcon
     val fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
 

@@ -32,12 +32,12 @@ fun MushafSelectionScreen(
             TopAppBar(
                 title = { Text("মুসহাফ লাইব্রেরি", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = Color(0xFF10B981)
                 )
             )
         },
-        containerColor = Color(0xFFF9FAFB)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier

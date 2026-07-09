@@ -75,6 +75,8 @@ fun HomeScreen(
     val lastReadSurah by viewModel.lastReadSurah.collectAsState()
     val lastReadPage by viewModel.lastReadPage.collectAsState()
     val surahList by viewModel.surahs.collectAsState()
+    val currentTheme by viewModel.theme.collectAsState()
+    val isDark = currentTheme == "Dark"
     var selectedTab by remember { mutableStateOf(0) } // 0 for Surah, 1 for Para
 
     Scaffold(
@@ -86,13 +88,13 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .shadow(2.dp, RoundedCornerShape(12.dp))
-                                .background(White, RoundedCornerShape(12.dp)),
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Default.MenuBook, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("কুরআন", fontWeight = FontWeight.Bold, color = DarkText, fontSize = 20.sp)
+                        Text("কুরআন", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
@@ -104,16 +106,20 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Dark Mode toggle */ }) {
-                        Icon(Icons.Outlined.DarkMode, contentDescription = "Dark Mode", tint = GrayText)
+                    IconButton(onClick = { viewModel.toggleTheme() }) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Filled.LightMode else Icons.Outlined.DarkMode,
+                            contentDescription = if (isDark) "Light Mode" else "Dark Mode",
+                            tint = if (isDark) OrangeAccent else GrayText
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = OffWhite,
+                    containerColor = MaterialTheme.colorScheme.background,
                 )
             )
         },
-        containerColor = OffWhite
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         BoxWithConstraints(
             modifier = Modifier
@@ -222,7 +228,7 @@ fun SearchSection(onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .shadow(6.dp, androidx.compose.foundation.shape.CircleShape)
-            .background(White, androidx.compose.foundation.shape.CircleShape)
+            .background(MaterialTheme.colorScheme.surface, androidx.compose.foundation.shape.CircleShape)
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
@@ -255,7 +261,7 @@ fun QuickAccessSection(
             modifier = Modifier
                 .weight(1.1f)
                 .shadow(2.dp, RoundedCornerShape(100.dp))
-                .background(White, RoundedCornerShape(100.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                 .clickable { onSurahClick(lastReadSurah) }
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
@@ -271,7 +277,7 @@ fun QuickAccessSection(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                     Text("সর্বশেষ পঠিত", color = GrayText, fontSize = 9.sp, lineHeight = 10.sp, maxLines = 1)
-                    Text(lastReadSurahName, color = DarkText, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, lineHeight = 12.sp)
+                    Text(lastReadSurahName, color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, lineHeight = 12.sp)
                 }
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GrayText, modifier = Modifier.size(16.dp))
             }
@@ -282,7 +288,7 @@ fun QuickAccessSection(
             modifier = Modifier
                 .weight(1f)
                 .shadow(2.dp, RoundedCornerShape(100.dp))
-                .background(White, RoundedCornerShape(100.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                 .padding(4.dp)
         ) {
             Row(
@@ -346,7 +352,7 @@ fun QuickSurahPills(
             modifier = Modifier
                 .fillMaxHeight()
                 .shadow(2.dp, RoundedCornerShape(100.dp))
-                .background(White, RoundedCornerShape(100.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                 .clickable { onSurahClick(18) } // Surah Kahf
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
@@ -356,7 +362,7 @@ fun QuickSurahPills(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(verticalArrangement = Arrangement.Center) {
                     Text("জুমার আমল", color = OrangeAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, lineHeight = 10.sp)
-                    Text("সূরা কাহফ", color = DarkText, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 12.sp)
+                    Text("সূরা কাহফ", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 12.sp)
                 }
             }
         }
@@ -365,7 +371,7 @@ fun QuickSurahPills(
             modifier = Modifier
                 .fillMaxHeight()
                 .shadow(2.dp, RoundedCornerShape(100.dp))
-                .background(White, RoundedCornerShape(100.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                 .clickable { onAyatulKursiClick() } // Ayatul Kursi click action
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
@@ -373,7 +379,7 @@ fun QuickSurahPills(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(6.dp).background(BlueDot, RoundedCornerShape(50)))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("আয়াতুল কুরসী", color = DarkText, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 12.sp)
+                Text("আয়াতুল কুরসী", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 12.sp)
             }
         }
         
@@ -381,7 +387,7 @@ fun QuickSurahPills(
             modifier = Modifier
                 .fillMaxHeight()
                 .shadow(2.dp, RoundedCornerShape(100.dp))
-                .background(White, RoundedCornerShape(100.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                 .clickable { onSurahClick(67) } // Surah Mulk
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
@@ -389,7 +395,7 @@ fun QuickSurahPills(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(6.dp).background(GreenDot, RoundedCornerShape(50)))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("সূরা মুলক", color = DarkText, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 12.sp)
+                Text("সূরা মুলক", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 12.sp)
             }
         }
     }
@@ -603,7 +609,7 @@ fun SurahCard(
     Box(
         modifier = modifier
             .shadow(1.dp, RoundedCornerShape(16.dp))
-            .background(White, RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
             .clickable { onClick() }
             .padding(12.dp)
     ) {
@@ -625,7 +631,7 @@ fun SurahCard(
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                     Text(
                         title, 
-                        color = DarkText, 
+                        color = MaterialTheme.colorScheme.onSurface, 
                         fontWeight = FontWeight.Bold, 
                         fontSize = 14.sp, 
                         maxLines = 1, 

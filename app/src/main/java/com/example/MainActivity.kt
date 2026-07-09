@@ -20,18 +20,30 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.getValue
 import com.example.ui.components.BottomNavBar
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.remember
+
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     installSplashScreen()
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     setContent {
-      MyApplicationTheme {
+      val appContainer = remember { (application as QuranApplication).container }
+      val themeState by appContainer.settingsRepository.themeFlow.collectAsState(initial = "Light")
+      val isSystemDark = isSystemInDarkTheme()
+      val darkTheme = when (themeState) {
+          "Dark" -> true
+          "Light" -> false
+          else -> isSystemDark
+      }
+
+      MyApplicationTheme(darkTheme = darkTheme) {
         Surface(
           modifier = Modifier.fillMaxSize(),
           color = MaterialTheme.colorScheme.background
         ) {
-          val appContainer = (application as QuranApplication).container
           val viewModelFactory = AppViewModelFactory(
             quranRepository = appContainer.quranRepository,
             settingsRepository = appContainer.settingsRepository,

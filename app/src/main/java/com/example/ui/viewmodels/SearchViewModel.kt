@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.SearchMatch
 import com.example.data.repository.QuranRepository
+import com.example.data.repository.SettingsRepository
 import com.example.ui.state.UiState
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,10 +13,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SearchViewModel(
-    private val repository: QuranRepository
+    private val repository: QuranRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -23,6 +27,13 @@ class SearchViewModel(
 
     private val _uiState = MutableStateFlow<UiState<List<SearchMatch>>>(UiState.Success(emptyList()))
     val uiState: StateFlow<UiState<List<SearchMatch>>> = _uiState.asStateFlow()
+
+    val theme: StateFlow<String> = settingsRepository.themeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "Light"
+        )
 
     init {
         setupSearch()

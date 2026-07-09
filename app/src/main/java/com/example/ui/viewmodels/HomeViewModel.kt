@@ -32,6 +32,20 @@ class HomeViewModel(
             initialValue = 1
         )
 
+    val theme: StateFlow<String> = settingsRepository.themeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "Light"
+        )
+
+    fun toggleTheme() {
+        viewModelScope.launch {
+            val nextTheme = if (theme.value == "Dark") "Light" else "Dark"
+            settingsRepository.setTheme(nextTheme)
+        }
+    }
+
     private val _surahs = MutableStateFlow<List<Surah>>(emptyList())
     val surahs: StateFlow<List<Surah>> = _surahs
 
