@@ -33,9 +33,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.QuranData
 import com.example.data.model.SearchMatch
+import com.example.data.model.Surah
 import com.example.ui.state.UiState
 import com.example.ui.theme.PrimaryGreen
 import com.example.ui.viewmodels.SearchViewModel
+import com.example.ui.viewmodels.SearchResultItemType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,15 +187,30 @@ fun SearchScreen(
                                             modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
                                         )
                                     }
-                                    items(matches) { match ->
-                                        SearchResultItem(
-                                            match = match, 
-                                            searchQuery = searchQuery,
-                                            isDark = isDark,
-                                            onClick = {
-                                                onNavigateToSurah(match.surah.number)
+                                    items(matches) { item ->
+                                        when (item) {
+                                            is SearchResultItemType.SurahItem -> {
+                                                SurahSearchResultItem(
+                                                    surah = item.surah,
+                                                    banglaName = item.banglaName,
+                                                    banglaMeaning = item.banglaMeaning,
+                                                    isDark = isDark,
+                                                    onClick = {
+                                                        onNavigateToSurah(item.surah.number)
+                                                    }
+                                                )
                                             }
-                                        )
+                                            is SearchResultItemType.AyahItem -> {
+                                                SearchResultItem(
+                                                    match = item.match, 
+                                                    searchQuery = searchQuery,
+                                                    isDark = isDark,
+                                                    onClick = {
+                                                        onNavigateToSurah(item.match.surah.number)
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -541,6 +558,112 @@ fun highlightText(text: String, query: String, highlightColor: Color): Annotated
             }
             
             startIdx = idx + query.length
+        }
+    }
+}
+
+@Composable
+fun SurahSearchResultItem(
+    surah: Surah,
+    banglaName: String,
+    banglaMeaning: String,
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(2.dp, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDark) Color(0xFF1E293B) else Color.White
+        ),
+        border = BorderStroke(
+            1.dp, 
+            PrimaryGreen.copy(alpha = 0.25f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Surah Number Badge with a distinctive style
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(PrimaryGreen.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = surah.number.toBengaliNumerals(),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryGreen
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "সূরা $banglaName",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 16.sp
+                        )
+                        // A distinctive tag/badge indicating "Surah"
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(PrimaryGreen)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "সূরা",
+                                fontSize = 10.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${surah.englishName} • $banglaMeaning",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    val banglaRevelation = if (surah.revelationType.lowercase() == "meccan") "মাক্কী" else "মাদানী"
+                    Text(
+                        text = banglaRevelation,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = PrimaryGreen
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${surah.numberOfAyahs.toBengaliNumerals()} আয়াত",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
         }
     }
 }

@@ -60,6 +60,9 @@ class AppViewModelFactory(
             modelClass.isAssignableFrom(MushafViewerViewModel::class.java) -> {
                 MushafViewerViewModel(mushafRepository) as T
             }
+            modelClass.isAssignableFrom(SplashViewModel::class.java) -> {
+                SplashViewModel(quranRepository) as T
+            }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
     }

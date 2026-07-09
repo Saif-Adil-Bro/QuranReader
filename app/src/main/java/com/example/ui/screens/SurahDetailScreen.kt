@@ -334,7 +334,9 @@ fun SurahDetailScreen(
                                         onPlayAyah = { viewModel.togglePlayPause(it, surahNumber) },
                                         arabicFontName = arabicFontName,
                                         arabicFontSize = arabicFontSize,
-                                        currentPlayingWordUrl = currentPlayingWordUrl
+                                        currentPlayingWordUrl = currentPlayingWordUrl,
+                                        currentPlayingAyahNumber = currentPlayingAyahNumber,
+                                        isPlaying = isPlaying
                                     )
                                 }
                             }
@@ -411,6 +413,7 @@ fun SurahDetailScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HeaderCard(
     title: String, 
@@ -440,7 +443,11 @@ fun HeaderCard(
             }
             Spacer(modifier = Modifier.height(16.dp))
             
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Box(
                     modifier = Modifier
                         .shadow(2.dp, RoundedCornerShape(100.dp))
@@ -1389,15 +1396,18 @@ fun MushafPageView(
     onPlayAyah: (CombinedAyah) -> Unit,
     arabicFontName: String = "Amiri Quran",
     arabicFontSize: Float = 28f,
-    currentPlayingWordUrl: String? = null
+    currentPlayingWordUrl: String? = null,
+    currentPlayingAyahNumber: Int? = null,
+    isPlaying: Boolean = false
 ) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     
     // Build a single, unified annotated string for all ayahs of this page to ensure continuous flow
-    val annotatedString = remember(ayahs, surahNumber, currentPlayingWordUrl) {
+    val annotatedString = remember(ayahs, surahNumber, currentPlayingWordUrl, currentPlayingAyahNumber, isPlaying) {
         buildAnnotatedString {
             ayahs.forEachIndexed { index, ayah ->
                 val ayahStart = length
+                val isAyahPlaying = isPlaying && currentPlayingAyahNumber == ayah.numberInSurah
                 
                 if (ayah.words.isNotEmpty()) {
                     val processedWords = mutableListOf<ProcessedWord>()
@@ -1473,6 +1483,17 @@ fun MushafPageView(
                 }
                 
                 val ayahEnd = length
+                
+                if (isAyahPlaying) {
+                    addStyle(
+                        style = SpanStyle(
+                            background = PrimaryGreen.copy(alpha = 0.12f)
+                        ),
+                        start = ayahStart,
+                        end = ayahEnd
+                    )
+                }
+                
                 // Add base ayah_index annotation covering the entire ayah text, circle, and spacing
                 addStringAnnotation(
                     tag = "ayah_index",

@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -37,6 +38,27 @@ import com.example.ui.screens.mushaf.MushafTabScreen
 import com.example.ui.screens.mushaf.MushafViewerScreen
 import com.example.ui.viewmodels.MushafSelectionViewModel
 import com.example.ui.viewmodels.MushafViewerViewModel
+import com.example.ui.viewmodels.SplashViewModel
+import com.example.ui.viewmodels.SplashLoadingState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun AppNavGraph(
@@ -47,11 +69,15 @@ fun AppNavGraph(
     NavHost(navController = navController, startDestination = "splash", modifier = modifier) {
         
         composable("splash") {
-            SplashScreen {
-                navController.navigate("home") {
-                    popUpTo("splash") { inclusive = true }
+            val splashViewModel: SplashViewModel = viewModel(factory = viewModelFactory)
+            SplashScreen(
+                viewModel = splashViewModel,
+                onSplashComplete = {
+                    navController.navigate("home") {
+                        popUpTo("splash") { inclusive = true }
+                    }
                 }
-            }
+            )
         }
 
         composable("mushaf") {
@@ -206,21 +232,101 @@ fun AppNavGraph(
 }
 
 @Composable
-fun SplashScreen(onSplashComplete: () -> Unit) {
-    LaunchedEffect(Unit) {
-        delay(1500) // 1.5 second delay
-        onSplashComplete()
+fun SplashScreen(
+    viewModel: SplashViewModel,
+    onSplashComplete: () -> Unit
+) {
+    val loadingState by viewModel.loadingState.collectAsState()
+    
+    LaunchedEffect(loadingState) {
+        if (loadingState is SplashLoadingState.Complete) {
+            onSplashComplete()
+        }
     }
     
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF051210)), // Deep elegant dark background
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "Quran Reader",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Elegant pulsing logo or icon
+            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+            val pulseScale by infiniteTransition.animateFloat(
+                initialValue = 0.95f,
+                targetValue = 1.05f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1200, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "scale"
+            )
+            
+            Box(
+                modifier = Modifier
+                    .scale(pulseScale)
+                    .size(96.dp)
+                    .background(Color(0xFF10B981).copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MenuBook,
+                    contentDescription = null,
+                    tint = Color(0xFF10B981),
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text(
+                text = "Quran Reader",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF10B981)
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "কুরআন রিডার",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF6B7280)
+            )
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // Dynamic loading animation (Phase 2: Loading State)
+            AnimatedVisibility(
+                visible = loadingState is SplashLoadingState.Loading,
+                enter = fadeIn(animationSpec = tween(500)),
+                exit = fadeOut(animationSpec = tween(500))
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = Color(0xFF10B981),
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(36.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "কুরআন প্রস্তুত করা হচ্ছে...",
+                        fontSize = 14.sp,
+                        color = Color(0xFF34D399),
+                        fontWeight = FontWeight.Light
+                    )
+                }
+            }
+        }
     }
 }
