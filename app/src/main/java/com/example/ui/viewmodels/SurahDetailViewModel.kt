@@ -2,6 +2,8 @@ package com.example.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.local.dao.BookmarkDao
+import com.example.data.local.entity.BookmarkEntity
 import com.example.data.model.CombinedAyah
 import com.example.data.repository.QuranRepository
 import com.example.data.repository.SettingsRepository
@@ -26,7 +28,8 @@ class SurahDetailViewModel(
     private val repository: QuranRepository,
     private val settingsRepository: SettingsRepository,
     private val aiRepository: AiRepository,
-    val audioRepository: AudioRepository
+    val audioRepository: AudioRepository,
+    private val bookmarkDao: BookmarkDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState<List<CombinedAyah>>>(UiState.Loading)
@@ -86,6 +89,34 @@ class SurahDetailViewModel(
 
     private val _playbackMode = MutableStateFlow(PlaybackMode.SURAH)
     val playbackMode: StateFlow<PlaybackMode> = _playbackMode.asStateFlow()
+
+    val bookmarks: StateFlow<List<BookmarkEntity>> = bookmarkDao.getAllBookmarks()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun toggleBookmark(ayah: CombinedAyah, defaultSurahNumber: Int) {
+        viewModelScope.launch {
+            val existing = bookmarkDao.getBookmark("AYAH", ayah.number)
+            if (existing != null) {
+                bookmarkDao.deleteBookmark(existing)
+            } else {
+                val sNum = if (ayah.surahNumber > 0) ayah.surahNumber else defaultSurahNumber
+                val surahPair = com.example.data.QuranData.surahNames.find { it.first == sNum }
+                val surahName = surahPair?.second?.first ?: "সুরা $sNum"
+                val bookmarkName = "$surahName: আয়াত ${ayah.numberInSurah}"
+                bookmarkDao.insertBookmark(
+                    BookmarkEntity(
+                        type = "AYAH",
+                        referenceId = ayah.number,
+                        name = bookmarkName
+                    )
+                )
+            }
+        }
+    }
 
     fun setPlaybackMode(mode: PlaybackMode) {
         _playbackMode.value = mode

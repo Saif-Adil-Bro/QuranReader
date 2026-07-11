@@ -56,10 +56,16 @@ class MainActivity : ComponentActivity() {
           val navController = rememberNavController()
           val navBackStackEntry by navController.currentBackStackEntryAsState()
           val currentRoute = navBackStackEntry?.destination?.route
+          val visibleEntries by navController.visibleEntries.collectAsState()
+          val isSplashVisible = visibleEntries.any { it.destination.route == "splash" }
 
           Scaffold(
             bottomBar = {
-              BottomNavBar(navController = navController, currentRoute = currentRoute)
+              BottomNavBar(
+                navController = navController,
+                currentRoute = currentRoute,
+                isSplashVisible = isSplashVisible
+              )
             }
           ) { innerPadding ->
             AppNavGraph(

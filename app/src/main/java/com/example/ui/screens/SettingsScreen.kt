@@ -613,8 +613,15 @@ fun BookmarkDialogContent(viewModel: SettingsViewModel) {
                                 color = DarkText
                             )
                             Spacer(modifier = Modifier.height(2.dp))
+                            val displayType = when (bookmark.type) {
+                                "SURAH" -> "সুরা"
+                                "PAGE" -> "পৃষ্ঠা"
+                                "JUZ" -> "পারা"
+                                "AYAH" -> "আয়াত"
+                                else -> bookmark.type
+                            }
                             Text(
-                                text = "প্রকার: ${bookmark.type} • আইডি: ${bookmark.referenceId}",
+                                text = "প্রকার: $displayType • আইডি: ${bookmark.referenceId}",
                                 fontSize = 11.sp,
                                 color = GrayText
                             )

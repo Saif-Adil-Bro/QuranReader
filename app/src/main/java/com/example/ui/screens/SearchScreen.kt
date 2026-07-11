@@ -49,6 +49,7 @@ fun SearchScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val theme by viewModel.theme.collectAsState()
+    val arabicFont by viewModel.arabicFont.collectAsState()
     val focusManager = LocalFocusManager.current
 
     val isDark = theme == "Dark"
@@ -205,6 +206,9 @@ fun SearchScreen(
                                                     match = item.match, 
                                                     searchQuery = searchQuery,
                                                     isDark = isDark,
+                                                    arabicText = item.arabicText,
+                                                    banglaText = item.banglaText,
+                                                    arabicFontName = arabicFont,
                                                     onClick = {
                                                         onNavigateToSurah(item.match.surah.number)
                                                     }
@@ -416,6 +420,9 @@ fun SearchResultItem(
     match: SearchMatch, 
     searchQuery: String, 
     isDark: Boolean,
+    arabicText: String? = null,
+    banglaText: String? = null,
+    arabicFontName: String = "Amiri Quran",
     onClick: () -> Unit
 ) {
     // Look up Bengali Surah Name & Translation Meaning from local QuranData mapping
@@ -455,7 +462,7 @@ fun SearchResultItem(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = match.surah.number.toString(),
+                        text = match.surah.number.toBengaliNumerals(),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryGreen
@@ -488,7 +495,7 @@ fun SearchResultItem(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "আয়াত ${match.numberInSurah}",
+                        text = "আয়াত ${match.numberInSurah.toBengaliNumerals()}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryGreen
@@ -508,20 +515,43 @@ fun SearchResultItem(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Verse Text with Keyword Highlighting!
-            val highlightedText = highlightText(
-                text = match.text,
-                query = searchQuery,
-                highlightColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706) // Soft warm gold/amber accent for high readability
-            )
+            // Arabic Text Section (if available)
+            if (!arabicText.isNullOrBlank()) {
+                val highlightedArabic = highlightText(
+                    text = arabicText,
+                    query = searchQuery,
+                    highlightColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+                )
+                Text(
+                    text = highlightedArabic,
+                    fontFamily = com.example.ui.theme.getArabicFont(arabicFontName),
+                    fontSize = 24.sp,
+                    lineHeight = 38.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    textAlign = TextAlign.End
+                )
+            }
 
-            Text(
-                text = highlightedText,
-                fontSize = 14.sp,
-                lineHeight = 22.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                overflow = TextOverflow.Ellipsis
-            )
+            // Bengali Translation Section with Keyword Highlighting!
+            val displayText = banglaText ?: match.text
+            if (displayText.isNotBlank()) {
+                val highlightedText = highlightText(
+                    text = displayText,
+                    query = searchQuery,
+                    highlightColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706) // Soft warm gold/amber accent for high readability
+                )
+
+                Text(
+                    text = highlightedText,
+                    fontSize = 14.sp,
+                    lineHeight = 22.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

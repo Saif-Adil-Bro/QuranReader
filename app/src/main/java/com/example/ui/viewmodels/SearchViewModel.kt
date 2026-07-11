@@ -27,7 +27,9 @@ sealed class SearchResultItemType {
     ) : SearchResultItemType()
 
     data class AyahItem(
-        val match: SearchMatch
+        val match: SearchMatch,
+        val arabicText: String? = null,
+        val banglaText: String? = null
     ) : SearchResultItemType()
 }
 
@@ -47,6 +49,13 @@ class SearchViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = "Light"
+        )
+
+    val arabicFont: StateFlow<String> = settingsRepository.arabicFontNameFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "Amiri Quran"
         )
 
     init {
@@ -92,6 +101,16 @@ class SearchViewModel(
             return Pair(surahNum, ayahNum)
         }
         return null
+    }
+
+    private fun containsArabic(text: String): Boolean {
+        return text.any { char ->
+            val block = Character.UnicodeBlock.of(char)
+            block == Character.UnicodeBlock.ARABIC ||
+            block == Character.UnicodeBlock.ARABIC_PRESENTATION_FORMS_A ||
+            block == Character.UnicodeBlock.ARABIC_PRESENTATION_FORMS_B ||
+            block == Character.UnicodeBlock.ARABIC_SUPPLEMENT
+        }
     }
 
     private fun matchesSurah(surah: Surah, query: String, banglaName: String, banglaMeaning: String): Boolean {
@@ -191,7 +210,11 @@ class SearchViewModel(
                                 surah = matchedSurah,
                                 numberInSurah = matchedAyah.numberInSurah
                             )
-                            results.add(SearchResultItemType.AyahItem(searchMatch))
+                            results.add(SearchResultItemType.AyahItem(
+                                match = searchMatch,
+                                arabicText = matchedAyah.arabicText,
+                                banglaText = matchedAyah.bengaliText
+                            ))
                         }
                     }
                 } else {
@@ -226,9 +249,32 @@ class SearchViewModel(
 
                     // 3. Search verses via API for text matching
                     try {
-                        val response = repository.searchQuran(query)
+                        val isArabicQuery = containsArabic(query)
+                        val response = if (isArabicQuery) {
+                            repository.searchQuran(query, "quran-uthmani")
+                        } else {
+                            repository.searchQuran(query)
+                        }
+
+                        // Optimize loading the translations/texts by grouping matches by surah
+                        val uniqueSurahNumbers = response.matches.map { it.surah.number }.distinct()
+                        val surahDetailsMap = mutableMapOf<Int, List<com.example.data.model.CombinedAyah>>()
+                        uniqueSurahNumbers.forEach { surahNum ->
+                            try {
+                                surahDetailsMap[surahNum] = repository.getSurahDetailsCombined(surahNum)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+
                         response.matches.forEach { match ->
-                            results.add(SearchResultItemType.AyahItem(match))
+                            val details = surahDetailsMap[match.surah.number]
+                            val combinedAyah = details?.find { it.numberInSurah == match.numberInSurah }
+                            results.add(SearchResultItemType.AyahItem(
+                                match = match,
+                                arabicText = combinedAyah?.arabicText,
+                                banglaText = combinedAyah?.bengaliText ?: if (isArabicQuery) "" else match.text
+                            ))
                         }
                     } catch (e: Exception) {
                         if (results.isEmpty()) {

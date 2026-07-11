@@ -89,6 +89,7 @@ data class CombinedAyah(
     val numberInSurah: Int, // Ayah number within the Surah
     val page: Int, // Page number of the Ayah
     val juz: Int = 0, // Juz number of the Ayah
+    val surahNumber: Int = 0, // Surah number of the Ayah
     val arabicText: String,
     val bengaliText: String,
     val tafsirText: String? = null,

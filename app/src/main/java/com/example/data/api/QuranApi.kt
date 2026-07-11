@@ -63,4 +63,13 @@ interface QuranApi {
     suspend fun searchQuran(
         @Path("keyword") keyword: String
     ): ApiResponse<com.example.data.model.SearchResponse>
+
+    /**
+     * Search the Quran by keyword in a specific edition.
+     */
+    @GET("search/{keyword}/all/{edition}")
+    suspend fun searchQuranWithEdition(
+        @Path("keyword") keyword: String,
+        @Path("edition") edition: String
+    ): ApiResponse<com.example.data.model.SearchResponse>
 }

@@ -31,7 +31,7 @@ class AppViewModelFactory(
                 QuranListViewModel(quranRepository) as T
             }
             modelClass.isAssignableFrom(SurahDetailViewModel::class.java) -> {
-                SurahDetailViewModel(quranRepository, settingsRepository, aiRepository, audioRepository) as T
+                SurahDetailViewModel(quranRepository, settingsRepository, aiRepository, audioRepository, bookmarkDao) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
                 SettingsViewModel(settingsRepository, bookmarkDao, quranRepository, audioRepository) as T

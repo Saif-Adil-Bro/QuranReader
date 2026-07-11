@@ -50,7 +50,8 @@ sealed class BottomNavItem(
 @Composable
 fun BottomNavBar(
     navController: NavController,
-    currentRoute: String?
+    currentRoute: String?,
+    isSplashVisible: Boolean = false
 ) {
     val items = listOf(
         BottomNavItem.Home,
@@ -61,7 +62,7 @@ fun BottomNavBar(
 
     // The bottom nav bar should only be visible on top-level screens.
     // If you have detail screens, you might want to hide it. We can handle it externally or here.
-    val isBottomNavItem = items.any { it.route == currentRoute } || currentRoute == "settings"
+    val isBottomNavItem = (items.any { it.route == currentRoute } || currentRoute == "settings") && !isSplashVisible
 
     if (isBottomNavItem) {
         Surface(

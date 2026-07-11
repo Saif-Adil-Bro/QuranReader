@@ -82,6 +82,7 @@ fun SurahDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val showTranslation by viewModel.showTranslation.collectAsState()
+    val bookmarkList by viewModel.bookmarks.collectAsState()
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val bengaliFontSize by viewModel.bengaliFontSize.collectAsState()
     val arabicFontName by viewModel.arabicFontName.collectAsState()
@@ -346,6 +347,7 @@ fun SurahDetailScreen(
                                 key = { it.number }
                             ) { ayah ->
                                 val isAyahPlaying = isPlaying && currentPlayingAyahNumber == ayah.numberInSurah
+                                val isBookmarked = bookmarkList.any { it.type == "AYAH" && it.referenceId == ayah.number }
                                 AyahCard(
                                     ayah = ayah,
                                     viewMode = viewMode,
@@ -357,7 +359,9 @@ fun SurahDetailScreen(
                                     arabicFontSize = arabicFontSize,
                                     bengaliFontSize = bengaliFontSize,
                                     arabicFontName = arabicFontName,
-                                    currentPlayingWordUrl = currentPlayingWordUrl
+                                    currentPlayingWordUrl = currentPlayingWordUrl,
+                                    isBookmarked = isBookmarked,
+                                    onToggleBookmark = { viewModel.toggleBookmark(ayah, surahNumber) }
                                 )
                             }
                         }
@@ -614,7 +618,9 @@ fun AyahCard(
     arabicFontSize: Float,
     bengaliFontSize: Float,
     arabicFontName: String = "Amiri Quran",
-    currentPlayingWordUrl: String? = null
+    currentPlayingWordUrl: String? = null,
+    isBookmarked: Boolean = false,
+    onToggleBookmark: () -> Unit = {}
 ) {
     var showTafsirDialog by remember { mutableStateOf(false) }
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
@@ -684,8 +690,12 @@ fun AyahCard(
                         Text("পারা ${ayah.juz} • পৃষ্ঠা ${ayah.page}", color = PrimaryGreen, fontSize = 10.sp)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { /* TODO: Bookmark */ }) {
-                            Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Bookmark", tint = GrayText)
+                        IconButton(onClick = onToggleBookmark) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = "Bookmark",
+                                tint = if (isBookmarked) PrimaryGreen else GrayText
+                            )
                         }
                         IconButton(onClick = { showTafsirDialog = true }) {
                             Icon(Icons.Outlined.Book, contentDescription = "Tafsir", tint = GrayText)
@@ -718,8 +728,12 @@ fun AyahCard(
                         Text("পারা ${ayah.juz} • পৃষ্ঠা ${ayah.page}", color = PrimaryGreen, fontSize = 10.sp)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { /* TODO: Bookmark */ }) {
-                            Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Bookmark", tint = GrayText)
+                        IconButton(onClick = onToggleBookmark) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = "Bookmark",
+                                tint = if (isBookmarked) PrimaryGreen else GrayText
+                            )
                         }
                         IconButton(onClick = { showTafsirDialog = true }) {
                             Icon(Icons.Outlined.Book, contentDescription = "Tafsir", tint = GrayText)

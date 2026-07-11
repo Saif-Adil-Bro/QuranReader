@@ -174,6 +174,7 @@ class QuranRepository(
                         numberInSurah = arabicAyah.numberInSurah,
                         page = arabicAyah.page,
                         juz = arabicAyah.juz,
+                        surahNumber = arabicAyah.surah?.number ?: surahNumber,
                         arabicText = processArabicText(arabicAyah, surahNumber),
                         bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
                         tafsirText = tafsir,
@@ -240,6 +241,7 @@ class QuranRepository(
                             numberInSurah = arabicAyah.numberInSurah,
                             page = arabicAyah.page,
                             juz = arabicAyah.juz,
+                            surahNumber = arabicAyah.surah?.number ?: 0,
                             arabicText = processArabicText(arabicAyah),
                             bengaliText = "", // Hafezi mode doesn't need translation
                             tafsirText = tafsir,
@@ -314,6 +316,7 @@ class QuranRepository(
                             numberInSurah = arabicAyah.numberInSurah,
                             page = arabicAyah.page,
                             juz = arabicAyah.juz,
+                            surahNumber = arabicAyah.surah?.number ?: 0,
                             arabicText = processArabicText(arabicAyah),
                             bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
                             tafsirText = tafsir,
@@ -345,9 +348,9 @@ class QuranRepository(
     /**
      * Searches the Quran by a keyword
      */
-    suspend fun searchQuran(keyword: String): com.example.data.model.SearchResponse {
+    suspend fun searchQuran(keyword: String, edition: String = "bn.bengali"): com.example.data.model.SearchResponse {
         return withContext(Dispatchers.IO) {
-            val response = api.searchQuran(keyword)
+            val response = api.searchQuranWithEdition(keyword, edition)
             if (response.code == 200) {
                 response.data
             } else {
