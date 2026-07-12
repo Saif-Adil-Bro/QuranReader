@@ -55,6 +55,9 @@ class HafeziModeViewModel(
     val theme: StateFlow<String> = settingsRepository.themeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Light")
 
+    val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     private var currentRepeatIteration = 0
     private var playlist: List<CombinedAyah> = emptyList()
     private var currentPlaylistIndex = 0
@@ -119,6 +122,12 @@ class HafeziModeViewModel(
     fun setTheme(theme: String) {
         viewModelScope.launch {
             settingsRepository.setTheme(theme)
+        }
+    }
+
+    fun setShowWaqfSigns(show: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShowWaqfSigns(show)
         }
     }
 

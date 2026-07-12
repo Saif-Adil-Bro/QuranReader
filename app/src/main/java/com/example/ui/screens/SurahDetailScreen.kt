@@ -55,6 +55,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.launch
 import com.example.data.model.CombinedAyah
+import com.example.data.model.removeWaqfSigns
 import com.example.ui.state.UiState
 import com.example.ui.theme.*
 import com.example.ui.viewmodels.SurahDetailViewModel
@@ -87,6 +88,7 @@ fun SurahDetailScreen(
     val bengaliFontSize by viewModel.bengaliFontSize.collectAsState()
     val arabicFontName by viewModel.arabicFontName.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
+    val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
     
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentPlayingAyahNumber by viewModel.currentPlayingAyahNumber.collectAsState()
@@ -220,10 +222,26 @@ fun SurahDetailScreen(
                     var searchQuery by remember { mutableStateOf("") }
                     
                     val isStandaloneAyatAlKursi = surahNumber == 2 && initialAyah == 255
-                    val displayedData = if (isStandaloneAyatAlKursi) {
+                    val rawDisplayedData = if (isStandaloneAyatAlKursi) {
                         state.data.filter { it.numberInSurah == initialAyah }
                     } else {
                         state.data
+                    }
+                    val displayedData = remember(rawDisplayedData, showWaqfSigns) {
+                        if (showWaqfSigns) {
+                            rawDisplayedData
+                        } else {
+                            rawDisplayedData.map { ayah ->
+                                ayah.copy(
+                                    arabicText = ayah.arabicText.removeWaqfSigns(),
+                                    words = ayah.words.map { word ->
+                                        word.copy(
+                                            textUthmani = word.textUthmani?.removeWaqfSigns()
+                                        )
+                                    }
+                                )
+                            }
+                        }
                     }
                     
                     LaunchedEffect(displayedData) {
@@ -398,6 +416,8 @@ fun SurahDetailScreen(
                 ReaderSettingsBottomSheetContent(
                     showTranslation = showTranslation,
                     onShowTranslationToggle = { viewModel.toggleTranslation() },
+                    showWaqfSigns = showWaqfSigns,
+                    onShowWaqfSignsToggle = { viewModel.setShowWaqfSigns(it) },
                     arabicFontSize = arabicFontSize,
                     onArabicFontSizeChange = { viewModel.setArabicFontSize(it) },
                     bengaliFontSize = bengaliFontSize,
@@ -1138,6 +1158,8 @@ fun PlayerBottomSheetContent(
 fun ReaderSettingsBottomSheetContent(
     showTranslation: Boolean,
     onShowTranslationToggle: (Boolean) -> Unit,
+    showWaqfSigns: Boolean = true,
+    onShowWaqfSignsToggle: (Boolean) -> Unit = {},
     arabicFontSize: Float,
     onArabicFontSizeChange: (Float) -> Unit,
     bengaliFontSize: Float,
@@ -1191,6 +1213,31 @@ fun ReaderSettingsBottomSheetContent(
             Switch(
                 checked = showTranslation,
                 onCheckedChange = onShowTranslationToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = White,
+                    checkedTrackColor = PrimaryGreen,
+                    uncheckedThumbColor = GrayText,
+                    uncheckedTrackColor = OffWhite
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Waqf Signs Toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "থামার চিহ্ন প্রদর্শন (ম, জ, ছলে, ইত্যাদি)",
+                fontSize = 16.sp,
+                color = DarkText
+            )
+            Switch(
+                checked = showWaqfSigns,
+                onCheckedChange = onShowWaqfSignsToggle,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = White,
                     checkedTrackColor = PrimaryGreen,

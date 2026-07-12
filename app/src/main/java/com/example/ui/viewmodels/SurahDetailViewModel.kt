@@ -90,6 +90,13 @@ class SurahDetailViewModel(
             initialValue = "quran-uthmani"
         )
 
+    val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
     // Playback state and Mode
     val isPlaying: StateFlow<Boolean> = audioRepository.isPlaying
     val currentPlayingAyahNumber: StateFlow<Int?> = audioRepository.currentPlayingAyahNumber
@@ -225,6 +232,12 @@ class SurahDetailViewModel(
     fun toggleTranslation() {
         viewModelScope.launch {
             settingsRepository.setShowTranslation(!showTranslation.value)
+        }
+    }
+
+    fun setShowWaqfSigns(show: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShowWaqfSigns(show)
         }
     }
 

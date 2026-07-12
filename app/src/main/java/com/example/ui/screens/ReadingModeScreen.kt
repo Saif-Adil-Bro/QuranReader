@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CombinedAyah
+import com.example.data.model.removeWaqfSigns
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.ReadingModeViewModel
@@ -40,6 +41,7 @@ fun ReadingModeScreen(
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
+    val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
 
     var showSettings by remember { mutableStateOf(false) }
 
@@ -142,10 +144,11 @@ fun ReadingModeScreen(
                             ) {
                                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                     val arabicFont = getArabicFont("") // Amiri Quran by default
-                                    val annotatedString = remember(state.data) {
+                                    val annotatedString = remember(state.data, showWaqfSigns) {
                                         buildAnnotatedString {
                                             state.data.forEachIndexed { index, ayah ->
-                                                append(ayah.arabicText)
+                                                val textToDisplay = if (showWaqfSigns) ayah.arabicText else ayah.arabicText.removeWaqfSigns()
+                                                append(textToDisplay)
                                                 
                                                 val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
                                                 append(" ﴿$numInSurahStr﴾")
@@ -191,6 +194,8 @@ fun ReadingModeScreen(
                     onThemeChange = { viewModel.setTheme(it) },
                     tanzilTextStyle = tanzilTextStyle,
                     onTanzilTextStyleChange = { viewModel.setTanzilTextStyle(it) },
+                    showWaqfSigns = showWaqfSigns,
+                    onShowWaqfSignsToggle = { viewModel.setShowWaqfSigns(it) },
                     topBarContentColor = topBarContentColor,
                     containerColor = containerColor
                 )
@@ -207,6 +212,8 @@ fun ReadingSettingsContent(
     onThemeChange: (String) -> Unit,
     tanzilTextStyle: String,
     onTanzilTextStyleChange: (String) -> Unit,
+    showWaqfSigns: Boolean = true,
+    onShowWaqfSignsToggle: (Boolean) -> Unit = {},
     topBarContentColor: Color,
     containerColor: Color
 ) {
@@ -239,6 +246,31 @@ fun ReadingSettingsContent(
                 activeTrackColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
             )
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Waqf signs toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "থামার চিহ্ন প্রদর্শন (ম, জ, ছলে, ইত্যাদি)",
+                style = MaterialTheme.typography.bodyMedium,
+                color = topBarContentColor
+            )
+            Switch(
+                checked = showWaqfSigns,
+                onCheckedChange = onShowWaqfSignsToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
+                    uncheckedThumbColor = Color.Gray,
+                    uncheckedTrackColor = containerColor.copy(alpha = 0.5f)
+                )
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

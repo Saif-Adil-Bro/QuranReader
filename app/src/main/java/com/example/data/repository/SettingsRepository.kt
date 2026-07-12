@@ -31,6 +31,7 @@ class SettingsRepository(val context: Context) {
     
     // Hafezi Mode Settings
     private val REPEAT_COUNT_KEY = intPreferencesKey("repeat_count")
+    private val SHOW_WAQF_SIGNS_KEY = booleanPreferencesKey("show_waqf_signs")
 
     val showTranslationFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[SHOW_TRANSLATION_KEY] ?: true }
@@ -61,6 +62,9 @@ class SettingsRepository(val context: Context) {
 
     val repeatCountFlow: Flow<Int> = context.dataStore.data
         .map { preferences -> preferences[REPEAT_COUNT_KEY] ?: 1 }
+
+    val showWaqfSignsFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[SHOW_WAQF_SIGNS_KEY] ?: true }
 
     suspend fun setShowTranslation(show: Boolean) {
         context.dataStore.edit { preferences -> preferences[SHOW_TRANSLATION_KEY] = show }
@@ -100,5 +104,9 @@ class SettingsRepository(val context: Context) {
 
     suspend fun setRepeatCount(count: Int) {
         context.dataStore.edit { preferences -> preferences[REPEAT_COUNT_KEY] = count }
+    }
+
+    suspend fun setShowWaqfSigns(show: Boolean) {
+        context.dataStore.edit { preferences -> preferences[SHOW_WAQF_SIGNS_KEY] = show }
     }
 }

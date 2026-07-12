@@ -151,3 +151,21 @@ data class QuranComTranslation(
     @SerializedName("resource_id") val resourceId: Int,
     @SerializedName("text") val text: String
 )
+
+fun String.removeWaqfSigns(): String {
+    val waqfChars = charArrayOf(
+        '\u06D6', // ۖ (صلے)
+        '\u06D7', // ۗ (قلے)
+        '\u06D8', // ۘ (مـ)
+        '\u06D9', // ۙ (لا)
+        '\u06DA', // ۚ (ج)
+        '\u06DB', // ۛ (three dots)
+        '\u06DC', // ۜ (seen)
+        '\u06E2'  // ۢ (high meem isolated)
+    )
+    var cleaned = this
+    for (char in waqfChars) {
+        cleaned = cleaned.replace(char.toString(), "")
+    }
+    return cleaned
+}

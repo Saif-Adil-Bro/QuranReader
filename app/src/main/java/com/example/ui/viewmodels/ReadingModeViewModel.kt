@@ -37,6 +37,9 @@ class ReadingModeViewModel(
     val autoScrollSpeed: StateFlow<Float> = settingsRepository.autoScrollSpeedFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1f)
 
+    val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     fun loadSurah(surahNumber: Int) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
@@ -69,5 +72,9 @@ class ReadingModeViewModel(
 
     fun setAutoScrollSpeed(speed: Float) {
         viewModelScope.launch { settingsRepository.setAutoScrollSpeed(speed) }
+    }
+
+    fun setShowWaqfSigns(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowWaqfSigns(show) }
     }
 }

@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CombinedAyah
+import com.example.data.model.removeWaqfSigns
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.HafeziModeViewModel
@@ -55,6 +56,7 @@ fun HafeziModeScreen(
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val arabicFontName by viewModel.arabicFontName.collectAsState()
     val theme by viewModel.theme.collectAsState()
+    val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
     
     var showSettings by remember { mutableStateOf(false) }
 
@@ -206,7 +208,8 @@ fun HafeziModeScreen(
                         arabicFontSize = arabicFontSize,
                         arabicFontName = arabicFontName,
                         theme = theme,
-                        currentPage = currentPage
+                        currentPage = currentPage,
+                        showWaqfSigns = showWaqfSigns
                     )
                 }
             }
@@ -304,6 +307,31 @@ fun HafeziModeScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Waqf signs toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "থামার চিহ্ন প্রদর্শন (ম, জ, ছলে, ইত্যাদি)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = topBarContentColor
+                        )
+                        Switch(
+                            checked = showWaqfSigns,
+                            onCheckedChange = { viewModel.setShowWaqfSigns(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
+                                uncheckedThumbColor = Color.Gray,
+                                uncheckedTrackColor = containerColor.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     // Font style selector
                     Text(
                         text = "ফন্ট স্টাইল", 
@@ -352,7 +380,8 @@ fun HafeziPageContent(
     arabicFontSize: Float,
     arabicFontName: String,
     theme: String,
-    currentPage: Int
+    currentPage: Int,
+    showWaqfSigns: Boolean = true
 ) {
     val arabicFont = getArabicFont(arabicFontName)
     val firstAyah = ayahs.firstOrNull()
@@ -377,11 +406,12 @@ fun HafeziPageContent(
         ) {
             // Flow the text in Right-to-Left (RTL) mode, completely avoiding bracket layout bugs
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                val annotatedString = remember(ayahs, playingAyahNumber, theme) {
+                val annotatedString = remember(ayahs, playingAyahNumber, theme, showWaqfSigns) {
                     buildAnnotatedString {
                         ayahs.forEachIndexed { index, ayah ->
                             val start = length
-                            append(ayah.arabicText)
+                            val textToDisplay = if (showWaqfSigns) ayah.arabicText else ayah.arabicText.removeWaqfSigns()
+                            append(textToDisplay)
                             
                             // Beautiful unicode ornament brackets for verse numbers
                             val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
