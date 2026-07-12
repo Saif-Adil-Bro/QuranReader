@@ -56,6 +56,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.launch
 import com.example.data.model.CombinedAyah
 import com.example.data.model.removeWaqfSigns
+import com.example.data.model.formatWaqfSigns
 import com.example.ui.state.UiState
 import com.example.ui.theme.*
 import com.example.ui.screens.toBengaliNumerals
@@ -233,7 +234,16 @@ fun SurahDetailScreen(
                     }
                     val displayedData = remember(rawDisplayedData, showWaqfSigns) {
                         if (showWaqfSigns) {
-                            rawDisplayedData
+                            rawDisplayedData.map { ayah ->
+                                ayah.copy(
+                                    arabicText = ayah.arabicText.formatWaqfSigns(),
+                                    words = ayah.words.map { word ->
+                                        word.copy(
+                                            textUthmani = word.textUthmani?.formatWaqfSigns()
+                                        )
+                                    }
+                                )
+                            }
                         } else {
                             rawDisplayedData.map { ayah ->
                                 ayah.copy(
@@ -1179,7 +1189,7 @@ fun ReaderSettingsBottomSheetContent(
     onBengaliFontSizeChange: (Float) -> Unit,
     arabicFontName: String = "Amiri Quran",
     onArabicFontNameChange: (String) -> Unit = {},
-    tanzilTextStyle: String = "quran-uthmani",
+    tanzilTextStyle: String = "quran-simple",
     onTanzilTextStyleChange: (String) -> Unit = {},
     isDownloadingOffline: Boolean,
     downloadProgress: Int,
@@ -1268,7 +1278,7 @@ fun ReaderSettingsBottomSheetContent(
         // Arabic Font Size
         com.example.ui.components.SettingAdjustmentRow(
             label = "আরবি হরফের আকার",
-            valueText = "${arabicFontSize.toInt()} sp".toBengaliNumerals(),
+            valueText = "${arabicFontSize.toInt()}".toBengaliNumerals(),
             onDecrease = {
                 val newSize = (arabicFontSize - 1f).coerceIn(24f, 48f)
                 onArabicFontSizeChange(newSize)
@@ -1284,7 +1294,7 @@ fun ReaderSettingsBottomSheetContent(
         // Bengali Font Size
         com.example.ui.components.SettingAdjustmentRow(
             label = "বাংলা হরফের আকার",
-            valueText = "${bengaliFontSize.toInt()} sp".toBengaliNumerals(),
+            valueText = "${bengaliFontSize.toInt()}".toBengaliNumerals(),
             onDecrease = {
                 val newSize = (bengaliFontSize - 1f).coerceIn(12f, 28f)
                 onBengaliFontSizeChange(newSize)
@@ -1300,7 +1310,7 @@ fun ReaderSettingsBottomSheetContent(
         // Arabic Line Spacing Settings
         com.example.ui.components.SettingAdjustmentRow(
             label = "আরবি লাইন স্পেস",
-            valueText = String.format(java.util.Locale.US, "%.2f", arabicLineSpacing).toBengaliNumerals() + " গুণ",
+            valueText = String.format(java.util.Locale.US, "%.2f", arabicLineSpacing).toBengaliNumerals(),
             onDecrease = {
                 val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
                 onArabicLineSpacingChange(newSpacing)
@@ -1530,7 +1540,7 @@ fun MushafPageView(
     currentPlayingAyahNumber: Int? = null,
     isPlaying: Boolean = false,
     arabicLineSpacing: Float = 1.65f,
-    tanzilTextStyle: String = "quran-uthmani"
+    tanzilTextStyle: String = "quran-simple"
 ) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     

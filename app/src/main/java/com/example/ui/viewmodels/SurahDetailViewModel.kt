@@ -87,7 +87,7 @@ class SurahDetailViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = "quran-uthmani"
+            initialValue = "quran-simple"
         )
 
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow

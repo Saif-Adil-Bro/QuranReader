@@ -182,3 +182,22 @@ fun String.removeWaqfSigns(): String {
     }
     return cleaned
 }
+
+fun String.formatWaqfSigns(): String {
+    val waqfChars = charArrayOf(
+        '\u06D6', // ۖ (صلے)
+        '\u06D7', // ۗ (قلے)
+        '\u06D8', // ۘ (مـ)
+        '\u06D9', // ۙ (لا)
+        '\u06DA', // ۚ (ج)
+        '\u06DB', // ۛ (three dots)
+        '\u06DC', // ۜ (seen)
+        '\u06E2'  // ۢ (high meem isolated)
+    )
+    var formatted = this
+    for (char in waqfChars) {
+        // Put a narrow non-breaking space (or normal non-breaking space) before the Waqf sign
+        formatted = formatted.replace(char.toString(), "\u00A0$char")
+    }
+    return formatted
+}

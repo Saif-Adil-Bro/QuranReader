@@ -231,7 +231,7 @@ class SettingsViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = "quran-uthmani"
+            initialValue = "quran-simple"
         )
 
     fun toggleTranslation(show: Boolean) {

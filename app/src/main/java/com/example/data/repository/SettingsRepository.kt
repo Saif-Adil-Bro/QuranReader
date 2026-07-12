@@ -54,7 +54,7 @@ class SettingsRepository(val context: Context) {
         .map { preferences -> preferences[ARABIC_FONT_NAME_KEY] ?: "Amiri Quran" }
 
     val tanzilTextStyleFlow: Flow<String> = context.dataStore.data
-        .map { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] ?: "quran-uthmani" }
+        .map { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] ?: "quran-simple" }
 
     val arabicLineSpacingFlow: Flow<Float> = context.dataStore.data
         .map { preferences -> preferences[ARABIC_LINE_SPACING_KEY] ?: 1.65f }

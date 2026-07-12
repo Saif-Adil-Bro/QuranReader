@@ -32,6 +32,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import com.example.ui.viewmodels.HomeViewModel
+import androidx.compose.animation.core.*
+import java.util.Calendar
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.border
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -273,9 +277,7 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     QuickSurahPills(
                         onSurahClick = onNavigateToSurah,
-                        onAyatulKursiClick = {
-                            onNavigateToSurahWithAyah(2, "MUSHAF", 255)
-                        }
+                        onNavigateToSurahWithAyah = onNavigateToSurahWithAyah
                     )
                 }
                 item {
@@ -449,11 +451,164 @@ fun QuickAccessSection(
     }
 }
 
+data class AmaliSurah(
+    val title: String,
+    val subtitle: String,
+    val surahId: Int,
+    val startAyah: Int? = null,
+    val dotColor: Color,
+    val isActive: (Calendar) -> Boolean
+)
+
 @Composable
 fun QuickSurahPills(
     onSurahClick: (Int) -> Unit,
-    onAyatulKursiClick: () -> Unit
+    onNavigateToSurahWithAyah: (Int, String, Int) -> Unit
 ) {
+    var currentTime by remember { mutableStateOf(Calendar.getInstance()) }
+    
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10000) // check every 10 seconds to keep dynamic cards live
+            currentTime = Calendar.getInstance()
+        }
+    }
+    
+    val isDark = MaterialTheme.colorScheme.surface.let { (it.red + it.green + it.blue) < 1.5f }
+    
+    val amaliList = remember {
+        listOf(
+            AmaliSurah(
+                title = "সূরা কাহফ",
+                subtitle = "জুমার আমল",
+                surahId = 18,
+                dotColor = OrangeAccent,
+                isActive = { cal ->
+                    val day = cal.get(Calendar.DAY_OF_WEEK)
+                    val hour = cal.get(Calendar.HOUR_OF_DAY)
+                    val minute = cal.get(Calendar.MINUTE)
+                    day == Calendar.FRIDAY && (hour in 5..12 || (hour == 13 && minute <= 30))
+                }
+            ),
+            AmaliSurah(
+                title = "আয়াতুল কুরসী",
+                subtitle = "ফরজ সালাত পর",
+                surahId = 2,
+                startAyah = 255,
+                dotColor = BlueDot,
+                isActive = { cal ->
+                    val hour = cal.get(Calendar.HOUR_OF_DAY)
+                    val minute = cal.get(Calendar.MINUTE)
+                    val timeInMinutes = hour * 60 + minute
+                    (timeInMinutes in 315..360) || // 5:15 - 6:00
+                    (timeInMinutes in 810..855) || // 13:30 - 14:15
+                    (timeInMinutes in 1005..1050) || // 16:45 - 17:30
+                    (timeInMinutes in 1140..1185) || // 19:00 - 19:45
+                    (timeInMinutes in 1230..1275)    // 20:30 - 21:15
+                }
+            ),
+            AmaliSurah(
+                title = "সূরা ইয়াসিন",
+                subtitle = "ফজরের আমল",
+                surahId = 36,
+                dotColor = Color(0xFF8B5CF6),
+                isActive = { cal ->
+                    val hour = cal.get(Calendar.HOUR_OF_DAY)
+                    val minute = cal.get(Calendar.MINUTE)
+                    (hour == 5) || (hour == 6 && minute <= 30)
+                }
+            ),
+            AmaliSurah(
+                title = "সূরা আর-রহমান",
+                subtitle = "আসর আমল",
+                surahId = 55,
+                dotColor = Color(0xFFF97316),
+                isActive = { cal ->
+                    val hour = cal.get(Calendar.HOUR_OF_DAY)
+                    val minute = cal.get(Calendar.MINUTE)
+                    (hour == 16 && minute >= 30) || (hour == 17)
+                }
+            ),
+            AmaliSurah(
+                title = "সূরা ওয়াক্বিয়া",
+                subtitle = "মাগরিবের আমল",
+                surahId = 56,
+                dotColor = Color(0xFFEC4899),
+                isActive = { cal ->
+                    val hour = cal.get(Calendar.HOUR_OF_DAY)
+                    val minute = cal.get(Calendar.MINUTE)
+                    (hour == 18 && minute >= 30) || (hour == 19)
+                }
+            ),
+            AmaliSurah(
+                title = "সূরা মুলক",
+                subtitle = "ঘুমানোর আমল",
+                surahId = 67,
+                dotColor = GreenDot,
+                isActive = { cal ->
+                    val hour = cal.get(Calendar.HOUR_OF_DAY)
+                    hour >= 22 || hour < 4
+                }
+            ),
+            AmaliSurah(
+                title = "সূরা দুখান",
+                subtitle = "বৃহস্পতিবার রাত",
+                surahId = 44,
+                dotColor = Color(0xFF06B6D4),
+                isActive = { cal ->
+                    val day = cal.get(Calendar.DAY_OF_WEEK)
+                    val hour = cal.get(Calendar.HOUR_OF_DAY)
+                    (day == Calendar.THURSDAY && hour >= 18 && (hour > 18 || cal.get(Calendar.MINUTE) >= 30)) ||
+                    (day == Calendar.FRIDAY && hour < 4)
+                }
+            ),
+            AmaliSurah(
+                title = "বাকারার শেষ ২ আয়াত",
+                subtitle = "রাতের আমল",
+                surahId = 2,
+                startAyah = 285,
+                dotColor = Color(0xFF14B8A6),
+                isActive = { cal ->
+                    val hour = cal.get(Calendar.HOUR_OF_DAY)
+                    hour in 19..21
+                }
+            )
+        )
+    }
+    
+    val infiniteTransition = rememberInfiniteTransition(label = "amal_pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 2.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "scale"
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "alpha"
+    )
+    val borderAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "borderAlpha"
+    )
+
+    val sortedAmaliList = remember(currentTime) {
+        amaliList.sortedByDescending { it.isActive(currentTime) }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -462,54 +617,100 @@ fun QuickSurahPills(
             .height(IntrinsicSize.Max),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .shadow(2.dp, RoundedCornerShape(100.dp))
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
-                .clickable { onSurahClick(18) } // Surah Kahf
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(6.dp).background(OrangeAccent, RoundedCornerShape(50)))
-                Spacer(modifier = Modifier.width(8.dp))
-                Column(verticalArrangement = Arrangement.Center) {
-                    Text("জুমার আমল", color = OrangeAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, lineHeight = 10.sp)
-                    Text("সূরা কাহফ", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 12.sp)
+        sortedAmaliList.forEach { item ->
+            val isActive = item.isActive(currentTime)
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .shadow(if (isActive) 4.dp else 2.dp, RoundedCornerShape(100.dp))
+                    .background(
+                        color = if (isActive) {
+                            if (isDark) item.dotColor.copy(alpha = 0.15f) else item.dotColor.copy(alpha = 0.10f)
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        shape = RoundedCornerShape(100.dp)
+                    )
+                    .then(
+                        if (isActive) {
+                            Modifier.border(
+                                width = 1.5.dp,
+                                color = item.dotColor.copy(alpha = borderAlpha),
+                                shape = RoundedCornerShape(100.dp)
+                            )
+                        } else {
+                            Modifier.border(
+                                width = 1.dp,
+                                color = if (isDark) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                                shape = RoundedCornerShape(100.dp)
+                            )
+                        }
+                    )
+                    .clickable {
+                        if (item.startAyah != null) {
+                            onNavigateToSurahWithAyah(item.surahId, "MUSHAF", item.startAyah)
+                        } else {
+                            onSurahClick(item.surahId)
+                        }
+                    }
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isActive) {
+                            Box(
+                                modifier = Modifier
+                                    .size((12 * pulseScale).dp)
+                                    .background(item.dotColor.copy(alpha = pulseAlpha), RoundedCornerShape(50))
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(item.dotColor, RoundedCornerShape(50))
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(verticalArrangement = Arrangement.Center) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = item.subtitle,
+                                color = if (isActive) item.dotColor else GrayText,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 10.sp
+                            )
+                            if (isActive) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(item.dotColor.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "চলমান",
+                                        color = item.dotColor,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        lineHeight = 8.sp
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            text = item.title,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 12.sp
+                        )
+                    }
                 }
-            }
-        }
-        
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .shadow(2.dp, RoundedCornerShape(100.dp))
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
-                .clickable { onAyatulKursiClick() } // Ayatul Kursi click action
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(6.dp).background(BlueDot, RoundedCornerShape(50)))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("আয়াতুল কুরসী", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 12.sp)
-            }
-        }
-        
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .shadow(2.dp, RoundedCornerShape(100.dp))
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
-                .clickable { onSurahClick(67) } // Surah Mulk
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(6.dp).background(GreenDot, RoundedCornerShape(50)))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("সূরা মুলক", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 12.sp)
             }
         }
     }

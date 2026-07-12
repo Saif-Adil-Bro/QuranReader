@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CombinedAyah
 import com.example.data.model.removeWaqfSigns
+import com.example.data.model.formatWaqfSigns
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.ReadingModeViewModel
@@ -156,34 +157,108 @@ fun ReadingModeScreen(
                                 ) {
                                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                         val arabicFont = getArabicFont("") // Amiri Quran by default
-                                        val annotatedString = remember(ayahs, showWaqfSigns) {
-                                            buildAnnotatedString {
-                                                ayahs.forEachIndexed { index, ayah ->
-                                                    val textToDisplay = if (showWaqfSigns) ayah.arabicText else ayah.arabicText.removeWaqfSigns()
-                                                    append(textToDisplay)
-                                                    
-                                                    val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
-                                                    append(" ﴿$numInSurahStr﴾")
-                                                    
-                                                    if (index < ayahs.lastIndex) {
-                                                        append("   ")
+                                        
+                                        // Group ayahs on this page by their Surah
+                                        val sections = remember(ayahs) {
+                                            val list = mutableListOf<Pair<Int, List<CombinedAyah>>>()
+                                            var currentSurahId = -1
+                                            var currentList = mutableListOf<CombinedAyah>()
+                                            for (ayah in ayahs) {
+                                                if (ayah.surahNumber != currentSurahId) {
+                                                    if (currentList.isNotEmpty()) {
+                                                        list.add(currentSurahId to currentList)
+                                                    }
+                                                    currentSurahId = ayah.surahNumber
+                                                    currentList = mutableListOf()
+                                                }
+                                                currentList.add(ayah)
+                                            }
+                                            if (currentList.isNotEmpty()) {
+                                                list.add(currentSurahId to currentList)
+                                            }
+                                            list
+                                        }
+                                        
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            sections.forEach { (surahId, surahAyahs) ->
+                                                val firstAyahOfSurah = surahAyahs.firstOrNull()
+                                                
+                                                if (firstAyahOfSurah?.numberInSurah == 1 && surahId != 1 && surahId != 9) {
+                                                    Box(
+                                                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(
+                                                            text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                                                            fontFamily = arabicFont,
+                                                            fontSize = (arabicFontSize * 1.15f).sp,
+                                                            color = when (theme) {
+                                                                "Dark" -> Color(0xFFE0E0E0)
+                                                                "Sepia" -> Color(0xFF4E342E)
+                                                                else -> Color(0xFF1A1A1A)
+                                                            },
+                                                            textAlign = TextAlign.Center
+                                                        )
                                                     }
                                                 }
+                                                
+                                                val annotatedString = remember(surahAyahs, showWaqfSigns) {
+                                                    buildAnnotatedString {
+                                                        surahAyahs.forEachIndexed { index, ayah ->
+                                                            var textToDisplay = if (showWaqfSigns) ayah.arabicText.formatWaqfSigns() else ayah.arabicText.removeWaqfSigns()
+                                                            
+                                                            if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
+                                                                val prefixes = listOf(
+                                                                    "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ",
+                                                                    "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                                                                    "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ ",
+                                                                    "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
+                                                                    "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ",
+                                                                    "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+                                                                    "بِسْمِ office.etc ",
+                                                                    "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ ",
+                                                                    "بِسْمِ office.etc",
+                                                                    "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ",
+                                                                    "بسم الله الرحمن الرحيم ",
+                                                                    "بسم الله الرحمن الرحيم"
+                                                                )
+                                                                for (prefix in prefixes) {
+                                                                    if (textToDisplay.startsWith(prefix)) {
+                                                                        textToDisplay = textToDisplay.removePrefix(prefix).trimStart()
+                                                                        break
+                                                                    }
+                                                                }
+                                                            }
+                                                            
+                                                            append(textToDisplay)
+                                                            
+                                                            val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
+                                                            append(" ﴿$numInSurahStr﴾")
+                                                            
+                                                            if (index < surahAyahs.lastIndex) {
+                                                                append("   ")
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                Text(
+                                                    text = annotatedString,
+                                                    fontSize = arabicFontSize.sp,
+                                                    lineHeight = (arabicFontSize * arabicLineSpacing).sp,
+                                                    fontFamily = arabicFont,
+                                                    color = when (theme) {
+                                                        "Dark" -> Color(0xFFE0E0E0)
+                                                        "Sepia" -> Color(0xFF4E342E)
+                                                        else -> Color(0xFF1A1A1A)
+                                                    },
+                                                    textAlign = TextAlign.Justify,
+                                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                                                )
                                             }
                                         }
-                                        Text(
-                                            text = annotatedString,
-                                            fontSize = arabicFontSize.sp,
-                                            lineHeight = (arabicFontSize * arabicLineSpacing).sp,
-                                            fontFamily = arabicFont,
-                                            color = when (theme) {
-                                                "Dark" -> Color(0xFFE0E0E0)
-                                                "Sepia" -> Color(0xFF4E342E)
-                                                else -> Color(0xFF1A1A1A)
-                                            },
-                                            textAlign = TextAlign.Justify,
-                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
-                                        )
                                     }
                                 }
                             }
@@ -249,7 +324,7 @@ fun ReadingSettingsContent(
         // Arabic font size
         com.example.ui.components.SettingAdjustmentRow(
             label = "আরবি হরফের আকার",
-            valueText = "${arabicFontSize.toInt()} sp".toBengaliNumerals(),
+            valueText = "${arabicFontSize.toInt()}".toBengaliNumerals(),
             onDecrease = {
                 val newSize = (arabicFontSize - 1f).coerceIn(18f, 40f)
                 onArabicFontSizeChange(newSize)
@@ -265,7 +340,7 @@ fun ReadingSettingsContent(
         // Arabic Line Spacing Settings
         com.example.ui.components.SettingAdjustmentRow(
             label = "আরবি লাইন স্পেস",
-            valueText = "${String.format("%.2f", arabicLineSpacing).toBengaliNumerals()} গুণ",
+            valueText = String.format("%.2f", arabicLineSpacing).toBengaliNumerals(),
             onDecrease = {
                 val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
                 onArabicLineSpacingChange(newSpacing)

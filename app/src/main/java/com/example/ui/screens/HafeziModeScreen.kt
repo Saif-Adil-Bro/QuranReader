@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.List
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.*
@@ -37,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CombinedAyah
 import com.example.data.model.removeWaqfSigns
+import com.example.data.model.formatWaqfSigns
+import androidx.compose.foundation.lazy.LazyColumn
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.HafeziModeViewModel
@@ -63,6 +66,7 @@ fun HafeziModeScreen(
     val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
     
     var showSettings by remember { mutableStateOf(false) }
+    var showJuzList by remember { mutableStateOf(false) }
 
     LaunchedEffect(initialPage) {
         if (currentPage == 1 && initialPage != 1) {
@@ -105,6 +109,13 @@ fun HafeziModeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showJuzList = true }) {
+                        Icon(
+                            imageVector = Icons.Default.List,
+                            contentDescription = "Juz List",
+                            tint = topBarContentColor
+                        )
+                    }
                     IconButton(onClick = { viewModel.toggleBookmark() }) {
                         Icon(
                             if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
@@ -264,7 +275,7 @@ fun HafeziModeScreen(
                     // Font Size SettingAdjustmentRow
                     com.example.ui.components.SettingAdjustmentRow(
                         label = "আরবি হরফের আকার",
-                        valueText = "${arabicFontSize.toInt()} sp".toBengaliNumerals(),
+                        valueText = "${arabicFontSize.toInt()}".toBengaliNumerals(),
                         onDecrease = {
                             val newSize = (arabicFontSize - 1f).coerceIn(18f, 40f)
                             viewModel.setArabicFontSize(newSize)
@@ -280,7 +291,7 @@ fun HafeziModeScreen(
                     // Arabic Line Spacing Settings
                     com.example.ui.components.SettingAdjustmentRow(
                         label = "আরবি লাইন স্পেস",
-                        valueText = "${String.format("%.2f", arabicLineSpacing).toBengaliNumerals()} গুণ",
+                        valueText = String.format("%.2f", arabicLineSpacing).toBengaliNumerals(),
                         onDecrease = {
                             val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
                             viewModel.setArabicLineSpacing(newSpacing)
@@ -391,6 +402,66 @@ fun HafeziModeScreen(
                 }
             }
         }
+
+        if (showJuzList) {
+            ModalBottomSheet(
+                onDismissRequest = { showJuzList = false },
+                sheetState = rememberModalBottomSheetState(),
+                containerColor = containerColor
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    Text(
+                        text = "পারা নির্বাচন করুন",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = topBarContentColor,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 400.dp)
+                    ) {
+                        items(30) { index ->
+                            val juzNum = index + 1
+                            val juzName = paraNamesBangla[index]
+                            val startPage = getJuzStartPage(juzNum)
+                            
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.loadPage(startPage)
+                                        showJuzList = false
+                                    }
+                                    .padding(vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "পারা ${juzNum.toBengaliNumerals()}: $juzName",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = topBarContentColor
+                                    )
+                                    Text(
+                                        text = "পৃষ্ঠা ${startPage.toBengaliNumerals()}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = topBarContentColor.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+                            HorizontalDivider(color = topBarContentColor.copy(alpha = 0.08f))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -410,7 +481,7 @@ fun HafeziPageContent(
     
     // Resolve Page Headers
     val surahData = firstAyah?.let { com.example.data.QuranData.surahNames.find { s -> s.first == it.surahNumber } }
-    val surahNameArabic = surahData?.second?.first ?: "" // e.g. سورة الفاتحة
+    val surahNameArabic = surahData?.second?.first ?: "" // e.g. سورة الفাতحة
     val juzNum = firstAyah?.juz ?: 1
     val juzName = "পারা ${juzNum.toBengaliNumerals()}"
 
@@ -428,55 +499,143 @@ fun HafeziPageContent(
         ) {
             // Flow the text in Right-to-Left (RTL) mode, completely avoiding bracket layout bugs
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                val annotatedString = remember(ayahs, playingAyahNumber, theme, showWaqfSigns) {
-                    buildAnnotatedString {
-                        ayahs.forEachIndexed { index, ayah ->
-                            val start = length
-                            val textToDisplay = if (showWaqfSigns) ayah.arabicText else ayah.arabicText.removeWaqfSigns()
-                            append(textToDisplay)
-                            
-                            // Beautiful unicode ornament brackets for verse numbers
-                            val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
-                            append(" ﴿$numInSurahStr﴾")
-                            
-                            val end = length
-                            
-                            // Highlight currently active/playing verse beautifully in green/accent shade
-                            if (ayah.number == playingAyahNumber) {
-                                addStyle(
-                                    style = SpanStyle(
-                                        background = if (theme == "Dark") Color(0xFF1E3524) else Color(0xFFE8F5E9),
-                                        color = if (theme == "Dark") Color(0xFF81C784) else Color(0xFF1B5E20),
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    start = start,
-                                    end = end
-                                )
+                // Group ayahs on this page by their Surah
+                val sections = remember(ayahs) {
+                    val list = mutableListOf<Pair<Int, List<CombinedAyah>>>()
+                    var currentSurahId = -1
+                    var currentList = mutableListOf<CombinedAyah>()
+                    for (ayah in ayahs) {
+                        if (ayah.surahNumber != currentSurahId) {
+                            if (currentList.isNotEmpty()) {
+                                list.add(currentSurahId to currentList)
                             }
-                            
-                            if (index < ayahs.lastIndex) {
-                                append("   ") // Visual negative space between consecutive verses
-                            }
+                            currentSurahId = ayah.surahNumber
+                            currentList = mutableListOf()
                         }
+                        currentList.add(ayah)
                     }
+                    if (currentList.isNotEmpty()) {
+                        list.add(currentSurahId to currentList)
+                    }
+                    list
                 }
 
-                Text(
-                    text = annotatedString,
-                    fontSize = arabicFontSize.sp,
-                    lineHeight = (arabicFontSize * arabicLineSpacing).sp,
-                    fontFamily = arabicFont,
-                    color = when (theme) {
-                        "Dark" -> Color(0xFFE0E0E0)
-                        "Sepia" -> Color(0xFF4E342E)
-                        else -> Color(0xFF1A1A1A)
-                    },
-                    textAlign = TextAlign.Justify,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    sections.forEach { (surahId, surahAyahs) ->
+                        val firstAyahOfSurah = surahAyahs.firstOrNull()
+                        
+                        if (firstAyahOfSurah?.numberInSurah == 1 && surahId != 1 && surahId != 9) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                                    fontFamily = arabicFont,
+                                    fontSize = (arabicFontSize * 1.15f).sp,
+                                    color = when (theme) {
+                                        "Dark" -> Color(0xFFE0E0E0)
+                                        "Sepia" -> Color(0xFF4E342E)
+                                        else -> Color(0xFF1A1A1A)
+                                    },
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+
+                        val annotatedString = remember(surahAyahs, playingAyahNumber, theme, showWaqfSigns) {
+                            buildAnnotatedString {
+                                surahAyahs.forEachIndexed { index, ayah ->
+                                    val start = length
+                                    var textToDisplay = if (showWaqfSigns) ayah.arabicText.formatWaqfSigns() else ayah.arabicText.removeWaqfSigns()
+                                    
+                                    if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
+                                        val prefixes = listOf(
+                                            "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ",
+                                            "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                                            "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ ",
+                                            "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
+                                            "بِسْمِ اللَّهِ الرَّحْمَٰনِ الرَّحِيمِ ",
+                                            "بِسْمِ اللَّهِ الرَّحْمَٰনِ الرَّحِيمِ",
+                                            "بِسْمِ office.etc ",
+                                            "بِسْمِ office.etc",
+                                            "بِسْمِ اللهِ الرَّحْمٰনِ الرَّحِيْمِ ",
+                                            "بِسْمِ office.etc",
+                                            "بِسْمِ اللهِ الرَّحْمٰনِ الرَّحِيْمِ",
+                                            "بسم الله الرحمن الرحيم ",
+                                            "بسم الله الرحمن الرحيم"
+                                        )
+                                        for (prefix in prefixes) {
+                                            if (textToDisplay.startsWith(prefix)) {
+                                                textToDisplay = textToDisplay.removePrefix(prefix).trimStart()
+                                                break
+                                            }
+                                        }
+                                    }
+
+                                    append(textToDisplay)
+                                    
+                                    // Beautiful unicode ornament brackets for verse numbers
+                                    val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
+                                    append(" ﴿$numInSurahStr﴾")
+                                    
+                                    val end = length
+                                    
+                                    // Highlight currently active/playing verse beautifully in green/accent shade
+                                    if (ayah.number == playingAyahNumber) {
+                                        addStyle(
+                                            style = SpanStyle(
+                                                background = if (theme == "Dark") Color(0xFF1E3524) else Color(0xFFE8F5E9),
+                                                color = if (theme == "Dark") Color(0xFF81C784) else Color(0xFF1B5E20),
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            start = start,
+                                            end = end
+                                        )
+                                    }
+                                    
+                                    if (index < surahAyahs.lastIndex) {
+                                        append("   ") // Visual negative space between consecutive verses
+                                    }
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = annotatedString,
+                            fontSize = arabicFontSize.sp,
+                            lineHeight = (arabicFontSize * arabicLineSpacing).sp,
+                            fontFamily = arabicFont,
+                            color = when (theme) {
+                                "Dark" -> Color(0xFFE0E0E0)
+                                "Sepia" -> Color(0xFF4E342E)
+                                else -> Color(0xFF1A1A1A)
+                            },
+                            textAlign = TextAlign.Justify,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+private val paraNamesBangla = listOf(
+    "আলিফ লাম মীম", "সাইয়াকুল", "তিলকাল রুসুল", "লান তানালু", "ওয়াল মুহসানাত",
+    "লা ইউহিব্বুল্লাহ", "ওয়া ইজা সামিউ", "ওয়া লাও আন্নানা", "ক্বলাল মালাইউ", "ওয়া'লামু",
+    "ইয়া'তাজিরুন", "ওয়া মা মিন দাব্বাহ", "ওয়া মা উবাররিউ", "রুবামা", "সুবহানাল্লাজি",
+    "ক্বলা আলাম", "ইক্বতারা বা লিন্নাস", "ক্বদ আফলাহা", "ওয়া ক্বলাল্লাজিনা", "আম্মান খালাক্ব",
+    "উতলু মা উহিয়া", "ওয়া মান ইয়াক্বনুত", "ওয়া মালিয়া", "ফামান আজলামু", "ইলাইহি ইয়ুরাদদু",
+    "হা মীম", "ক্বলা ফামা খাতবুকুম", "ক্বদ সামিয়াল্লাহ", "তাবারাকাল্লাজি", "আম্মা ইয়াতাসায়ালুন"
+)
+
+private fun getJuzStartPage(juz: Int): Int {
+    if (juz == 1) return 1
+    return (juz - 1) * 20 + 2
 }
 
 @Composable

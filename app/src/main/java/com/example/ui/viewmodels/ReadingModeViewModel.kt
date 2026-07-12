@@ -29,7 +29,7 @@ class ReadingModeViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 16f)
 
     val tanzilTextStyle: StateFlow<String> = settingsRepository.tanzilTextStyleFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "quran-uthmani")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "quran-simple")
 
     val theme: StateFlow<String> = settingsRepository.themeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Light")
