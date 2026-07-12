@@ -16,6 +16,10 @@ val provider = GoogleFont.Provider(
     certificates = R.array.com_google_android_gms_fonts_certs
 )
 
+val uthmanTahaFont = FontFamily(
+    ResourceFont(R.font.uthman_taha)
+)
+
 val amiriQuranFont = FontFamily(
     ResourceFont(R.font.amiri_quran),
     GoogleFontFile(googleFont = GoogleFont("Amiri Quran"), fontProvider = provider)
@@ -47,6 +51,7 @@ val tajawalFont = FontFamily(
 )
 
 val arabicFontsList = listOf(
+    "Uthman Taha",
     "Amiri Quran",
     "Amiri",
     "Scheherazade New",
@@ -57,12 +62,14 @@ val arabicFontsList = listOf(
 
 fun getArabicFont(name: String): FontFamily {
     return when (name) {
+        "Uthman Taha" -> uthmanTahaFont
         "Amiri" -> amiriFont
         "Scheherazade New" -> scheherazadeFont
         "Lateef" -> lateefFont
         "Almarai" -> almaraiFont
         "Tajawal" -> tajawalFont
-        else -> amiriQuranFont
+        "Amiri Quran" -> amiriQuranFont
+        else -> uthmanTahaFont
     }
 }
 

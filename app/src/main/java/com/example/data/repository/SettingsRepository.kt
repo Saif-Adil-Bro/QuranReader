@@ -28,6 +28,7 @@ class SettingsRepository(val context: Context) {
     private val AUTO_SCROLL_SPEED_KEY = floatPreferencesKey("auto_scroll_speed")
     private val ARABIC_FONT_NAME_KEY = stringPreferencesKey("arabic_font_name")
     private val TANZIL_TEXT_STYLE_KEY = stringPreferencesKey("tanzil_text_style")
+    private val ARABIC_LINE_SPACING_KEY = floatPreferencesKey("arabic_line_spacing")
     
     // Hafezi Mode Settings
     private val REPEAT_COUNT_KEY = intPreferencesKey("repeat_count")
@@ -53,6 +54,9 @@ class SettingsRepository(val context: Context) {
 
     val tanzilTextStyleFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] ?: "quran-uthmani" }
+
+    val arabicLineSpacingFlow: Flow<Float> = context.dataStore.data
+        .map { preferences -> preferences[ARABIC_LINE_SPACING_KEY] ?: 1.65f }
 
     val themeFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[THEME_KEY] ?: "Light" }
@@ -92,6 +96,10 @@ class SettingsRepository(val context: Context) {
 
     suspend fun setTanzilTextStyle(style: String) {
         context.dataStore.edit { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] = style }
+    }
+
+    suspend fun setArabicLineSpacing(spacing: Float) {
+        context.dataStore.edit { preferences -> preferences[ARABIC_LINE_SPACING_KEY] = spacing }
     }
 
     suspend fun setTheme(theme: String) {

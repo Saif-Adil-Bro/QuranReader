@@ -40,6 +40,9 @@ class ReadingModeViewModel(
     val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.65f)
+
     fun loadSurah(surahNumber: Int) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
@@ -76,5 +79,9 @@ class ReadingModeViewModel(
 
     fun setShowWaqfSigns(show: Boolean) {
         viewModelScope.launch { settingsRepository.setShowWaqfSigns(show) }
+    }
+
+    fun setArabicLineSpacing(spacing: Float) {
+        viewModelScope.launch { settingsRepository.setArabicLineSpacing(spacing) }
     }
 }

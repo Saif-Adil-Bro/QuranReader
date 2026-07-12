@@ -11,6 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +45,7 @@ fun ReadingModeScreen(
     val theme by viewModel.theme.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
+    val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
 
     var showSettings by remember { mutableStateOf(false) }
 
@@ -163,7 +167,7 @@ fun ReadingModeScreen(
                                     Text(
                                         text = annotatedString,
                                         fontSize = arabicFontSize.sp,
-                                        lineHeight = (arabicFontSize * 1.65f).sp,
+                                        lineHeight = (arabicFontSize * arabicLineSpacing).sp,
                                         fontFamily = arabicFont,
                                         color = when (theme) {
                                             "Dark" -> Color(0xFFE0E0E0)
@@ -196,6 +200,8 @@ fun ReadingModeScreen(
                     onTanzilTextStyleChange = { viewModel.setTanzilTextStyle(it) },
                     showWaqfSigns = showWaqfSigns,
                     onShowWaqfSignsToggle = { viewModel.setShowWaqfSigns(it) },
+                    arabicLineSpacing = arabicLineSpacing,
+                    onArabicLineSpacingChange = { viewModel.setArabicLineSpacing(it) },
                     topBarContentColor = topBarContentColor,
                     containerColor = containerColor
                 )
@@ -214,6 +220,8 @@ fun ReadingSettingsContent(
     onTanzilTextStyleChange: (String) -> Unit,
     showWaqfSigns: Boolean = true,
     onShowWaqfSignsToggle: (Boolean) -> Unit = {},
+    arabicLineSpacing: Float = 1.65f,
+    onArabicLineSpacingChange: (Float) -> Unit = {},
     topBarContentColor: Color,
     containerColor: Color
 ) {
@@ -246,6 +254,65 @@ fun ReadingSettingsContent(
                 activeTrackColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
             )
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Arabic Line Spacing Settings
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "আরবি লাইন স্পেস: ${String.format("%.2f", arabicLineSpacing).toBengaliNumerals()} গুণ", 
+                style = MaterialTheme.typography.bodyMedium,
+                color = topBarContentColor
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
+                        onArabicLineSpacingChange(newSpacing)
+                    },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = (if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)).copy(alpha = 0.2f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Remove,
+                        contentDescription = "Decrease line spacing",
+                        tint = topBarContentColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                
+                IconButton(
+                    onClick = {
+                        val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
+                        onArabicLineSpacingChange(newSpacing)
+                    },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = (if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)).copy(alpha = 0.2f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Increase line spacing",
+                        tint = topBarContentColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

@@ -58,6 +58,7 @@ import com.example.data.model.CombinedAyah
 import com.example.data.model.removeWaqfSigns
 import com.example.ui.state.UiState
 import com.example.ui.theme.*
+import com.example.ui.screens.toBengaliNumerals
 import com.example.ui.viewmodels.SurahDetailViewModel
 import com.example.ui.viewmodels.PlaybackMode
 
@@ -89,6 +90,7 @@ fun SurahDetailScreen(
     val arabicFontName by viewModel.arabicFontName.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
+    val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
     
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentPlayingAyahNumber by viewModel.currentPlayingAyahNumber.collectAsState()
@@ -357,7 +359,9 @@ fun SurahDetailScreen(
                                         arabicFontSize = arabicFontSize,
                                         currentPlayingWordUrl = currentPlayingWordUrl,
                                         currentPlayingAyahNumber = currentPlayingAyahNumber,
-                                        isPlaying = isPlaying
+                                        isPlaying = isPlaying,
+                                        arabicLineSpacing = arabicLineSpacing,
+                                        tanzilTextStyle = tanzilTextStyle
                                     )
                                 }
                             }
@@ -381,7 +385,8 @@ fun SurahDetailScreen(
                                     arabicFontName = arabicFontName,
                                     currentPlayingWordUrl = currentPlayingWordUrl,
                                     isBookmarked = isBookmarked,
-                                    onToggleBookmark = { viewModel.toggleBookmark(ayah, surahNumber) }
+                                    onToggleBookmark = { viewModel.toggleBookmark(ayah, surahNumber) },
+                                    arabicLineSpacing = arabicLineSpacing
                                 )
                             }
                         }
@@ -434,7 +439,9 @@ fun SurahDetailScreen(
                         viewModel.downloadSurahOffline(surahNumber, "এই")
                     },
                     onCancelDownloadClick = { viewModel.cancelOfflineDownload() },
-                    onClose = { showSettingsBottomSheet = false }
+                    onClose = { showSettingsBottomSheet = false },
+                    arabicLineSpacing = arabicLineSpacing,
+                    onArabicLineSpacingChange = { viewModel.setArabicLineSpacing(it) }
                 )
             }
         }
@@ -644,7 +651,8 @@ fun AyahCard(
     arabicFontName: String = "Amiri Quran",
     currentPlayingWordUrl: String? = null,
     isBookmarked: Boolean = false,
-    onToggleBookmark: () -> Unit = {}
+    onToggleBookmark: () -> Unit = {},
+    arabicLineSpacing: Float = 1.6f
 ) {
     var showTafsirDialog by remember { mutableStateOf(false) }
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
@@ -863,7 +871,8 @@ fun AyahCard(
                             fontSize = arabicFontSize.toFloat(),
                             fontFamily = arabicFont,
                             color = DarkText,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            lineSpacing = arabicLineSpacing
                         )
                     }
                 }
@@ -884,7 +893,8 @@ fun AyahCard(
                     fontSize = arabicFontSize.toFloat(),
                     fontFamily = arabicFont,
                     color = DarkText,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    lineSpacing = arabicLineSpacing
                 )
                 if (showTranslation) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -920,7 +930,8 @@ fun AyahCard(
                     fontSize = arabicFontSize.toFloat(),
                     fontFamily = arabicFont,
                     color = DarkText,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    lineSpacing = arabicLineSpacing
                 )
                 if (showTranslation) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -1174,7 +1185,9 @@ fun ReaderSettingsBottomSheetContent(
     downloadError: String?,
     onDownloadClick: () -> Unit,
     onCancelDownloadClick: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    arabicLineSpacing: Float = 1.65f,
+    onArabicLineSpacingChange: (Float) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -1284,6 +1297,65 @@ fun ReaderSettingsBottomSheetContent(
                 inactiveTrackColor = OffWhite
             )
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Arabic Line Spacing Settings
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "আরবি লাইন স্পেস: " + String.format(java.util.Locale.US, "%.2f", arabicLineSpacing).toBengaliNumerals() + " গুণ", 
+                fontSize = 14.sp,
+                color = GrayText
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
+                        onArabicLineSpacingChange(newSpacing)
+                    },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = PrimaryGreen.copy(alpha = 0.12f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Remove,
+                        contentDescription = "Decrease line spacing",
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                
+                IconButton(
+                    onClick = {
+                        val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
+                        onArabicLineSpacingChange(newSpacing)
+                    },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = PrimaryGreen.copy(alpha = 0.12f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Increase line spacing",
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -1510,18 +1582,20 @@ fun MushafPageView(
     arabicFontSize: Float = 28f,
     currentPlayingWordUrl: String? = null,
     currentPlayingAyahNumber: Int? = null,
-    isPlaying: Boolean = false
+    isPlaying: Boolean = false,
+    arabicLineSpacing: Float = 1.65f,
+    tanzilTextStyle: String = "quran-uthmani"
 ) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     
     // Build a single, unified annotated string for all ayahs of this page to ensure continuous flow
-    val annotatedString = remember(ayahs, surahNumber, currentPlayingWordUrl, currentPlayingAyahNumber, isPlaying) {
+    val annotatedString = remember(ayahs, surahNumber, currentPlayingWordUrl, currentPlayingAyahNumber, isPlaying, tanzilTextStyle) {
         buildAnnotatedString {
             ayahs.forEachIndexed { index, ayah ->
                 val ayahStart = length
                 val isAyahPlaying = isPlaying && currentPlayingAyahNumber == ayah.numberInSurah
                 
-                if (ayah.words.isNotEmpty()) {
+                if (ayah.words.isNotEmpty() && tanzilTextStyle != "quran-simple-clean" && tanzilTextStyle != "quran-simple-plain") {
                     val processedWords = mutableListOf<ProcessedWord>()
                     ayah.words.forEach { word ->
                         val text = word.textUthmani ?: ""
@@ -1585,9 +1659,9 @@ fun MushafPageView(
                 
                 append(" ")
                 
-                // Add the inline Ayah Circle
-                val circleId = "circle_${ayah.numberInSurah}"
-                appendInlineContent(circleId, "\uFFFC")
+                // Add the standard Uthmani end of ayah symbol and digits
+                val ayahNumberStr = ayah.numberInSurah.toArabicNumerals()
+                append("\u06DD$ayahNumberStr")
                 
                 // Add a space between ayahs
                 if (index < ayahs.lastIndex) {
@@ -1617,35 +1691,14 @@ fun MushafPageView(
         }
     }
     
-    val inlineContent = remember(ayahs) {
-        ayahs.associate { ayah ->
-            val circleId = "circle_${ayah.numberInSurah}"
-            circleId to InlineTextContent(
-                Placeholder(
-                    width = (arabicFontSize * 1.35f).sp,
-                    height = (arabicFontSize * 1.35f).sp,
-                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                )
-            ) {
-                AyahCircle(
-                    number = ayah.numberInSurah,
-                    fontSize = arabicFontSize,
-                    color = PrimaryGreen,
-                    modifier = Modifier.clickable { onPlayAyah(ayah) }
-                )
-            }
-        }
-    }
-    
     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     
     Column(modifier = Modifier.fillMaxWidth()) {
         CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
             Text(
                 text = annotatedString,
-                inlineContent = inlineContent,
                 fontSize = arabicFontSize.sp,
-                lineHeight = (arabicFontSize * 1.65f).sp,
+                lineHeight = (arabicFontSize * arabicLineSpacing).sp,
                 fontFamily = arabicFont,
                 color = DarkText,
                 textAlign = TextAlign.Center,
@@ -1775,37 +1828,23 @@ fun AyahInlineText(
     fontSize: Float,
     fontFamily: androidx.compose.ui.text.font.FontFamily,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    lineSpacing: Float = 1.6f
 ) {
-    val inlineContentId = "ayah_circle_${ayahNumber}"
-    val annotatedString = buildAnnotatedString {
-        append(arabicText)
-        append(" ")
-        appendInlineContent(inlineContentId, "\uFFFC")
-    }
-    
-    val inlineContent = mapOf(
-        inlineContentId to InlineTextContent(
-            Placeholder(
-                width = (fontSize * 1.35f).sp,
-                height = (fontSize * 1.35f).sp,
-                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-            )
-        ) {
-            AyahCircle(
-                number = ayahNumber,
-                fontSize = fontSize,
-                color = PrimaryGreen
-            )
-        }
-    )
-    
+    // The standard Uthmani way to display ayah numbers: 
+    // Arabic text followed by U+FD3F (Ornate Left Parenthesis), ayah number in Arabic digits, U+FD3E (Ornate Right Parenthesis)
+    // Or just appending U+06DD (Arabic End of Ayah) followed by the digits. 
+    // In KFGQPC Uthman Taha, \u06DD wraps the trailing digits automatically!
+    val ayahNumberStr = ayahNumber.toArabicNumerals()
+    // KFGQPC Uthman Taha Naskh often uses U+06DD before the digits.
+    // Let's use \u06DD + digits.
+    val combinedText = "$arabicText \u06DD$ayahNumberStr"
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Text(
-            text = annotatedString,
-            inlineContent = inlineContent,
+            text = combinedText,
             fontSize = fontSize.sp,
-            lineHeight = (fontSize * 1.6f).sp,
+            lineHeight = (fontSize * lineSpacing).sp,
             fontFamily = fontFamily,
             color = color,
             textAlign = TextAlign.Right,

@@ -90,6 +90,13 @@ class SurahDetailViewModel(
             initialValue = "quran-uthmani"
         )
 
+    val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 1.65f
+        )
+
     val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
         .stateIn(
             scope = viewModelScope,
@@ -226,6 +233,12 @@ class SurahDetailViewModel(
     fun setTanzilTextStyle(style: String) {
         viewModelScope.launch {
             settingsRepository.setTanzilTextStyle(style)
+        }
+    }
+
+    fun setArabicLineSpacing(spacing: Float) {
+        viewModelScope.launch {
+            settingsRepository.setArabicLineSpacing(spacing)
         }
     }
 

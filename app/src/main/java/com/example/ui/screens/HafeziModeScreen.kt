@@ -17,6 +17,9 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,6 +60,7 @@ fun HafeziModeScreen(
     val arabicFontName by viewModel.arabicFontName.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
+    val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
     
     var showSettings by remember { mutableStateOf(false) }
 
@@ -209,7 +213,8 @@ fun HafeziModeScreen(
                         arabicFontName = arabicFontName,
                         theme = theme,
                         currentPage = currentPage,
-                        showWaqfSigns = showWaqfSigns
+                        showWaqfSigns = showWaqfSigns,
+                        arabicLineSpacing = arabicLineSpacing
                     )
                 }
             }
@@ -269,6 +274,65 @@ fun HafeziModeScreen(
                             activeTrackColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
                         )
                     )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Arabic Line Spacing Settings
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "আরবি লাইন স্পেস: ${String.format("%.2f", arabicLineSpacing).toBengaliNumerals()} গুণ", 
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = topBarContentColor
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
+                                    viewModel.setArabicLineSpacing(newSpacing)
+                                },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(
+                                        color = (if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)).copy(alpha = 0.2f),
+                                        shape = CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Remove,
+                                    contentDescription = "Decrease line spacing",
+                                    tint = topBarContentColor,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            
+                            IconButton(
+                                onClick = {
+                                    val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
+                                    viewModel.setArabicLineSpacing(newSpacing)
+                                },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(
+                                        color = (if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)).copy(alpha = 0.2f),
+                                        shape = CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Increase line spacing",
+                                    tint = topBarContentColor,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -381,7 +445,8 @@ fun HafeziPageContent(
     arabicFontName: String,
     theme: String,
     currentPage: Int,
-    showWaqfSigns: Boolean = true
+    showWaqfSigns: Boolean = true,
+    arabicLineSpacing: Float = 1.65f
 ) {
     val arabicFont = getArabicFont(arabicFontName)
     val firstAyah = ayahs.firstOrNull()
@@ -442,7 +507,7 @@ fun HafeziPageContent(
                 Text(
                     text = annotatedString,
                     fontSize = arabicFontSize.sp,
-                    lineHeight = (arabicFontSize * 1.65f).sp,
+                    lineHeight = (arabicFontSize * arabicLineSpacing).sp,
                     fontFamily = arabicFont,
                     color = when (theme) {
                         "Dark" -> Color(0xFFE0E0E0)

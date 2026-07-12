@@ -58,6 +58,9 @@ class HafeziModeViewModel(
     val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.65f)
+
     private var currentRepeatIteration = 0
     private var playlist: List<CombinedAyah> = emptyList()
     private var currentPlaylistIndex = 0
@@ -128,6 +131,12 @@ class HafeziModeViewModel(
     fun setShowWaqfSigns(show: Boolean) {
         viewModelScope.launch {
             settingsRepository.setShowWaqfSigns(show)
+        }
+    }
+
+    fun setArabicLineSpacing(spacing: Float) {
+        viewModelScope.launch {
+            settingsRepository.setArabicLineSpacing(spacing)
         }
     }
 
