@@ -11,8 +11,8 @@ class GetSurahsUseCase(private val repository: QuranRepository) {
 }
 
 class GetSurahDetailsUseCase(private val repository: QuranRepository) {
-    suspend operator fun invoke(surahNumber: Int): List<CombinedAyah> {
-        return repository.getSurahDetailsCombined(surahNumber)
+    suspend operator fun invoke(surahNumber: Int, arabicEdition: String = "quran-uthmani"): List<CombinedAyah> {
+        return repository.getSurahDetailsCombined(surahNumber, arabicEdition)
     }
 }
 

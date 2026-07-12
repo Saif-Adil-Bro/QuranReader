@@ -24,7 +24,7 @@ class QuranRepository(
 
     // In-memory caching structures to optimize loading times and prevent repeated network calls
     private var cachedSurahs: List<Surah>? = null
-    private val cachedSurahDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
+    private val cachedSurahDetails = java.util.concurrent.ConcurrentHashMap<String, List<CombinedAyah>>()
     private val cachedPageDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
     private val cachedJuzDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
 
@@ -41,8 +41,12 @@ class QuranRepository(
         File(context.filesDir, "quran_text_cache/surahs.json")
     }
 
-    private fun getSurahDetailsCacheFile(surahNumber: Int): File {
-        return File(context.filesDir, "quran_text_cache/surah_details_$surahNumber.json")
+    private fun getSurahDetailsCacheFile(surahNumber: Int, arabicEdition: String = "quran-uthmani"): File {
+        return if (arabicEdition == "quran-uthmani") {
+            File(context.filesDir, "quran_text_cache/surah_details_$surahNumber.json")
+        } else {
+            File(context.filesDir, "quran_text_cache/surah_details_${surahNumber}_$arabicEdition.json")
+        }
     }
 
     private fun getPageDetailsCacheFile(pageNumber: Int): File {
@@ -125,17 +129,18 @@ class QuranRepository(
      * Fetches a specific Surah with both Arabic text and Bengali translation,
      * and combines them into a list of CombinedAyah for easy UI consumption.
      */
-    suspend fun getSurahDetailsCombined(surahNumber: Int): List<CombinedAyah> {
-        cachedSurahDetails[surahNumber]?.let { return it }
+    suspend fun getSurahDetailsCombined(surahNumber: Int, arabicEdition: String = "quran-uthmani"): List<CombinedAyah> {
+        val cacheKey = "${surahNumber}_$arabicEdition"
+        cachedSurahDetails[cacheKey]?.let { return it }
         return withContext(Dispatchers.IO) {
-            val cacheFile = getSurahDetailsCacheFile(surahNumber)
+            val cacheFile = getSurahDetailsCacheFile(surahNumber, arabicEdition)
             if (cacheFile.exists() && cacheFile.length() > 0) {
                 try {
                     val json = cacheFile.readText()
                     val type = object : TypeToken<List<CombinedAyah>>() {}.type
                     val list = Gson().fromJson<List<CombinedAyah>>(json, type)
                     if (!list.isNullOrEmpty()) {
-                        cachedSurahDetails[surahNumber] = list
+                        cachedSurahDetails[cacheKey] = list
                         return@withContext list
                     }
                 } catch (e: Exception) {
@@ -143,7 +148,12 @@ class QuranRepository(
                 }
             }
 
-            val response = api.getSurahWithTranslation(surahNumber)
+            val response = if (arabicEdition == "quran-uthmani") {
+                api.getSurahWithTranslation(surahNumber)
+            } else {
+                api.getSurahWithEditions(surahNumber, "$arabicEdition,bn.bengali,ar.alafasy")
+            }
+            
             val quranComResponse = try {
                 quranComApi.getSurahVerses(surahNumber)
             } catch (e: Exception) {
@@ -153,15 +163,16 @@ class QuranRepository(
 
             if (response.code == 200 && response.data.size >= 2) {
                 // Determine which edition is which based on language code and format
-                val arabicEdition = response.data.find { it.edition.identifier == "quran-uthmani" }
+                val arabicEditionObj = response.data.find { it.edition.identifier == arabicEdition }
+                    ?: response.data.find { it.edition.language == "ar" && it.edition.format == "text" }
                 val bengaliEdition = response.data.find { it.edition.identifier == "bn.bengali" }
                 val audioEdition = response.data.find { it.edition.identifier == "ar.alafasy" }
 
-                if (arabicEdition == null || bengaliEdition == null) {
+                if (arabicEditionObj == null || bengaliEdition == null) {
                     throw Exception("Missing Arabic or Bengali editions in the response.")
                 }
 
-                val arabicAyahs = arabicEdition.ayahs
+                val arabicAyahs = arabicEditionObj.ayahs
                 val bengaliAyahs = bengaliEdition.ayahs
                 val audioAyahs = audioEdition?.ayahs
 
@@ -182,7 +193,7 @@ class QuranRepository(
                         words = quranComVerse?.words ?: emptyList()
                     )
                 }
-                cachedSurahDetails[surahNumber] = combined
+                cachedSurahDetails[cacheKey] = combined
                 
                 try {
                     cacheFile.parentFile?.mkdirs()

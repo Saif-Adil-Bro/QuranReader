@@ -218,7 +218,8 @@ fun SurahDetailScreen(
                     val coroutineScope = rememberCoroutineScope()
                     var searchQuery by remember { mutableStateOf("") }
                     
-                    val displayedData = if (initialAyah > 0) {
+                    val isStandaloneAyatAlKursi = surahNumber == 2 && initialAyah == 255
+                    val displayedData = if (isStandaloneAyatAlKursi) {
                         state.data.filter { it.numberInSurah == initialAyah }
                     } else {
                         state.data
@@ -226,7 +227,7 @@ fun SurahDetailScreen(
                     
                     LaunchedEffect(displayedData) {
                         if (initialAyah > 0) {
-                            val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && initialAyah <= 0) 2 else 1
+                            val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandaloneAyatAlKursi) 2 else 1
                             if (viewMode == ViewMode.MUSHAF) {
                                 val targetAyah = displayedData.find { it.numberInSurah == initialAyah }
                                 if (targetAyah != null) {
@@ -252,7 +253,7 @@ fun SurahDetailScreen(
                         if (playingAyahNum != null && playingAyahNum > 0) {
                             val targetAyah = displayedData.find { it.numberInSurah == playingAyahNum }
                             if (targetAyah != null) {
-                                val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && initialAyah <= 0) 2 else 1
+                                val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandaloneAyatAlKursi) 2 else 1
                                 if (viewMode == ViewMode.MUSHAF) {
                                     val ayahsByPage = displayedData.groupBy { it.page }
                                     val pagesList = ayahsByPage.keys.toList()
@@ -305,7 +306,7 @@ fun SurahDetailScreen(
                                     if (viewMode != ViewMode.MUSHAF) {
                                         val ayahIndex = displayedData.indexOfFirst { it.numberInSurah.toString() == searchQuery }
                                         if (ayahIndex != -1) {
-                                            val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && initialAyah <= 0) 2 else 1
+                                            val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandaloneAyatAlKursi) 2 else 1
                                             coroutineScope.launch {
                                                 listState.animateScrollToItem(ayahIndex + headerCount)
                                             }
@@ -318,7 +319,7 @@ fun SurahDetailScreen(
                                 }
                             )
                         }
-                        if (!isJuz && surahNumber != 1 && surahNumber != 9 && initialAyah <= 0) {
+                        if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandaloneAyatAlKursi) {
                             item {
                                 BismillahSection(arabicFontName = arabicFontName)
                             }

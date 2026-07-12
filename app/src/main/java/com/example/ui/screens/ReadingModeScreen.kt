@@ -31,10 +31,11 @@ fun ReadingModeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val theme by viewModel.theme.collectAsState()
+    val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
 
     var showSettings by remember { mutableStateOf(false) }
 
-    LaunchedEffect(surahNumber) {
+    LaunchedEffect(surahNumber, tanzilTextStyle) {
         viewModel.loadSurah(surahNumber)
     }
 
@@ -121,7 +122,9 @@ fun ReadingModeScreen(
                     arabicFontSize = arabicFontSize,
                     onArabicFontSizeChange = { viewModel.setArabicFontSize(it) },
                     theme = theme,
-                    onThemeChange = { viewModel.setTheme(it) }
+                    onThemeChange = { viewModel.setTheme(it) },
+                    tanzilTextStyle = tanzilTextStyle,
+                    onTanzilTextStyleChange = { viewModel.setTanzilTextStyle(it) }
                 )
             }
         }
@@ -133,7 +136,9 @@ fun ReadingSettingsContent(
     arabicFontSize: Float,
     onArabicFontSizeChange: (Float) -> Unit,
     theme: String,
-    onThemeChange: (String) -> Unit
+    onThemeChange: (String) -> Unit,
+    tanzilTextStyle: String,
+    onTanzilTextStyleChange: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -167,6 +172,40 @@ fun ReadingSettingsContent(
             ThemeOption(name = "Sepia", currentTheme = theme, onClick = { onThemeChange("Sepia") })
         }
         
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(text = "Tanzil Script Style", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val scripts = listOf(
+                Pair("quran-uthmani", "Uthmani"),
+                Pair("quran-simple", "Simple"),
+                Pair("quran-simple-clean", "Clean"),
+                Pair("quran-simple-plain", "Plain")
+            )
+            scripts.forEach { (styleId, styleName) ->
+                val isSelected = styleId == tanzilTextStyle
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onTanzilTextStyleChange(styleId) }
+                ) {
+                    Text(
+                        text = styleName,
+                        textAlign = TextAlign.Center,
+                        fontSize = 11.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 10.dp)
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
     }
 }

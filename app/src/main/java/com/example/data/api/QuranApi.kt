@@ -26,6 +26,15 @@ interface QuranApi {
     ): ApiResponse<List<SurahDetail>>
 
     /**
+     * Fetches a specific Surah with custom editions list.
+     */
+    @GET("surah/{number}/editions/{editions}")
+    suspend fun getSurahWithEditions(
+        @Path("number") surahNumber: Int,
+        @Path("editions") editions: String
+    ): ApiResponse<List<SurahDetail>>
+
+    /**
      * Fetches a specific page of the Quran
      */
     @GET("page/{pageNumber}/quran-uthmani")

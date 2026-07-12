@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 sealed class SearchResultItemType {
@@ -249,9 +250,10 @@ class SearchViewModel(
 
                     // 3. Search verses via API for text matching
                     try {
+                        val tanzilStyle = settingsRepository.tanzilTextStyleFlow.first()
                         val isArabicQuery = containsArabic(query)
                         val response = if (isArabicQuery) {
-                            repository.searchQuran(query, "quran-uthmani")
+                            repository.searchQuran(query, tanzilStyle)
                         } else {
                             repository.searchQuran(query)
                         }
@@ -261,7 +263,7 @@ class SearchViewModel(
                         val surahDetailsMap = mutableMapOf<Int, List<com.example.data.model.CombinedAyah>>()
                         uniqueSurahNumbers.forEach { surahNum ->
                             try {
-                                surahDetailsMap[surahNum] = repository.getSurahDetailsCombined(surahNum)
+                                surahDetailsMap[surahNum] = repository.getSurahDetailsCombined(surahNum, tanzilStyle)
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }

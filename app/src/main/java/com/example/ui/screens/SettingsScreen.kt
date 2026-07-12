@@ -49,12 +49,17 @@ data class MenuItem(
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToSurah: (Int) -> Unit = {},
+    onNavigateToPage: (Int) -> Unit = {},
+    onNavigateToJuz: (Int) -> Unit = {},
+    onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
     val showTranslation by viewModel.showTranslation.collectAsState()
+    val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     val username by viewModel.username.collectAsState()
     val readingTime by viewModel.readingTimeMinutes.collectAsState()
     val bookmarkList by viewModel.bookmarks.collectAsState(initial = emptyList())
@@ -335,6 +340,76 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Border)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Book,
+                            contentDescription = null,
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "তানজিল কুরআন স্ক্রিপ্ট স্টাইল",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "পঠন মোড ও সার্চের জন্য তানজিল.নেট স্ক্রিপ্ট অপশন নির্বাচন করুন",
+                        fontSize = 12.sp,
+                        color = GrayText
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val scriptOptions = listOf(
+                        Pair("quran-uthmani", "উসমানী স্ক্রিপ্ট (Uthmani)"),
+                        Pair("quran-simple", "সহজ স্ক্রিপ্ট (Simple)"),
+                        Pair("quran-simple-clean", "হরকত ছাড়া ক্লিন (Simple Clean)"),
+                        Pair("quran-simple-plain", "প্লেইন স্ক্রিপ্ট (Simple Plain)")
+                    )
+
+                    scriptOptions.forEach { (styleId, styleName) ->
+                        val isSelected = tanzilTextStyle == styleId
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) PrimaryGreen.copy(alpha = 0.1f) else Color.Transparent)
+                                .clickable { viewModel.setTanzilTextStyle(styleId) }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = styleName,
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface
+                            )
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { viewModel.setTanzilTextStyle(styleId) },
+                                colors = RadioButtonDefaults.colors(selectedColor = PrimaryGreen)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -343,7 +418,11 @@ fun SettingsScreen(
         MenuDetailDialog(
             type = activeDialog!!,
             viewModel = viewModel,
-            onDismiss = { activeDialog = null }
+            onDismiss = { activeDialog = null },
+            onNavigateToSurah = onNavigateToSurah,
+            onNavigateToPage = onNavigateToPage,
+            onNavigateToJuz = onNavigateToJuz,
+            onNavigateToAyah = onNavigateToAyah
         )
     }
 }
@@ -352,7 +431,11 @@ fun SettingsScreen(
 fun MenuDetailDialog(
     type: String,
     viewModel: SettingsViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onNavigateToSurah: (Int) -> Unit = {},
+    onNavigateToPage: (Int) -> Unit = {},
+    onNavigateToJuz: (Int) -> Unit = {},
+    onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -418,7 +501,21 @@ fun MenuDetailDialog(
                 ) {
                     when (type) {
                         "profile" -> ProfileDialogContent(viewModel)
-                        "bookmark" -> BookmarkDialogContent(viewModel)
+                        "bookmark" -> BookmarkDialogContent(
+                            viewModel = viewModel,
+                            onBookmarkClick = { bookmark ->
+                                onDismiss()
+                                when (bookmark.type) {
+                                    "SURAH" -> onNavigateToSurah(bookmark.referenceId)
+                                    "PAGE" -> onNavigateToPage(bookmark.referenceId)
+                                    "JUZ" -> onNavigateToJuz(bookmark.referenceId)
+                                    "AYAH" -> {
+                                        val (surahNum, ayahNum) = com.example.data.QuranData.getSurahAndAyahFromGlobal(bookmark.referenceId)
+                                        onNavigateToAyah(surahNum, ayahNum)
+                                    }
+                                }
+                            }
+                        )
                         "note" -> NotepadDialogContent(viewModel)
                         "planner" -> PlannerDialogContent(viewModel)
                         "subjectwise" -> SubjectwiseDialogContent()
@@ -556,7 +653,10 @@ fun ProfileDialogContent(viewModel: SettingsViewModel) {
 
 // --- 2. BOOKMARK DIALOG ---
 @Composable
-fun BookmarkDialogContent(viewModel: SettingsViewModel) {
+fun BookmarkDialogContent(
+    viewModel: SettingsViewModel,
+    onBookmarkClick: (BookmarkEntity) -> Unit = {}
+) {
     val bookmarks by viewModel.bookmarks.collectAsState(initial = emptyList())
     
     if (bookmarks.isEmpty()) {
@@ -594,7 +694,9 @@ fun BookmarkDialogContent(viewModel: SettingsViewModel) {
         ) {
             items(bookmarks) { bookmark ->
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onBookmarkClick(bookmark) },
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     border = BorderStroke(1.dp, Border)
                 ) {

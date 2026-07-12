@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class ReadingModeViewModel(
@@ -27,6 +28,9 @@ class ReadingModeViewModel(
     val bengaliFontSize: StateFlow<Float> = settingsRepository.bengaliFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 16f)
 
+    val tanzilTextStyle: StateFlow<String> = settingsRepository.tanzilTextStyleFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "quran-uthmani")
+
     val theme: StateFlow<String> = settingsRepository.themeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Light")
 
@@ -37,13 +41,18 @@ class ReadingModeViewModel(
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
-                val ayahs = getSurahDetailsUseCase(surahNumber)
+                val style = settingsRepository.tanzilTextStyleFlow.first()
+                val ayahs = getSurahDetailsUseCase(surahNumber, style)
                 _uiState.value = UiState.Success(ayahs)
                 settingsRepository.setLastReadSurah(surahNumber)
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to load Surah details")
             }
         }
+    }
+
+    fun setTanzilTextStyle(style: String) {
+        viewModelScope.launch { settingsRepository.setTanzilTextStyle(style) }
     }
 
     fun setArabicFontSize(size: Float) {

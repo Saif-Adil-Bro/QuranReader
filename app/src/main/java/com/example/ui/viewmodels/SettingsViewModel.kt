@@ -227,9 +227,22 @@ class SettingsViewModel(
             initialValue = true
         )
 
+    val tanzilTextStyle: StateFlow<String> = repository.tanzilTextStyleFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "quran-uthmani"
+        )
+
     fun toggleTranslation(show: Boolean) {
         viewModelScope.launch {
             repository.setShowTranslation(show)
+        }
+    }
+
+    fun setTanzilTextStyle(style: String) {
+        viewModelScope.launch {
+            repository.setTanzilTextStyle(style)
         }
     }
 

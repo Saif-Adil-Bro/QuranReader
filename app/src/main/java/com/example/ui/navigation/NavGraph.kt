@@ -214,7 +214,19 @@ fun AppNavGraph(
             val viewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
             SettingsScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSurah = { surahNumber ->
+                    navController.navigate("detail/$surahNumber")
+                },
+                onNavigateToPage = { page ->
+                    navController.navigate("hafezi/$page")
+                },
+                onNavigateToJuz = { juzNumber ->
+                    navController.navigate("juz/$juzNumber")
+                },
+                onNavigateToAyah = { surahNumber, ayahNumber ->
+                    navController.navigate("detail/$surahNumber?viewMode=LIST&initialAyah=$ayahNumber")
+                }
             )
         }
 
