@@ -83,6 +83,13 @@ class SurahDetailViewModel(
             initialValue = "Amiri Quran"
         )
 
+    val tanzilTextStyle: StateFlow<String> = settingsRepository.tanzilTextStyleFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "quran-uthmani"
+        )
+
     // Playback state and Mode
     val isPlaying: StateFlow<Boolean> = audioRepository.isPlaying
     val currentPlayingAyahNumber: StateFlow<Int?> = audioRepository.currentPlayingAyahNumber
@@ -209,6 +216,12 @@ class SurahDetailViewModel(
         }
     }
 
+    fun setTanzilTextStyle(style: String) {
+        viewModelScope.launch {
+            settingsRepository.setTanzilTextStyle(style)
+        }
+    }
+
     fun toggleTranslation() {
         viewModelScope.launch {
             settingsRepository.setShowTranslation(!showTranslation.value)
@@ -219,7 +232,7 @@ class SurahDetailViewModel(
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
-                val combinedAyahs = repository.getSurahDetailsCombined(surahNumber)
+                val combinedAyahs = repository.getSurahDetailsCombined(surahNumber, tanzilTextStyle.value)
                 _uiState.value = UiState.Success(combinedAyahs)
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to load Surah details")
@@ -260,7 +273,7 @@ class SurahDetailViewModel(
             _downloadError.value = null
             try {
                 // 1. Pre-cache text data
-                val combinedAyahs = repository.getSurahDetailsCombined(surahNumber)
+                val combinedAyahs = repository.getSurahDetailsCombined(surahNumber, tanzilTextStyle.value)
                 val totalAyahs = combinedAyahs.size
                 if (totalAyahs == 0) {
                     _downloadStatus.value = "কোনো আয়াত পাওয়া যায়নি"

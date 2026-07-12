@@ -46,6 +46,15 @@ class HafeziModeViewModel(
     val repeatCount: StateFlow<Int> = settingsRepository.repeatCountFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
 
+    val arabicFontSize: StateFlow<Float> = settingsRepository.arabicFontSizeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 24f)
+
+    val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Amiri Quran")
+
+    val theme: StateFlow<String> = settingsRepository.themeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Light")
+
     private var currentRepeatIteration = 0
     private var playlist: List<CombinedAyah> = emptyList()
     private var currentPlaylistIndex = 0
@@ -92,6 +101,24 @@ class HafeziModeViewModel(
     fun setRepeatCount(count: Int) {
         viewModelScope.launch {
             settingsRepository.setRepeatCount(count)
+        }
+    }
+
+    fun setArabicFontSize(size: Float) {
+        viewModelScope.launch {
+            settingsRepository.setArabicFontSize(size)
+        }
+    }
+
+    fun setArabicFontName(fontName: String) {
+        viewModelScope.launch {
+            settingsRepository.setArabicFontName(fontName)
+        }
+    }
+
+    fun setTheme(theme: String) {
+        viewModelScope.launch {
+            settingsRepository.setTheme(theme)
         }
     }
 

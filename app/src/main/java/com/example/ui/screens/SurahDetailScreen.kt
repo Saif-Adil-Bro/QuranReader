@@ -86,6 +86,7 @@ fun SurahDetailScreen(
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val bengaliFontSize by viewModel.bengaliFontSize.collectAsState()
     val arabicFontName by viewModel.arabicFontName.collectAsState()
+    val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentPlayingAyahNumber by viewModel.currentPlayingAyahNumber.collectAsState()
@@ -112,7 +113,7 @@ fun SurahDetailScreen(
     
     val currentPlayingAyah = (uiState as? UiState.Success)?.data?.find { it.numberInSurah == currentPlayingAyahNumber }
 
-    LaunchedEffect(surahNumber, isJuz) {
+    LaunchedEffect(surahNumber, isJuz, tanzilTextStyle) {
         if (isJuz) {
             viewModel.loadJuz(surahNumber)
         } else {
@@ -403,6 +404,8 @@ fun SurahDetailScreen(
                     onBengaliFontSizeChange = { viewModel.setBengaliFontSize(it) },
                     arabicFontName = arabicFontName,
                     onArabicFontNameChange = { viewModel.setArabicFontName(it) },
+                    tanzilTextStyle = tanzilTextStyle,
+                    onTanzilTextStyleChange = { viewModel.setTanzilTextStyle(it) },
                     isDownloadingOffline = isDownloadingOffline,
                     downloadProgress = downloadProgress,
                     downloadStatus = downloadStatus,
@@ -1141,6 +1144,8 @@ fun ReaderSettingsBottomSheetContent(
     onBengaliFontSizeChange: (Float) -> Unit,
     arabicFontName: String = "Amiri Quran",
     onArabicFontNameChange: (String) -> Unit = {},
+    tanzilTextStyle: String = "quran-uthmani",
+    onTanzilTextStyleChange: (String) -> Unit = {},
     isDownloadingOffline: Boolean,
     downloadProgress: Int,
     downloadStatus: String?,
@@ -1277,6 +1282,51 @@ fun ReaderSettingsBottomSheetContent(
                             fontFamily = com.example.ui.theme.getArabicFont(font)
                         )
                     }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Tanzil Quran Script Style Selection
+        Text(
+            text = "কুরআন স্ক্রিপ্ট স্টাইল নির্বাচন করুন",
+            fontSize = 14.sp,
+            color = GrayText
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        val scriptOptions = listOf(
+            Pair("quran-uthmani", "উসমানী স্ক্রিপ্ট"),
+            Pair("quran-simple", "সহজ স্ক্রিপ্ট"),
+            Pair("quran-simple-clean", "হরকত ছাড়া ক্লিন"),
+            Pair("quran-simple-plain", "প্লেইন স্ক্রিপ্ট")
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(scriptOptions) { (styleId, styleName) ->
+                val isSelected = styleId == tanzilTextStyle
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (isSelected) PrimaryGreen else OffWhite,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .border(
+                            1.dp,
+                            if (isSelected) PrimaryGreen else Border,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { onTanzilTextStyleChange(styleId) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = styleName,
+                        color = if (isSelected) White else DarkText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

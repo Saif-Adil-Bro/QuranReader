@@ -1,10 +1,13 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
@@ -13,12 +16,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CombinedAyah
 import com.example.ui.state.UiState
+import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.ReadingModeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,17 +47,32 @@ fun ReadingModeScreen(
         viewModel.loadSurah(surahNumber)
     }
 
-    // Determine colors based on theme
-    val (backgroundColor, textColor) = when (theme) {
-        "Dark" -> Pair(Color(0xFF121212), Color(0xFFE0E0E0))
-        "Sepia" -> Pair(Color(0xFFFBF0D9), Color(0xFF5D4037))
-        else -> Pair(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.onSurface)
+    // Determine theme colors
+    val backgroundColor = when (theme) {
+        "Dark" -> Color(0xFF121212)
+        "Sepia" -> Color(0xFFFBF0D9)
+        else -> Color(0xFFF8F6F0)
+    }
+    val containerColor = when (theme) {
+        "Dark" -> Color(0xFF1E1E1E)
+        "Sepia" -> Color(0xFFF1E4C3)
+        else -> Color(0xFFEFECE4)
+    }
+    val topBarContentColor = when (theme) {
+        "Dark" -> Color(0xFFE0E0E0)
+        "Sepia" -> Color(0xFF5D4037)
+        else -> Color(0xFF333333)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Surah $surahNumber") },
+                title = { 
+                    val firstAyah = (uiState as? UiState.Success)?.data?.firstOrNull()
+                    val surahData = firstAyah?.let { com.example.data.QuranData.surahNames.find { s -> s.first == it.surahNumber } }
+                    val surahNameBangla = surahData?.second?.second ?: "সূরা $surahNumber"
+                    Text(surahNameBangla, fontWeight = FontWeight.Bold, fontSize = 18.sp) 
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -61,10 +84,10 @@ fun ReadingModeScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = backgroundColor,
-                    titleContentColor = textColor,
-                    navigationIconContentColor = textColor,
-                    actionIconContentColor = textColor
+                    containerColor = containerColor,
+                    titleContentColor = topBarContentColor,
+                    navigationIconContentColor = topBarContentColor,
+                    actionIconContentColor = topBarContentColor
                 )
             )
         }
@@ -77,7 +100,10 @@ fun ReadingModeScreen(
         ) {
             when (val state = uiState) {
                 is UiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
+                    )
                 }
                 is UiState.Error -> {
                     Column(
@@ -86,27 +112,66 @@ fun ReadingModeScreen(
                     ) {
                         Text(text = state.message, color = MaterialTheme.colorScheme.error)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.loadSurah(surahNumber) }) {
+                        Button(
+                            onClick = { viewModel.loadSurah(surahNumber) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
+                            )
+                        ) {
                             Text("Retry")
                         }
                     }
                 }
                 is UiState.Success -> {
+                    val firstAyah = state.data.firstOrNull()
+                    val surahData = firstAyah?.let { com.example.data.QuranData.surahNames.find { s -> s.first == it.surahNumber } }
+                    val surahNameArabic = surahData?.second?.first ?: "سورة $surahNumber"
+                    val juzNum = firstAyah?.juz ?: 1
+                    val juzName = "পারা ${juzNum.toBengaliNumerals()}"
+
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp)
                     ) {
                         item {
-                            // Render all ayahs continuously like a paragraph for reading mode
-                            val combinedText = state.data.joinToString(" ") { "${it.arabicText} ﴿${it.numberInSurah}﴾" }
-                            Text(
-                                text = combinedText,
-                                fontSize = arabicFontSize.sp,
-                                lineHeight = (arabicFontSize * 1.5).sp,
-                                textAlign = TextAlign.Justify,
-                                color = textColor,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            TanzilMushafFrame(
+                                titleRight = surahNameArabic,
+                                titleLeft = juzName,
+                                pageNumber = if (state.data.isNotEmpty()) state.data.first().page.toBengaliNumerals() else "",
+                                theme = theme
+                            ) {
+                                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                    val arabicFont = getArabicFont("") // Amiri Quran by default
+                                    val annotatedString = remember(state.data) {
+                                        buildAnnotatedString {
+                                            state.data.forEachIndexed { index, ayah ->
+                                                append(ayah.arabicText)
+                                                
+                                                val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
+                                                append(" ﴿$numInSurahStr﴾")
+                                                
+                                                if (index < state.data.lastIndex) {
+                                                    append("   ")
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Text(
+                                        text = annotatedString,
+                                        fontSize = arabicFontSize.sp,
+                                        lineHeight = (arabicFontSize * 1.65f).sp,
+                                        fontFamily = arabicFont,
+                                        color = when (theme) {
+                                            "Dark" -> Color(0xFFE0E0E0)
+                                            "Sepia" -> Color(0xFF4E342E)
+                                            else -> Color(0xFF1A1A1A)
+                                        },
+                                        textAlign = TextAlign.Justify,
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -116,7 +181,8 @@ fun ReadingModeScreen(
         if (showSettings) {
             ModalBottomSheet(
                 onDismissRequest = { showSettings = false },
-                sheetState = rememberModalBottomSheetState()
+                sheetState = rememberModalBottomSheetState(),
+                containerColor = containerColor
             ) {
                 ReadingSettingsContent(
                     arabicFontSize = arabicFontSize,
@@ -124,7 +190,9 @@ fun ReadingModeScreen(
                     theme = theme,
                     onThemeChange = { viewModel.setTheme(it) },
                     tanzilTextStyle = tanzilTextStyle,
-                    onTanzilTextStyleChange = { viewModel.setTanzilTextStyle(it) }
+                    onTanzilTextStyleChange = { viewModel.setTanzilTextStyle(it) },
+                    topBarContentColor = topBarContentColor,
+                    containerColor = containerColor
                 )
             }
         }
@@ -138,58 +206,101 @@ fun ReadingSettingsContent(
     theme: String,
     onThemeChange: (String) -> Unit,
     tanzilTextStyle: String,
-    onTanzilTextStyleChange: (String) -> Unit
+    onTanzilTextStyleChange: (String) -> Unit,
+    topBarContentColor: Color,
+    containerColor: Color
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         Text(
-            text = "Reading Settings",
-            style = MaterialTheme.typography.titleLarge,
+            text = "পঠন সেটিংস",
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
+            color = topBarContentColor,
+            modifier = Modifier.padding(bottom = 20.dp)
         )
 
-        Text(text = "Arabic Font Size: ${arabicFontSize.toInt()}sp", style = MaterialTheme.typography.bodyMedium)
+        // Arabic font size
+        Text(
+            text = "আরবি ফ্রন্ট সাইজ: ${arabicFontSize.toInt().toBengaliNumerals()}sp", 
+            style = MaterialTheme.typography.bodyMedium,
+            color = topBarContentColor
+        )
         Slider(
             value = arabicFontSize,
             onValueChange = onArabicFontSizeChange,
             valueRange = 18f..40f,
-            steps = 22
+            steps = 22,
+            colors = SliderDefaults.colors(
+                thumbColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
+                activeTrackColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Theme", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
+        // Theme selector
+        Text(
+            text = "থিম", 
+            style = MaterialTheme.typography.bodyMedium, 
+            color = topBarContentColor,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ThemeOption(name = "Light", currentTheme = theme, onClick = { onThemeChange("Light") })
-            ThemeOption(name = "Dark", currentTheme = theme, onClick = { onThemeChange("Dark") })
-            ThemeOption(name = "Sepia", currentTheme = theme, onClick = { onThemeChange("Sepia") })
+            listOf("Light" to "লাইট", "Sepia" to "সেপিয়া", "Dark" to "ডার্ক").forEach { (tKey, tName) ->
+                val isSel = tKey == theme
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSel) (if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)) else containerColor.copy(alpha = 0.5f),
+                    contentColor = if (isSel) Color.White else topBarContentColor,
+                    border = BorderStroke(1.dp, topBarContentColor.copy(alpha = 0.2f)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onThemeChange(tKey) }
+                ) {
+                    Text(
+                        text = tName,
+                        textAlign = TextAlign.Center,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 10.dp)
+                    )
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text(text = "Tanzil Script Style", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
+        // Tanzil Quran Script selector
+        Text(
+            text = "কুরআন স্ক্রিপ্ট স্টাইল", 
+            style = MaterialTheme.typography.bodyMedium, 
+            color = topBarContentColor,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             val scripts = listOf(
-                Pair("quran-uthmani", "Uthmani"),
-                Pair("quran-simple", "Simple"),
-                Pair("quran-simple-clean", "Clean"),
-                Pair("quran-simple-plain", "Plain")
+                Pair("quran-uthmani", "উসমানী"),
+                Pair("quran-simple", "সহজ"),
+                Pair("quran-simple-clean", "ক্লিন"),
+                Pair("quran-simple-plain", "প্লেইন")
             )
             scripts.forEach { (styleId, styleName) ->
-                val isSelected = styleId == tanzilTextStyle
+                val isSel = styleId == tanzilTextStyle
                 Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSel) (if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)) else containerColor.copy(alpha = 0.5f),
+                    contentColor = if (isSel) Color.White else topBarContentColor,
+                    border = BorderStroke(1.dp, topBarContentColor.copy(alpha = 0.2f)),
                     modifier = Modifier
                         .weight(1f)
                         .clickable { onTanzilTextStyleChange(styleId) }
@@ -197,9 +308,8 @@ fun ReadingSettingsContent(
                     Text(
                         text = styleName,
                         textAlign = TextAlign.Center,
-                        fontSize = 11.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(vertical = 10.dp)
                     )
                 }

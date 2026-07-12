@@ -135,6 +135,7 @@ fun AppNavGraph(
             val viewModel: QuranListViewModel = viewModel(factory = viewModelFactory)
             QuranListScreen(
                 viewModel = viewModel,
+                mode = mode,
                 onSurahClick = { surahNumber ->
                     if (mode == "normal") {
                         navController.navigate("detail/$surahNumber")
@@ -144,6 +145,9 @@ fun AppNavGraph(
                 },
                 onSettingsClick = {
                     navController.navigate("settings")
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }

@@ -33,6 +33,7 @@ import com.example.ui.theme.*
 import com.example.ui.viewmodels.HomeViewModel
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 
 fun String.toArabicNumerals(): String {
     val englishNumerals = "0123456789"
@@ -156,7 +157,15 @@ fun HomeScreen(
                     )
                 }
                 item {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ReadingModesSection(
+                        onNavigateToReadingMode = onNavigateToReadingMode,
+                        onNavigateToHafeziMode = { onNavigateToHafeziMode(1) },
+                        onNavigateToMushaf = onNavigateToMushaf
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                     QuickSurahPills(
                         onSurahClick = onNavigateToSurah,
                         onAyatulKursiClick = {
@@ -661,6 +670,110 @@ fun SurahCard(
                     Text(revelationType, color = GrayText, fontSize = 10.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ReadingModesSection(
+    onNavigateToReadingMode: () -> Unit,
+    onNavigateToHafeziMode: () -> Unit,
+    onNavigateToMushaf: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "পঠন মোডসমূহ",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Paragraph Reading Mode Card
+            ModeCard(
+                title = "প্যারাগ্রাফ মোড",
+                subtitle = "টানা পড়ার জন্য",
+                icon = Icons.Default.ChromeReaderMode,
+                backgroundColor = Color(0xFF10B981).copy(alpha = 0.08f),
+                iconColor = Color(0xFF10B981),
+                onClick = onNavigateToReadingMode,
+                modifier = Modifier.weight(1f)
+            )
+
+            // Hafezi Mode Card
+            ModeCard(
+                title = "হাফেজী মোড",
+                subtitle = "১৫ লাইন ফরম্যাট",
+                icon = Icons.Default.AutoStories,
+                backgroundColor = Color(0xFF3B82F6).copy(alpha = 0.08f),
+                iconColor = Color(0xFF3B82F6),
+                onClick = onNavigateToHafeziMode,
+                modifier = Modifier.weight(1f)
+            )
+
+            // Mushaf Mode Card
+            ModeCard(
+                title = "ডিজিটাল মুসহাফ",
+                subtitle = "আসল প্রিন্ট পেজ",
+                icon = Icons.AutoMirrored.Filled.MenuBook,
+                backgroundColor = Color(0xFFF59E0B).copy(alpha = 0.08f),
+                iconColor = Color(0xFFF59E0B),
+                onClick = onNavigateToMushaf,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun ModeCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    backgroundColor: Color,
+    iconColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .shadow(1.dp, RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(10.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.Start) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(backgroundColor, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(18.dp))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = title,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                lineHeight = 12.sp
+            )
+            Text(
+                text = subtitle,
+                fontSize = 9.sp,
+                color = GrayText,
+                maxLines = 1,
+                lineHeight = 10.sp
+            )
         }
     }
 }
