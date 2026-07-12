@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -853,14 +854,17 @@ fun ModeCard(
             .clickable { onClick() }
             .padding(10.dp)
     ) {
-        Column(horizontalAlignment = Alignment.Start) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
-                    .background(backgroundColor, RoundedCornerShape(8.dp)),
+                    .size(36.dp)
+                    .background(backgroundColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(18.dp))
+                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -869,14 +873,16 @@ fun ModeCard(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                lineHeight = 12.sp
+                lineHeight = 12.sp,
+                textAlign = TextAlign.Center
             )
             Text(
                 text = subtitle,
                 fontSize = 9.sp,
                 color = GrayText,
                 maxLines = 1,
-                lineHeight = 10.sp
+                lineHeight = 10.sp,
+                textAlign = TextAlign.Center
             )
         }
     }

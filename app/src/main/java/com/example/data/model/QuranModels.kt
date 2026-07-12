@@ -152,6 +152,19 @@ data class QuranComTranslation(
     @SerializedName("text") val text: String
 )
 
+data class QuranComTafsirResponse(
+    @SerializedName("tafsirs") val tafsirs: List<QuranComTafsirItem>
+)
+
+data class QuranComTafsirItem(
+    @SerializedName("id") val id: Int,
+    @SerializedName("resource_id") val resourceId: Int,
+    @SerializedName("verse_key") val verseKey: String,
+    @SerializedName("language_id") val languageId: Int,
+    @SerializedName("text") val text: String,
+    @SerializedName("slug") val slug: String? = null
+)
+
 fun String.removeWaqfSigns(): String {
     val waqfChars = charArrayOf(
         '\u06D6', // ۖ (صلے)
