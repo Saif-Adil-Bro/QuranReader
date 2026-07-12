@@ -139,7 +139,11 @@ class QuranRepository(
                     val json = cacheFile.readText()
                     val type = object : TypeToken<List<CombinedAyah>>() {}.type
                     val list = Gson().fromJson<List<CombinedAyah>>(json, type)
-                    if (!list.isNullOrEmpty()) {
+                    
+                    // Invalidate cache if it contains ayahs with missing words (to recover from past bugs/timeouts)
+                    val hasMissingWords = list.any { it.words.isEmpty() }
+                    
+                    if (!list.isNullOrEmpty() && !hasMissingWords) {
                         cachedSurahDetails[cacheKey] = list
                         return@withContext list
                     }
@@ -220,7 +224,10 @@ class QuranRepository(
                     val json = cacheFile.readText()
                     val type = object : TypeToken<List<CombinedAyah>>() {}.type
                     val list = Gson().fromJson<List<CombinedAyah>>(json, type)
-                    if (!list.isNullOrEmpty()) {
+                    
+                    val hasMissingWords = list.any { it.words.isEmpty() }
+                    
+                    if (!list.isNullOrEmpty() && !hasMissingWords) {
                         cachedPageDetails[pageNumber] = list
                         return@withContext list
                     }
@@ -293,7 +300,10 @@ class QuranRepository(
                     val json = cacheFile.readText()
                     val type = object : TypeToken<List<CombinedAyah>>() {}.type
                     val list = Gson().fromJson<List<CombinedAyah>>(json, type)
-                    if (!list.isNullOrEmpty()) {
+                    
+                    val hasMissingWords = list.any { it.words.isEmpty() }
+                    
+                    if (!list.isNullOrEmpty() && !hasMissingWords) {
                         cachedJuzDetails[juzNumber] = list
                         return@withContext list
                     }

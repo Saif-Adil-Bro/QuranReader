@@ -5,6 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -106,10 +108,12 @@ fun ReadingModeScreen(
         ) {
             when (val state = uiState) {
                 is UiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
-                    )
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        com.example.ui.components.QuranLoadingAnimation(
+                            text = "সুরা লোড হচ্ছে...", 
+                            color = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
+                        )
+                    }
                 }
                 is UiState.Error -> {
                     Column(
@@ -134,49 +138,53 @@ fun ReadingModeScreen(
                     val surahNameArabic = surahData?.second?.first ?: "سورة $surahNumber"
                     val juzNum = firstAyah?.juz ?: 1
                     val juzName = "পারা ${juzNum.toBengaliNumerals()}"
-
+                    
+                    val ayahsByPage = state.data.groupBy { it.page }
+                    
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp)
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        item {
-                            TanzilMushafFrame(
-                                titleRight = surahNameArabic,
-                                titleLeft = juzName,
-                                pageNumber = if (state.data.isNotEmpty()) state.data.first().page.toBengaliNumerals() else "",
-                                theme = theme
-                            ) {
-                                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                    val arabicFont = getArabicFont("") // Amiri Quran by default
-                                    val annotatedString = remember(state.data, showWaqfSigns) {
-                                        buildAnnotatedString {
-                                            state.data.forEachIndexed { index, ayah ->
-                                                val textToDisplay = if (showWaqfSigns) ayah.arabicText else ayah.arabicText.removeWaqfSigns()
-                                                append(textToDisplay)
-                                                
-                                                val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
-                                                append(" ﴿$numInSurahStr﴾")
-                                                
-                                                if (index < state.data.lastIndex) {
-                                                    append("   ")
+                        ayahsByPage.forEach { (page, ayahs) ->
+                            item(key = page) {
+                                TanzilMushafFrame(
+                                    titleRight = surahNameArabic,
+                                    titleLeft = juzName,
+                                    pageNumber = page.toBengaliNumerals(),
+                                    theme = theme
+                                ) {
+                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                        val arabicFont = getArabicFont("") // Amiri Quran by default
+                                        val annotatedString = remember(ayahs, showWaqfSigns) {
+                                            buildAnnotatedString {
+                                                ayahs.forEachIndexed { index, ayah ->
+                                                    val textToDisplay = if (showWaqfSigns) ayah.arabicText else ayah.arabicText.removeWaqfSigns()
+                                                    append(textToDisplay)
+                                                    
+                                                    val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
+                                                    append(" ﴿$numInSurahStr﴾")
+                                                    
+                                                    if (index < ayahs.lastIndex) {
+                                                        append("   ")
+                                                    }
                                                 }
                                             }
                                         }
+                                        Text(
+                                            text = annotatedString,
+                                            fontSize = arabicFontSize.sp,
+                                            lineHeight = (arabicFontSize * arabicLineSpacing).sp,
+                                            fontFamily = arabicFont,
+                                            color = when (theme) {
+                                                "Dark" -> Color(0xFFE0E0E0)
+                                                "Sepia" -> Color(0xFF4E342E)
+                                                else -> Color(0xFF1A1A1A)
+                                            },
+                                            textAlign = TextAlign.Justify,
+                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                                        )
                                     }
-
-                                    Text(
-                                        text = annotatedString,
-                                        fontSize = arabicFontSize.sp,
-                                        lineHeight = (arabicFontSize * arabicLineSpacing).sp,
-                                        fontFamily = arabicFont,
-                                        color = when (theme) {
-                                            "Dark" -> Color(0xFFE0E0E0)
-                                            "Sepia" -> Color(0xFF4E342E)
-                                            else -> Color(0xFF1A1A1A)
-                                        },
-                                        textAlign = TextAlign.Justify,
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
-                                    )
                                 }
                             }
                         }
@@ -184,7 +192,6 @@ fun ReadingModeScreen(
                 }
             }
         }
-
         if (showSettings) {
             ModalBottomSheet(
                 onDismissRequest = { showSettings = false },
@@ -228,6 +235,7 @@ fun ReadingSettingsContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         Text(
@@ -239,80 +247,34 @@ fun ReadingSettingsContent(
         )
 
         // Arabic font size
-        Text(
-            text = "আরবি ফ্রন্ট সাইজ: ${arabicFontSize.toInt().toBengaliNumerals()}sp", 
-            style = MaterialTheme.typography.bodyMedium,
-            color = topBarContentColor
-        )
-        Slider(
-            value = arabicFontSize,
-            onValueChange = onArabicFontSizeChange,
-            valueRange = 18f..40f,
-            steps = 22,
-            colors = SliderDefaults.colors(
-                thumbColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
-                activeTrackColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
-            )
+        com.example.ui.components.SettingAdjustmentRow(
+            label = "আরবি হরফের আকার",
+            valueText = "${arabicFontSize.toInt()} sp".toBengaliNumerals(),
+            onDecrease = {
+                val newSize = (arabicFontSize - 1f).coerceIn(18f, 40f)
+                onArabicFontSizeChange(newSize)
+            },
+            onIncrease = {
+                val newSize = (arabicFontSize + 1f).coerceIn(18f, 40f)
+                onArabicFontSizeChange(newSize)
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Arabic Line Spacing Settings
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "আরবি লাইন স্পেস: ${String.format("%.2f", arabicLineSpacing).toBengaliNumerals()} গুণ", 
-                style = MaterialTheme.typography.bodyMedium,
-                color = topBarContentColor
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                IconButton(
-                    onClick = {
-                        val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
-                        onArabicLineSpacingChange(newSpacing)
-                    },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            color = (if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)).copy(alpha = 0.2f),
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Remove,
-                        contentDescription = "Decrease line spacing",
-                        tint = topBarContentColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                
-                IconButton(
-                    onClick = {
-                        val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
-                        onArabicLineSpacingChange(newSpacing)
-                    },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            color = (if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)).copy(alpha = 0.2f),
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Increase line spacing",
-                        tint = topBarContentColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+        com.example.ui.components.SettingAdjustmentRow(
+            label = "আরবি লাইন স্পেস",
+            valueText = "${String.format("%.2f", arabicLineSpacing).toBengaliNumerals()} গুণ",
+            onDecrease = {
+                val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
+                onArabicLineSpacingChange(newSpacing)
+            },
+            onIncrease = {
+                val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
+                onArabicLineSpacingChange(newSpacing)
             }
-        }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -323,7 +285,7 @@ fun ReadingSettingsContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "থামার চিহ্ন প্রদর্শন (ম, জ, ছলে, ইত্যাদি)",
+                text = "থামার চিহ্ন প্রদর্শন (م، ج،صلے)",
                 style = MaterialTheme.typography.bodyMedium,
                 color = topBarContentColor
             )

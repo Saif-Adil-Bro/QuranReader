@@ -198,7 +198,9 @@ fun SurahDetailScreen(
         ) {
             when (val state = uiState) {
                 is UiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = PrimaryGreen)
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        com.example.ui.components.QuranLoadingAnimation(text = "লোড হচ্ছে...")
+                    }
                 }
                 is UiState.Error -> {
                     Column(
@@ -882,7 +884,6 @@ fun AyahCard(
                         text = ayah.bengaliText,
                         fontSize = bengaliFontSize.sp,
                         color = GrayText,
-                        textAlign = TextAlign.Right,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -1071,6 +1072,7 @@ fun PlayerBottomSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -1192,6 +1194,7 @@ fun ReaderSettingsBottomSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
         Row(
@@ -1244,7 +1247,7 @@ fun ReaderSettingsBottomSheetContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "থামার চিহ্ন প্রদর্শন (ম, জ, ছলে, ইত্যাদি)",
+                text = "থামার চিহ্ন প্রদর্শন (م، ج،صلے)",
                 fontSize = 16.sp,
                 color = DarkText
             )
@@ -1263,99 +1266,50 @@ fun ReaderSettingsBottomSheetContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Arabic Font Size
-        Text(
-            text = "আরবি হরফের আকার: ${arabicFontSize.toInt()} sp",
-            fontSize = 14.sp,
-            color = GrayText
-        )
-        Slider(
-            value = arabicFontSize,
-            onValueChange = onArabicFontSizeChange,
-            valueRange = 24f..48f,
-            colors = SliderDefaults.colors(
-                thumbColor = PrimaryGreen,
-                activeTrackColor = PrimaryGreen,
-                inactiveTrackColor = OffWhite
-            )
+        com.example.ui.components.SettingAdjustmentRow(
+            label = "আরবি হরফের আকার",
+            valueText = "${arabicFontSize.toInt()} sp".toBengaliNumerals(),
+            onDecrease = {
+                val newSize = (arabicFontSize - 1f).coerceIn(24f, 48f)
+                onArabicFontSizeChange(newSize)
+            },
+            onIncrease = {
+                val newSize = (arabicFontSize + 1f).coerceIn(24f, 48f)
+                onArabicFontSizeChange(newSize)
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Bengali Font Size
-        Text(
-            text = "বাংলা হরফের আকার: ${bengaliFontSize.toInt()} sp",
-            fontSize = 14.sp,
-            color = GrayText
-        )
-        Slider(
-            value = bengaliFontSize,
-            onValueChange = onBengaliFontSizeChange,
-            valueRange = 12f..28f,
-            colors = SliderDefaults.colors(
-                thumbColor = PrimaryGreen,
-                activeTrackColor = PrimaryGreen,
-                inactiveTrackColor = OffWhite
-            )
+        com.example.ui.components.SettingAdjustmentRow(
+            label = "বাংলা হরফের আকার",
+            valueText = "${bengaliFontSize.toInt()} sp".toBengaliNumerals(),
+            onDecrease = {
+                val newSize = (bengaliFontSize - 1f).coerceIn(12f, 28f)
+                onBengaliFontSizeChange(newSize)
+            },
+            onIncrease = {
+                val newSize = (bengaliFontSize + 1f).coerceIn(12f, 28f)
+                onBengaliFontSizeChange(newSize)
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Arabic Line Spacing Settings
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "আরবি লাইন স্পেস: " + String.format(java.util.Locale.US, "%.2f", arabicLineSpacing).toBengaliNumerals() + " গুণ", 
-                fontSize = 14.sp,
-                color = GrayText
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                IconButton(
-                    onClick = {
-                        val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
-                        onArabicLineSpacingChange(newSpacing)
-                    },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            color = PrimaryGreen.copy(alpha = 0.12f),
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Remove,
-                        contentDescription = "Decrease line spacing",
-                        tint = PrimaryGreen,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                
-                IconButton(
-                    onClick = {
-                        val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
-                        onArabicLineSpacingChange(newSpacing)
-                    },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            color = PrimaryGreen.copy(alpha = 0.12f),
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Increase line spacing",
-                        tint = PrimaryGreen,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+        com.example.ui.components.SettingAdjustmentRow(
+            label = "আরবি লাইন স্পেস",
+            valueText = String.format(java.util.Locale.US, "%.2f", arabicLineSpacing).toBengaliNumerals() + " গুণ",
+            onDecrease = {
+                val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
+                onArabicLineSpacingChange(newSpacing)
+            },
+            onIncrease = {
+                val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
+                onArabicLineSpacingChange(newSpacing)
             }
-        }
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -1374,6 +1328,7 @@ fun ReaderSettingsBottomSheetContent(
                 val isSelected = font == arabicFontName
                 Box(
                     modifier = Modifier
+                        .height(56.dp)
                         .background(
                             if (isSelected) PrimaryGreen else OffWhite,
                             RoundedCornerShape(12.dp)
@@ -1384,23 +1339,15 @@ fun ReaderSettingsBottomSheetContent(
                             RoundedCornerShape(12.dp)
                         )
                         .clickable { onArabicFontNameChange(font) }
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = font,
-                            color = if (isSelected) White else DarkText,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "الحمد لله",
-                            color = if (isSelected) White else GrayText,
-                            fontSize = 18.sp,
-                            fontFamily = com.example.ui.theme.getArabicFont(font)
-                        )
-                    }
+                    Text(
+                        text = "الحمد لله",
+                        color = if (isSelected) White else DarkText,
+                        fontSize = 22.sp,
+                        fontFamily = com.example.ui.theme.getArabicFont(font)
+                    )
                 }
             }
         }
@@ -1556,9 +1503,9 @@ fun ReaderSettingsBottomSheetContent(
 
             Button(
                 onClick = onDownloadClick,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06B6D4)),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF06B6D4)),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
             ) {
                 Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -1570,7 +1517,6 @@ fun ReaderSettingsBottomSheetContent(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MushafPageView(
     page: Int,
@@ -1588,107 +1534,123 @@ fun MushafPageView(
 ) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     
-    // Build a single, unified annotated string for all ayahs of this page to ensure continuous flow
-    val annotatedString = remember(ayahs, surahNumber, currentPlayingWordUrl, currentPlayingAyahNumber, isPlaying, tanzilTextStyle) {
-        buildAnnotatedString {
-            ayahs.forEachIndexed { index, ayah ->
-                val ayahStart = length
-                val isAyahPlaying = isPlaying && currentPlayingAyahNumber == ayah.numberInSurah
-                
-                if (ayah.words.isNotEmpty() && tanzilTextStyle != "quran-simple-clean" && tanzilTextStyle != "quran-simple-plain") {
-                    val processedWords = mutableListOf<ProcessedWord>()
-                    ayah.words.forEach { word ->
-                        val text = word.textUthmani ?: ""
-                        val isPause = word.charTypeName == "pause" || 
-                                      word.charTypeName == "stop" ||
-                                      text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج", "لا", "صلى", "صلے", " his", "qaly", "qala", "صلے", "কুত", "صلى", "صلے", "قلے", "قلى")
-                        
-                        if (isPause) {
-                            val lastWordIndex = processedWords.indexOfLast { it.charTypeName == "word" }
-                            if (lastWordIndex != -1) {
-                                val lastWord = processedWords[lastWordIndex]
-                                processedWords[lastWordIndex] = lastWord.copy(
-                                    textUthmani = lastWord.textUthmani + " " + text
-                                )
-                            } else {
-                                processedWords.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
-                            }
-                        } else {
-                            processedWords.add(ProcessedWord(word.id, word.position, word.charTypeName, text, word.translation?.text))
-                        }
-                    }
+    var annotatedString by remember { mutableStateOf<androidx.compose.ui.text.AnnotatedString?>(null) }
+    
+    LaunchedEffect(ayahs, surahNumber, currentPlayingWordUrl, currentPlayingAyahNumber, isPlaying, tanzilTextStyle) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val result = buildAnnotatedString {
+                ayahs.forEachIndexed { index, ayah ->
+                    val ayahStart = length
+                    val isAyahPlaying = isPlaying && currentPlayingAyahNumber == ayah.numberInSurah
                     
-                    processedWords.forEachIndexed { wIndex, word ->
-                        if (word.charTypeName != "end") {
-                            val wordStart = length
-                            val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
-                            val isHighlighted = url == currentPlayingWordUrl
+                    if (ayah.words.isNotEmpty() && tanzilTextStyle != "quran-simple-clean" && tanzilTextStyle != "quran-simple-plain") {
+                        val processedWords = mutableListOf<ProcessedWord>()
+                        ayah.words.forEach { word ->
+                            val text = word.textUthmani ?: ""
+                            val isPause = word.charTypeName == "pause" || 
+                                          word.charTypeName == "stop" ||
+                                          text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج", "لا", "صلى", "صلے", " his", "qaly", "qala", "صلے", "কুত", "صلى", "صلے", "قلے", "قلى")
                             
-                            if (isHighlighted) {
-                                withStyle(
-                                    style = SpanStyle(
-                                        background = PrimaryGreen.copy(alpha = 0.25f),
-                                        fontWeight = FontWeight.Bold,
-                                        color = PrimaryGreen
+                            if (isPause) {
+                                val lastWordIndex = processedWords.indexOfLast { it.charTypeName == "word" }
+                                if (lastWordIndex != -1) {
+                                    val lastWord = processedWords[lastWordIndex]
+                                    processedWords[lastWordIndex] = lastWord.copy(
+                                        textUthmani = lastWord.textUthmani + " " + text
                                     )
-                                ) {
-                                    append(word.textUthmani)
+                                } else {
+                                    processedWords.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
                                 }
                             } else {
-                                append(word.textUthmani)
-                            }
-                            
-                            val wordEnd = length
-                            
-                            addStringAnnotation(
-                                tag = "word_url",
-                                annotation = url,
-                                start = wordStart,
-                                end = wordEnd
-                            )
-                            
-                            if (wIndex < processedWords.lastIndex) {
-                                append(" ")
+                                processedWords.add(ProcessedWord(word.id, word.position, word.charTypeName, text, word.translation?.text))
                             }
                         }
+                        
+                        processedWords.forEachIndexed { wIndex, word ->
+                            if (word.charTypeName != "end") {
+                                val wordStart = length
+                                val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
+                                val isHighlighted = url == currentPlayingWordUrl
+                                
+                                if (isHighlighted) {
+                                    withStyle(
+                                        style = SpanStyle(
+                                            background = PrimaryGreen.copy(alpha = 0.25f),
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryGreen
+                                        )
+                                    ) {
+                                        append(word.textUthmani)
+                                    }
+                                } else {
+                                    append(word.textUthmani)
+                                }
+                                
+                                val wordEnd = length
+                                
+                                addStringAnnotation(
+                                    tag = "word_url",
+                                    annotation = url,
+                                    start = wordStart,
+                                    end = wordEnd
+                                )
+                                
+                                if (wIndex < processedWords.lastIndex) {
+                                    append(" ")
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback to full Arabic text if words are empty
+                        append(ayah.arabicText)
                     }
-                } else {
-                    // Fallback to full Arabic text if words are empty
-                    append(ayah.arabicText)
-                }
-                
-                append(" ")
-                
-                // Add the standard Uthmani end of ayah symbol and digits
-                val ayahNumberStr = ayah.numberInSurah.toArabicNumerals()
-                append("\u06DD$ayahNumberStr")
-                
-                // Add a space between ayahs
-                if (index < ayahs.lastIndex) {
-                    append("  ")
-                }
-                
-                val ayahEnd = length
-                
-                if (isAyahPlaying) {
-                    addStyle(
-                        style = SpanStyle(
-                            background = PrimaryGreen.copy(alpha = 0.12f)
-                        ),
+                    
+                    append(" ")
+                    
+                    // Add the standard Uthmani end of ayah symbol and digits
+                    val ayahNumberStr = ayah.numberInSurah.toArabicNumerals()
+                    append("\u06DD$ayahNumberStr")
+                    
+                    // Add a space between ayahs
+                    if (index < ayahs.lastIndex) {
+                        append("  ")
+                    }
+                    
+                    val ayahEnd = length
+                    
+                    if (isAyahPlaying) {
+                        addStyle(
+                            style = SpanStyle(
+                                background = PrimaryGreen.copy(alpha = 0.12f)
+                            ),
+                            start = ayahStart,
+                            end = ayahEnd
+                        )
+                    }
+                    
+                    // Add base ayah_index annotation covering the entire ayah text, circle, and spacing
+                    addStringAnnotation(
+                        tag = "ayah_index",
+                        annotation = index.toString(),
                         start = ayahStart,
                         end = ayahEnd
                     )
                 }
-                
-                // Add base ayah_index annotation covering the entire ayah text, circle, and spacing
-                addStringAnnotation(
-                    tag = "ayah_index",
-                    annotation = index.toString(),
-                    start = ayahStart,
-                    end = ayahEnd
-                )
             }
+            annotatedString = result
         }
+    }
+    
+    if (annotatedString == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            com.example.ui.components.QuranLoadingAnimation(text = "")
+        }
+        return
     }
     
     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -1696,7 +1658,7 @@ fun MushafPageView(
     Column(modifier = Modifier.fillMaxWidth()) {
         CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
             Text(
-                text = annotatedString,
+                text = annotatedString!!,
                 fontSize = arabicFontSize.sp,
                 lineHeight = (arabicFontSize * arabicLineSpacing).sp,
                 fontFamily = arabicFont,
@@ -1711,7 +1673,7 @@ fun MushafPageView(
                             val charIndex = currentLayoutResult.getOffsetForPosition(offset)
                             
                             // Check if word_url annotation exists at click offset
-                            val wordUrlAnnotations = annotatedString.getStringAnnotations(
+                            val wordUrlAnnotations = annotatedString!!.getStringAnnotations(
                                 tag = "word_url",
                                 start = charIndex,
                                 end = charIndex
@@ -1721,7 +1683,7 @@ fun MushafPageView(
                                 onPlayWord(wordUrlAnnotations.first().item)
                             } else {
                                 // Fallback: check if ayah_index annotation exists
-                                val ayahAnnotations = annotatedString.getStringAnnotations(
+                                val ayahAnnotations = annotatedString!!.getStringAnnotations(
                                     tag = "ayah_index",
                                     start = charIndex,
                                     end = charIndex

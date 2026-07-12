@@ -79,7 +79,7 @@ fun QuranListScreen(
             when (val state = uiState) {
                 is UiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        com.example.ui.components.QuranLoadingAnimation(text = "সুরা লোড হচ্ছে...")
                     }
                 }
                 is UiState.Error -> {

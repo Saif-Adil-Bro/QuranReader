@@ -155,18 +155,7 @@ fun SearchScreen(
                                 modifier = Modifier.fillMaxSize(), 
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    CircularProgressIndicator(color = PrimaryGreen)
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        "অনুসন্ধান করা হচ্ছে...", 
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                        fontSize = 14.sp
-                                    )
-                                }
+                                com.example.ui.components.QuranLoadingAnimation(text = "অনুসন্ধান করা হচ্ছে...")
                             }
                         }
                         is UiState.Success -> {
