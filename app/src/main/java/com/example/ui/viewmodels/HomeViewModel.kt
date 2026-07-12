@@ -39,6 +39,56 @@ class HomeViewModel(
             initialValue = "Light"
         )
 
+    val hasAskedDownloadPrompt: StateFlow<Boolean> = settingsRepository.hasAskedDownloadPromptFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    private val _isDownloading = MutableStateFlow(false)
+    val isDownloading: StateFlow<Boolean> = _isDownloading
+
+    private val _downloadProgress = MutableStateFlow(0)
+    val downloadProgress: StateFlow<Int> = _downloadProgress
+
+    private val _downloadError = MutableStateFlow<String?>(null)
+    val downloadError: StateFlow<String?> = _downloadError
+
+    fun setHasAskedDownloadPrompt() {
+        viewModelScope.launch {
+            settingsRepository.setHasAskedDownloadPrompt(true)
+        }
+    }
+
+    fun downloadAllQuranData() {
+        viewModelScope.launch {
+            _isDownloading.value = true
+            _downloadProgress.value = 0
+            _downloadError.value = null
+            try {
+                // First download Surah list
+                quranRepository.getSurahs()
+                
+                // Then download each of the 114 Surahs
+                for (i in 1..114) {
+                    if (!quranRepository.isSurahDownloaded(i)) {
+                        try {
+                            quranRepository.getSurahDetailsCombined(i)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    _downloadProgress.value = i
+                }
+            } catch (e: Exception) {
+                _downloadError.value = e.localizedMessage ?: "ডাউনলোড ব্যর্থ হয়েছে"
+            } finally {
+                _isDownloading.value = false
+            }
+        }
+    }
+
     fun toggleTheme() {
         viewModelScope.launch {
             val nextTheme = if (theme.value == "Dark") "Light" else "Dark"

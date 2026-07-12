@@ -1737,50 +1737,14 @@ fun AyahCircle(
     color: Color = PrimaryGreen,
     modifier: Modifier = Modifier
 ) {
-    val density = LocalDensity.current
-    // Size is proportional to font size to ensure it scales perfectly and stays compact
-    val boxSize = (fontSize * 1.35f).dp
-    val textFontSize = (fontSize * 0.55f).sp
-    
-    Box(
+    Text(
+        text = "\u06DD${number.toArabicNumerals()}",
+        fontSize = (fontSize * 1.25f).sp,
+        fontFamily = amiriFont,
+        color = color,
+        textAlign = TextAlign.Center,
         modifier = modifier
-            .size(boxSize)
-            .padding(1.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val center = this.center
-            val radius = size.minDimension / 2f
-            
-            // Outer dynamic circle
-            drawCircle(
-                color = color,
-                radius = radius - 1.dp.toPx(),
-                style = Stroke(width = 1.5.dp.toPx())
-            )
-            
-            // Inner decorative dynamic solid line
-            val innerRadius = radius - 3.dp.toPx()
-            if (innerRadius > 0) {
-                drawCircle(
-                    color = color.copy(alpha = 0.35f),
-                    radius = innerRadius,
-                    style = Stroke(
-                        width = 0.8.dp.toPx()
-                    )
-                )
-            }
-        }
-        Text(
-            text = number.toArabicNumerals(),
-            color = DarkText,
-            fontSize = textFontSize,
-            fontWeight = FontWeight.Bold,
-            fontFamily = amiriFont,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 1.dp)
-        )
-    }
+    )
 }
 
 @Composable

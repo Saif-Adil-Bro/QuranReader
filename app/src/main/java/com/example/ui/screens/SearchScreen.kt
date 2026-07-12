@@ -105,7 +105,7 @@ fun SearchScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     placeholder = { 
                         Text(
-                            "বাংলা বা ইংরেজি শব্দ দিয়ে খুঁজুন...", 
+                            "বাংলা, ইংরেজি বা আরবি শব্দ দিয়ে খুঁজুন...", 
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         ) 
                     },
@@ -254,9 +254,9 @@ fun InitialSearchLayout(
     isDark: Boolean
 ) {
     val popularTags = listOf(
-        "সালাত", "ঈমান", "জান্নাত", "জাহান্নাম", 
-        "তওবা", "ধৈর্য", "রমজান", "দোয়া", 
-        "হজ্জ", "ক্ষমা", "তাকওয়া", "ইনসাফ"
+        "সালাত", "ঈমান", "জান্নাত", "তওবা", 
+        "الله", "صبر", "صلاة", "قرآن", 
+        "ধৈর্য", "রমজান", "তাকওয়া", "ক্ষমা"
     )
 
     Column(
@@ -294,7 +294,7 @@ fun InitialSearchLayout(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "কুরআনের যেকোনো আয়াত বা শিক্ষা সহজেই বাংলা অথবা ইংরেজি কীওয়ার্ড দিয়ে অনুসন্ধান করুন।",
+            text = "কুরআনের যেকোনো আয়াত বা শিক্ষা সহজে বাংলা, ইংরেজি অথবা আরবি কীওয়ার্ড দিয়ে অনুসন্ধান করুন।",
             textAlign = TextAlign.Center,
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),

@@ -114,6 +114,12 @@ class SearchViewModel(
         }
     }
 
+    private fun cleanArabicText(text: String): String {
+        // Remove Arabic diacritics/tashkeel and waqf/pause signs
+        val diacriticsRegex = Regex("[\\u064B-\\u065F\\u0670\\u06D6-\\u06ED]")
+        return text.replace(diacriticsRegex, "")
+    }
+
     private fun matchesSurah(surah: Surah, query: String, banglaName: String, banglaMeaning: String): Boolean {
         val q = query.trim().lowercase()
         if (q.isEmpty()) return false
@@ -253,7 +259,8 @@ class SearchViewModel(
                         val tanzilStyle = settingsRepository.tanzilTextStyleFlow.first()
                         val isArabicQuery = containsArabic(query)
                         val response = if (isArabicQuery) {
-                            repository.searchQuran(query, tanzilStyle)
+                            val cleanedQuery = cleanArabicText(query)
+                            repository.searchQuran(cleanedQuery, "quran-simple-clean")
                         } else {
                             repository.searchQuran(query)
                         }

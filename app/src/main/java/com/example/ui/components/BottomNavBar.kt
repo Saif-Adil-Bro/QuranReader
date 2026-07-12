@@ -60,9 +60,22 @@ fun BottomNavBar(
         BottomNavItem.Menu
     )
 
-    // The bottom nav bar should only be visible on top-level screens.
-    // If you have detail screens, you might want to hide it. We can handle it externally or here.
-    val isBottomNavItem = (items.any { it.route == currentRoute } || currentRoute == "settings") && !isSplashVisible
+    val visibleEntries by navController.visibleEntries.collectAsState()
+
+    // Check if there are any non-bottom-navigation screens currently visible or transitioning
+    val hasNonBottomNavVisible = visibleEntries.any { entry ->
+        val route = entry.destination.route
+        route != null && 
+                route != "home" && 
+                route != "mushaf" && 
+                route != "search" && 
+                route != "settings"
+    }
+
+    // The bottom nav bar should only be visible on top-level screens when no detail screens are transitioning
+    val isBottomNavItem = (items.any { it.route == currentRoute } || currentRoute == "settings") && 
+            !isSplashVisible && 
+            !hasNonBottomNavVisible
 
     if (isBottomNavItem) {
         Surface(

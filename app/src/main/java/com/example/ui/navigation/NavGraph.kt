@@ -336,7 +336,7 @@ fun SplashScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     Text(
-                        text = "কুরআন প্রস্তুত করা হচ্ছে...",
+                        text = "কুরআন ডাটা লোড করা হচ্ছে...",
                         fontSize = 14.sp,
                         color = Color(0xFF34D399),
                         fontWeight = FontWeight.Light
