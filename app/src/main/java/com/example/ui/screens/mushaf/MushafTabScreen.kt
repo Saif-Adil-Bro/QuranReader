@@ -9,14 +9,20 @@ import com.example.ui.viewmodels.MushafSelectionViewModel
 @Composable
 fun MushafTabScreen(
     onMushafSelected: (MushafStyle) -> Unit,
+    onLastReadSelected: (String, Int) -> Unit,
     viewModel: MushafSelectionViewModel
 ) {
     val mushafs by viewModel.mushafs.collectAsState()
     val downloadStatus by viewModel.downloadStatus.collectAsState()
+    val lastReadMushafId by viewModel.lastReadMushafId.collectAsState()
+    val lastReadMushafPage by viewModel.lastReadMushafPage.collectAsState()
 
     MushafSelectionScreen(
         mushafs = mushafs,
         downloadStatus = downloadStatus,
+        lastReadMushafId = lastReadMushafId,
+        lastReadMushafPage = lastReadMushafPage,
+        onResumeReading = onLastReadSelected,
         onSelectMushaf = onMushafSelected,
         onDownload = { viewModel.downloadMushaf(it) },
         onPause = { viewModel.pauseDownload(it) },

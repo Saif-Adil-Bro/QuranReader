@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import com.example.data.model.CombinedAyah
 import com.example.data.model.removeWaqfSigns
 import com.example.data.model.formatWaqfSigns
+import com.example.data.model.appendStyledWaqfText
 import com.example.ui.state.UiState
 import com.example.ui.theme.*
 import com.example.ui.screens.toBengaliNumerals
@@ -855,7 +856,9 @@ fun AyahCard(
                                             .padding(horizontal = 8.dp, vertical = 4.dp)
                                     ) {
                                         Text(
-                                            text = word.textUthmani,
+                                            text = androidx.compose.ui.text.buildAnnotatedString {
+                                                appendStyledWaqfText(word.textUthmani, arabicFontSize, true)
+                                            },
                                             fontSize = arabicFontSize.sp,
                                             color = if (isHighlighted) PrimaryGreen else DarkText,
                                             fontFamily = arabicFont,
@@ -1778,11 +1781,15 @@ fun AyahInlineText(
     val ayahNumberStr = ayahNumber.toArabicNumerals()
     // KFGQPC Uthman Taha Naskh often uses U+06DD before the digits.
     // Let's use \u06DD + digits.
-    val combinedText = "$arabicText﴿$ayahNumberStr﴾"
+    
+    val annotatedText = androidx.compose.ui.text.buildAnnotatedString {
+        appendStyledWaqfText(arabicText, fontSize, showWaqfSigns = true)
+        append("﴿$ayahNumberStr﴾")
+    }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Text(
-            text = combinedText,
+            text = annotatedText,
             fontSize = fontSize.sp,
             lineHeight = (fontSize * lineSpacing).sp,
             fontFamily = fontFamily,

@@ -6,14 +6,24 @@ import com.example.data.model.DownloadState
 import com.example.data.model.DownloadStatus
 import com.example.data.model.MushafStyle
 import com.example.data.repository.MushafRepository
+import com.example.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MushafSelectionViewModel(
-    private val repository: MushafRepository
+    private val repository: MushafRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    val lastReadMushafId: StateFlow<String?> = settingsRepository.lastReadMushafIdFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val lastReadMushafPage: StateFlow<Int> = settingsRepository.lastReadMushafPageFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
 
     private val _mushafs = MutableStateFlow<List<MushafStyle>>(emptyList())
     val mushafs: StateFlow<List<MushafStyle>> = _mushafs.asStateFlow()

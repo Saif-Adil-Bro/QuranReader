@@ -10,6 +10,7 @@ class MushafRepository(
     private val downloader: MushafDownloader,
     private val storageManager: StorageManager
 ) {
+
     fun getAvailableMushafs(): List<MushafStyle> {
         return listOf(
             MushafStyle(
@@ -51,6 +52,16 @@ class MushafRepository(
                 fileSizeMB = 180,
                 thumbnailUrl = "https://cdn.islamic.network/quran/images/4_1.png",
                 baseUrl = "https://android.quran.com/data/width_1024/page{page3}.png"
+            ),
+            MushafStyle(
+                id = "hafs_tajweed",
+                name = "Hafs Tajweed",
+                nameBengali = "হাফস তাজবীদ",
+                description = "Color-coded Tajweed Mushaf from easyquran.com",
+                descriptionBengali = "ইজি-কুরআন ডট কম থেকে রঙিন তাজবীদ মুসহাফ",
+                fileSizeMB = 180,
+                thumbnailUrl = "https://raw.githubusercontent.com/QuranHub/quran-pages-images/main/easyquran.com/hafs-tajweed/1.jpg",
+                baseUrl = "https://raw.githubusercontent.com/QuranHub/quran-pages-images/main/easyquran.com/hafs-tajweed/{page}.jpg"
             )
         )
     }

@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,6 +24,9 @@ import com.example.ui.screens.mushaf.components.MushafCard
 fun MushafSelectionScreen(
     mushafs: List<MushafStyle>,
     downloadStatus: Map<String, DownloadStatus>,
+    lastReadMushafId: String?,
+    lastReadMushafPage: Int,
+    onResumeReading: (String, Int) -> Unit,
     onSelectMushaf: (MushafStyle) -> Unit,
     onDownload: (MushafStyle) -> Unit,
     onPause: (String) -> Unit,
@@ -53,6 +59,79 @@ fun MushafSelectionScreen(
                     contentPadding = PaddingValues(8.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    if (lastReadMushafId != null) {
+                        val lastMushaf = mushafs.find { it.id == lastReadMushafId }
+                        if (lastMushaf != null) {
+                            item {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(0xFFECFDF5) // Very light elegant emerald green
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Bookmark,
+                                                    contentDescription = "Bookmark",
+                                                    tint = Color(0xFF10B981),
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "সর্বশেষ পঠিত",
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF047857),
+                                                    fontSize = 14.sp
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = lastMushaf.nameBengali,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 18.sp,
+                                                color = Color(0xFF065F46)
+                                            )
+                                            Text(
+                                                text = "পৃষ্ঠা নম্বর: $lastReadMushafPage",
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF047857)
+                                            )
+                                        }
+                                        Button(
+                                            onClick = { onResumeReading(lastReadMushafId, lastReadMushafPage) },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFF10B981)
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Play",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("পড়ুন", color = Color.White, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     items(mushafs) { mushaf ->
                         MushafCard(
                             mushaf = mushaf,

@@ -20,6 +20,8 @@ class SettingsRepository(val context: Context) {
     private val SHOW_TRANSLATION_KEY = booleanPreferencesKey("show_translation")
     private val LAST_READ_SURAH_KEY = intPreferencesKey("last_read_surah")
     private val LAST_READ_PAGE_KEY = intPreferencesKey("last_read_page")
+    private val LAST_READ_MUSHAF_ID_KEY = stringPreferencesKey("last_read_mushaf_id")
+    private val LAST_READ_MUSHAF_PAGE_KEY = intPreferencesKey("last_read_mushaf_page")
     
     // Reading Mode Settings
     private val ARABIC_FONT_SIZE_KEY = floatPreferencesKey("arabic_font_size")
@@ -43,6 +45,12 @@ class SettingsRepository(val context: Context) {
 
     val lastReadPageFlow: Flow<Int> = context.dataStore.data
         .map { preferences -> preferences[LAST_READ_PAGE_KEY] ?: 1 }
+
+    val lastReadMushafIdFlow: Flow<String?> = context.dataStore.data
+        .map { preferences -> preferences[LAST_READ_MUSHAF_ID_KEY] }
+
+    val lastReadMushafPageFlow: Flow<Int> = context.dataStore.data
+        .map { preferences -> preferences[LAST_READ_MUSHAF_PAGE_KEY] ?: 1 }
 
     val arabicFontSizeFlow: Flow<Float> = context.dataStore.data
         .map { preferences -> preferences[ARABIC_FONT_SIZE_KEY] ?: 24f }
@@ -84,6 +92,13 @@ class SettingsRepository(val context: Context) {
 
     suspend fun setLastReadPage(pageNumber: Int) {
         context.dataStore.edit { preferences -> preferences[LAST_READ_PAGE_KEY] = pageNumber }
+    }
+
+    suspend fun setLastReadMushaf(mushafId: String, pageNumber: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_READ_MUSHAF_ID_KEY] = mushafId
+            preferences[LAST_READ_MUSHAF_PAGE_KEY] = pageNumber
+        }
     }
 
     suspend fun setArabicFontSize(size: Float) {

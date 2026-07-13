@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.CombinedAyah
 import com.example.data.model.removeWaqfSigns
 import com.example.data.model.formatWaqfSigns
+import com.example.data.model.appendStyledWaqfText
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.ReadingModeViewModel
@@ -209,7 +210,7 @@ fun ReadingModeScreen(
                                                 val annotatedString = remember(surahAyahs, showWaqfSigns) {
                                                     buildAnnotatedString {
                                                         surahAyahs.forEachIndexed { index, ayah ->
-                                                            var textToDisplay = if (showWaqfSigns) ayah.arabicText.formatWaqfSigns() else ayah.arabicText.removeWaqfSigns()
+                                                            var textToDisplay = ayah.arabicText // Base text without processing
                                                             
                                                             if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
                                                                 val prefixes = listOf(
@@ -234,7 +235,7 @@ fun ReadingModeScreen(
                                                                 }
                                                             }
                                                             
-                                                            append(textToDisplay)
+                                                            appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns)
                                                             
                                                             val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
                                                             append("﴿$numInSurahStr﴾")

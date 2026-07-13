@@ -1,6 +1,11 @@
 package com.example.data.model
 
 import com.google.gson.annotations.SerializedName
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.unit.sp
 
 /**
  * Represents the base response from Al-Quran API
@@ -165,19 +170,20 @@ data class QuranComTafsirItem(
     @SerializedName("slug") val slug: String? = null
 )
 
+val WAQF_CHARS = charArrayOf(
+    '\u06D6', // ۖ (صلے)
+    '\u06D7', // ۗ (قلے)
+    '\u06D8', // ۘ (مـ)
+    '\u06D9', // ۙ (لا)
+    '\u06DA', // ۚ (ج)
+    '\u06DB', // ۛ (three dots)
+    '\u06DC', // ۜ (seen)
+    '\u06E2'  // ۢ (high meem isolated)
+)
+
 fun String.removeWaqfSigns(): String {
-    val waqfChars = charArrayOf(
-        '\u06D6', // ۖ (صلے)
-        '\u06D7', // ۗ (قلے)
-        '\u06D8', // ۘ (مـ)
-        '\u06D9', // ۙ (لا)
-        '\u06DA', // ۚ (ج)
-        '\u06DB', // ۛ (three dots)
-        '\u06DC', // ۜ (seen)
-        '\u06E2'  // ۢ (high meem isolated)
-    )
     var cleaned = this
-    for (char in waqfChars) {
+    for (char in WAQF_CHARS) {
         cleaned = cleaned.replace(char.toString(), "")
     }
     return cleaned
@@ -185,4 +191,34 @@ fun String.removeWaqfSigns(): String {
 
 fun String.formatWaqfSigns(): String {
     return this
+}
+
+fun AnnotatedString.Builder.appendStyledWaqfText(text: String, fontSize: Float, showWaqfSigns: Boolean = true) {
+    if (!showWaqfSigns) {
+        append(text.removeWaqfSigns())
+        return
+    }
+    
+    var lastIndex = 0
+    for (i in text.indices) {
+        val char = text[i]
+        if (WAQF_CHARS.contains(char)) {
+            if (i > lastIndex) {
+                append(text.substring(lastIndex, i))
+            }
+            // Style the waqf sign
+            withStyle(
+                style = SpanStyle(
+                    fontSize = (fontSize * 0.55f).sp, // Significantly smaller
+                    baselineShift = BaselineShift(-0.4f) // Shift downwards
+                )
+            ) {
+                append(char.toString())
+            }
+            lastIndex = i + 1
+        }
+    }
+    if (lastIndex < text.length) {
+        append(text.substring(lastIndex))
+    }
 }

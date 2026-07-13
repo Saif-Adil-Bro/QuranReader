@@ -1,13 +1,17 @@
 package com.example.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.data.repository.MushafRepository
+import com.example.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class MushafViewerViewModel(
-    private val repository: MushafRepository
+    private val repository: MushafRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _currentPagePath = MutableStateFlow<String?>(null)
@@ -39,6 +43,11 @@ class MushafViewerViewModel(
         if (pageNumber in 1..604) {
             _currentPageNumber.value = pageNumber
             _currentPagePath.value = repository.getMushafPagePath(currentMushafId, pageNumber)
+            viewModelScope.launch {
+                if (currentMushafId.isNotEmpty()) {
+                    settingsRepository.setLastReadMushaf(currentMushafId, pageNumber)
+                }
+            }
         }
     }
     

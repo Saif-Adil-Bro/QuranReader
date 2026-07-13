@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.CombinedAyah
 import com.example.data.model.removeWaqfSigns
 import com.example.data.model.formatWaqfSigns
+import com.example.data.model.appendStyledWaqfText
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.ClickableText
 import com.example.ui.state.UiState
@@ -663,7 +664,7 @@ fun HafeziPageContent(
                             buildAnnotatedString {
                                 surahAyahs.forEachIndexed { index, ayah ->
                                     val start = length
-                                    var textToDisplay = if (showWaqfSigns) ayah.arabicText.formatWaqfSigns() else ayah.arabicText.removeWaqfSigns()
+                                    var textToDisplay = ayah.arabicText // Base text without processing
                                     
                                     if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
                                         val prefixes = listOf(
@@ -689,7 +690,7 @@ fun HafeziPageContent(
                                         }
                                     }
 
-                                    append(textToDisplay)
+                                    appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns)
                                     
                                     // Beautiful unicode ornament brackets for verse numbers
                                     val numInSurahStr = ayah.numberInSurah.toArabicNumerals()

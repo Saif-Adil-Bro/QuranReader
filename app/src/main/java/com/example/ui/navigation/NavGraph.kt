@@ -86,6 +86,9 @@ fun AppNavGraph(
                 onMushafSelected = { mushaf ->
                     navController.navigate("mushaf/viewer/${mushaf.id}")
                 },
+                onLastReadSelected = { mushafId, page ->
+                    navController.navigate("mushaf/viewer/$mushafId?page=$page")
+                },
                 viewModel = viewModel
             )
         }

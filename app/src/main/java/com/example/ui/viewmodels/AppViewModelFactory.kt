@@ -55,10 +55,10 @@ class AppViewModelFactory(
                 ) as T
             }
             modelClass.isAssignableFrom(MushafSelectionViewModel::class.java) -> {
-                MushafSelectionViewModel(mushafRepository) as T
+                MushafSelectionViewModel(mushafRepository, settingsRepository) as T
             }
             modelClass.isAssignableFrom(MushafViewerViewModel::class.java) -> {
-                MushafViewerViewModel(mushafRepository) as T
+                MushafViewerViewModel(mushafRepository, settingsRepository) as T
             }
             modelClass.isAssignableFrom(SplashViewModel::class.java) -> {
                 SplashViewModel(quranRepository) as T
