@@ -1622,11 +1622,8 @@ fun MushafPageView(
                         append(ayah.arabicText)
                     }
                     
-                    append(" ")
-                    
-                    // Add the standard Uthmani end of ayah symbol and digits
                     val ayahNumberStr = ayah.numberInSurah.toArabicNumerals()
-                    append("\u06DD$ayahNumberStr")
+                    append("﴿$ayahNumberStr﴾")
                     
                     // Add a space between ayahs
                     if (index < ayahs.lastIndex) {
@@ -1781,7 +1778,7 @@ fun AyahInlineText(
     val ayahNumberStr = ayahNumber.toArabicNumerals()
     // KFGQPC Uthman Taha Naskh often uses U+06DD before the digits.
     // Let's use \u06DD + digits.
-    val combinedText = "$arabicText \u06DD$ayahNumberStr"
+    val combinedText = "$arabicText﴿$ayahNumberStr﴾"
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Text(

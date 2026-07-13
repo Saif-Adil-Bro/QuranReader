@@ -83,6 +83,7 @@ class QuranRepository(
     }
 
     private fun cleanCombinedAyahList(list: List<CombinedAyah>): List<CombinedAyah> {
+        val tajweedRegex = Regex("[\u06E2\u06E5\u06E6]")
         return list.map { ayah ->
             val sNum = ayah.surahNumber
             val rawWords = ayah.words
@@ -99,11 +100,14 @@ class QuranRepository(
             // Format Hurufe Muqatta'at in full text
             cleanedArabicText = formatHurufeMuqattaat(cleanedArabicText)
             
-            // Format Hurufe Muqatta'at in individual word-by-word text
+            // Remove specific Tajweed marks
+            cleanedArabicText = cleanedArabicText.replace(tajweedRegex, "")
+            
+            // Format Hurufe Muqatta'at in individual word-by-word text and remove Tajweed marks
             val formattedWords = rawWords.map { word ->
                 val text = word.textUthmani
                 if (text != null) {
-                    word.copy(textUthmani = formatHurufeMuqattaat(text))
+                    word.copy(textUthmani = formatHurufeMuqattaat(text).replace(tajweedRegex, ""))
                 } else {
                     word
                 }
