@@ -65,6 +65,15 @@ class MushafSelectionViewModel(
         }
     }
 
+    fun importCustomPdf(inputStream: java.io.InputStream) {
+        viewModelScope.launch {
+            val success = repository.importCustomPdf(inputStream)
+            if (success) {
+                loadMushafs()
+            }
+        }
+    }
+
     fun pauseDownload(mushafId: String) {
         repository.pauseDownload(mushafId)
         val currentMap = _downloadStatus.value.toMutableMap()

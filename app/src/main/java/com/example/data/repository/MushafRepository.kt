@@ -1,10 +1,16 @@
 package com.example.data.repository
 
+import android.graphics.Bitmap
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import com.example.data.model.DownloadStatus
 import com.example.data.model.MushafStyle
 import com.example.data.local.MushafDownloader
 import com.example.util.StorageManager
 import kotlinx.coroutines.CoroutineScope
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 
 class MushafRepository(
     private val downloader: MushafDownloader,
@@ -12,26 +18,30 @@ class MushafRepository(
 ) {
 
     fun getAvailableMushafs(): List<MushafStyle> {
-        return listOf(
+        val list = mutableListOf(
             MushafStyle(
-                id = "madani",
-                name = "Mushaf Al-Madani",
-                nameBengali = "মুসহাফ আল-মাদানী",
-                description = "Standard Uthmani script used worldwide",
-                descriptionBengali = "সারা বিশ্বে সর্বাধিক ব্যবহৃত আদর্শ উসমানী লিপি",
-                fileSizeMB = 250,
-                thumbnailUrl = "https://cdn.islamic.network/quran/images/1_1.png",
-                baseUrl = "https://android.quran.com/data/width_1024/page{page3}.png"
+                id = "pdf_tajweed",
+                name = "Tajweed PDF Quran",
+                nameBengali = "তাজবীদ পিডিএফ কুরআন",
+                description = "Color-coded Tajweed PDF Quran (Single File, Fast)",
+                descriptionBengali = "সম্পূর্ণ রঙিন তাজবীদ পিডিএফ কুরআন (একক ফাইল, দ্রুত ডাউনলোড)",
+                fileSizeMB = 54,
+                thumbnailUrl = "https://raw.githubusercontent.com/QuranHub/quran-pages-images/main/easyquran.com/hafs-tajweed/1.jpg",
+                baseUrl = "https://raw.githubusercontent.com/gimran/quran-pdf/master/quran.pdf",
+                isPdf = true,
+                pdfPageOffset = 1
             ),
             MushafStyle(
-                id = "makkah",
-                name = "Mushaf Al-Makkah",
-                nameBengali = "মুসহাফ মক্কা",
-                description = "Clear and large font from Makkah",
-                descriptionBengali = "মক্কা থেকে প্রকাশিত স্পষ্ট ও বড় ফন্ট",
-                fileSizeMB = 320,
-                thumbnailUrl = "https://cdn.islamic.network/quran/images/2_1.png",
-                baseUrl = "https://android.quran.com/data/width_1024/page{page3}.png"
+                id = "hafizi_15line",
+                name = "Hafizi 15-Line Quran",
+                nameBengali = "হাফেজী ১৫-লাইন কুরআন",
+                description = "Standard 15-Line Hafizi Quran PDF",
+                descriptionBengali = "স্ট্যান্ডার্ড ১৫-লাইন হাফেজী কুরআন (একক ফাইল, সম্পূর্ণ অফলাইন)",
+                fileSizeMB = 45,
+                thumbnailUrl = "https://pub-26d400c878304ce889b8454325e14661.r2.dev/IMG_20260713_174626.jpg",
+                baseUrl = "https://pub-26d400c878304ce889b8454325e14661.r2.dev/hafizi-quran-15-line.pdf",
+                isPdf = true,
+                pdfPageOffset = 2
             ),
             MushafStyle(
                 id = "indopak",
@@ -40,30 +50,32 @@ class MushafRepository(
                 description = "Popular Nastaliq style in India/Pakistan",
                 descriptionBengali = "ভারত-পাকিস্তানে জনপ্রিয় নস্তালিক স্টাইল",
                 fileSizeMB = 280,
-                thumbnailUrl = "https://cdn.islamic.network/quran/images/3_1.png",
+                thumbnailUrl = "https://pub-26d400c878304ce889b8454325e14661.r2.dev/indo-pak/IMG_20260713_192455.jpg",
                 baseUrl = "https://android.quran.com/data/width_1024/page{page3}.png"
-            ),
-            MushafStyle(
-                id = "simplified",
-                name = "Simplified Mushaf",
-                nameBengali = "সহজ মুসহাফ",
-                description = "Easy to read for beginners",
-                descriptionBengali = "শিক্ষানবিসদের জন্য সহজ পাঠ্য",
-                fileSizeMB = 180,
-                thumbnailUrl = "https://cdn.islamic.network/quran/images/4_1.png",
-                baseUrl = "https://android.quran.com/data/width_1024/page{page3}.png"
-            ),
-            MushafStyle(
-                id = "hafs_tajweed",
-                name = "Hafs Tajweed",
-                nameBengali = "হাফস তাজবীদ",
-                description = "Color-coded Tajweed Mushaf from easyquran.com",
-                descriptionBengali = "ইজি-কুরআন ডট কম থেকে রঙিন তাজবীদ মুসহাফ",
-                fileSizeMB = 180,
-                thumbnailUrl = "https://raw.githubusercontent.com/QuranHub/quran-pages-images/main/easyquran.com/hafs-tajweed/1.jpg",
-                baseUrl = "https://raw.githubusercontent.com/QuranHub/quran-pages-images/main/easyquran.com/hafs-tajweed/{page}.jpg"
             )
         )
+
+        val customPdfFile = File(storageManager.getMushafDirectory("custom_pdf"), "mushaf.pdf")
+        if (customPdfFile.exists() && customPdfFile.length() > 0) {
+            val customSizeMB = (customPdfFile.length() / (1024 * 1024)).toInt()
+            list.add(
+                0, // Put custom PDF at the top for easy access
+                MushafStyle(
+                    id = "custom_pdf",
+                    name = "Custom Imported Quran",
+                    nameBengali = "আপনার পিডিএফ কুরআন",
+                    description = "Your custom imported Quran PDF file",
+                    descriptionBengali = "আপনার ডিভাইস থেকে আমদানিকৃত পিডিএফ কুরআন",
+                    fileSizeMB = if (customSizeMB > 0) customSizeMB else 1,
+                    thumbnailUrl = "https://cdn.islamic.network/quran/images/1_1.png",
+                    baseUrl = "",
+                    isPdf = true,
+                    pdfPageOffset = 0
+                )
+            )
+        }
+
+        return list
     }
 
     suspend fun downloadMushaf(
@@ -80,6 +92,12 @@ class MushafRepository(
         )
     }
 
+    suspend fun downloadSinglePage(mushafId: String, pageNumber: Int): Boolean {
+        val style = getAvailableMushafs().find { it.id == mushafId } ?: return false
+        if (style.isPdf) return false
+        return downloader.downloadSinglePage(mushafId, style.baseUrl, pageNumber)
+    }
+
     fun pauseDownload(mushafId: String) {
         downloader.pauseDownload(mushafId)
     }
@@ -93,17 +111,124 @@ class MushafRepository(
     }
 
     fun isMushafDownloaded(mushafId: String): Boolean {
+        val style = getAvailableMushafs().find { it.id == mushafId }
+        if (style?.isPdf == true) {
+            val file = File(storageManager.getMushafDirectory(mushafId), "mushaf.pdf")
+            return file.exists() && file.length() > 0
+        }
         val count = storageManager.getDownloadedPagesCount(mushafId)
-        // Assume at least 1 page downloaded means it exists. Better check all pages or downloaded count.
         return count >= 604
     }
 
     fun getDownloadedPagesCount(mushafId: String): Int {
+        val style = getAvailableMushafs().find { it.id == mushafId }
+        if (style?.isPdf == true) {
+            val file = File(storageManager.getMushafDirectory(mushafId), "mushaf.pdf")
+            return if (file.exists() && file.length() > 0) 604 else 0
+        }
         return storageManager.getDownloadedPagesCount(mushafId)
     }
 
-    fun getMushafPagePath(mushafId: String, pageNumber: Int): String? {
+    fun getMushafPagePath(mushafId: String, pageNumber: Int, customOffset: Int? = null): String? {
+        val style = getAvailableMushafs().find { it.id == mushafId }
         val file = storageManager.getPageFile(mushafId, pageNumber)
-        return if (file.exists()) file.absolutePath else null
+        
+        if (file.exists()) {
+            return file.absolutePath
+        }
+
+        if (style?.isPdf == true) {
+            val pdfFile = File(storageManager.getMushafDirectory(mushafId), "mushaf.pdf")
+            if (pdfFile.exists() && pdfFile.length() > 0) {
+                val offset = customOffset ?: style.pdfPageOffset
+                val renderedFile = renderPdfPageToPng(pdfFile, pageNumber, file, offset)
+                if (renderedFile != null) {
+                    return renderedFile.absolutePath
+                }
+            }
+        }
+        return null
+    }
+
+    fun clearRenderedPages(mushafId: String) {
+        try {
+            val destDir = storageManager.getMushafDirectory(mushafId)
+            destDir.listFiles()?.forEach { file ->
+                if (file.name != "mushaf.pdf") {
+                    file.delete()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun renderPdfPageToPng(pdfFile: File, pageNumber: Int, outputFile: File, offset: Int): File? {
+        try {
+            val parcelFileDescriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
+            val pdfRenderer = PdfRenderer(parcelFileDescriptor)
+            
+            val pdfPageNumber = pageNumber - 1 + offset
+            if (pdfPageNumber < 0 || pdfPageNumber >= pdfRenderer.pageCount) {
+                pdfRenderer.close()
+                parcelFileDescriptor.close()
+                return null
+            }
+            
+            val page = pdfRenderer.openPage(pdfPageNumber)
+            
+            val scale = 3.0f
+            val width = (page.width * scale).toInt()
+            val height = (page.height * scale).toInt()
+            
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            canvas.drawColor(android.graphics.Color.WHITE)
+            
+            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            
+            val out = FileOutputStream(outputFile)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
+            out.flush()
+            out.close()
+            
+            bitmap.recycle()
+            page.close()
+            pdfRenderer.close()
+            parcelFileDescriptor.close()
+            
+            return outputFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
+    }
+
+    fun importCustomPdf(pdfInputStream: InputStream): Boolean {
+        return try {
+            val destDir = storageManager.getMushafDirectory("custom_pdf")
+            val destFile = File(destDir, "mushaf.pdf")
+            
+            // Delete old renders if importing a new one
+            destDir.listFiles()?.forEach { file ->
+                if (file.name != "mushaf.pdf") {
+                    file.delete()
+                }
+            }
+            
+            val outputStream = FileOutputStream(destFile)
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+            while (pdfInputStream.read(buffer).also { bytesRead = it } != -1) {
+                outputStream.write(buffer, 0, bytesRead)
+            }
+            outputStream.flush()
+            outputStream.close()
+            pdfInputStream.close()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 }

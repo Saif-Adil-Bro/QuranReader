@@ -36,6 +36,13 @@ class MushafDownloader(
     ) {
         val job = scope.launch(Dispatchers.IO) {
             pausedDownloads.remove(mushafId)
+            
+            val isPdf = baseUrl.endsWith(".pdf")
+            if (isPdf) {
+                downloadPdfFile(mushafId, baseUrl, onProgress)
+                return@launch
+            }
+
             val semaphore = Semaphore(3) // Max 3 concurrent downloads
             
             var downloadedCount = storageManager.getDownloadedPagesCount(mushafId)
@@ -91,6 +98,72 @@ class MushafDownloader(
         activeDownloads[mushafId] = job
     }
     
+    private suspend fun downloadPdfFile(
+        mushafId: String,
+        url: String,
+        onProgress: (DownloadStatus) -> Unit
+    ) = withContext(Dispatchers.IO) {
+        try {
+            val file = java.io.File(storageManager.getMushafDirectory(mushafId), "mushaf.pdf")
+            if (file.exists() && file.length() > 0) {
+                onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, 604, 604))
+                return@withContext
+            }
+            
+            onProgress(DownloadStatus(mushafId, DownloadState.Downloading, 0, 0, 604))
+            
+            val request = Request.Builder().url(url).build()
+            val response = client.newCall(request).execute()
+            
+            if (response.isSuccessful) {
+                val body = response.body
+                if (body != null) {
+                    val contentLength = body.contentLength()
+                    val inputStream = body.byteStream()
+                    val outputStream = FileOutputStream(file)
+                    
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalBytesRead = 0L
+                    var lastUpdatePercent = 0
+                    
+                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        if (pausedDownloads.contains(mushafId)) {
+                            outputStream.close()
+                            inputStream.close()
+                            file.delete()
+                            return@withContext
+                        }
+                        outputStream.write(buffer, 0, bytesRead)
+                        totalBytesRead += bytesRead
+                        
+                        if (contentLength > 0) {
+                            val percent = ((totalBytesRead * 100) / contentLength).toInt()
+                            if (percent > lastUpdatePercent) {
+                                lastUpdatePercent = percent
+                                val fakePageCount = (percent * 604) / 100
+                                onProgress(DownloadStatus(mushafId, DownloadState.Downloading, percent, fakePageCount, 604))
+                            }
+                        }
+                    }
+                    
+                    outputStream.flush()
+                    outputStream.close()
+                    inputStream.close()
+                    
+                    onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, 604, 604))
+                } else {
+                    onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
+                }
+            } else {
+                onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
+        }
+    }
+
     private suspend fun downloadPage(mushafId: String, baseUrl: String, page: Int): Boolean = withContext(Dispatchers.IO) {
         var attempts = 0
         while (attempts < 3) {
@@ -128,6 +201,10 @@ class MushafDownloader(
         return@withContext false
     }
     
+    suspend fun downloadSinglePage(mushafId: String, baseUrl: String, page: Int): Boolean {
+        return downloadPage(mushafId, baseUrl, page)
+    }
+
     fun pauseDownload(mushafId: String) {
         pausedDownloads.add(mushafId)
         activeDownloads[mushafId]?.cancel()

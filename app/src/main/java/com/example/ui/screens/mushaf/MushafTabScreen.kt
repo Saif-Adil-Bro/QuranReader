@@ -24,6 +24,7 @@ fun MushafTabScreen(
         lastReadMushafPage = lastReadMushafPage,
         onResumeReading = onLastReadSelected,
         onSelectMushaf = onMushafSelected,
+        onImportPdf = { viewModel.importCustomPdf(it) },
         onDownload = { viewModel.downloadMushaf(it) },
         onPause = { viewModel.pauseDownload(it) },
         onCancel = { viewModel.cancelDownload(it) },

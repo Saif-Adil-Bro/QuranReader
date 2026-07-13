@@ -12,5 +12,7 @@ data class MushafStyle(
     val baseUrl: String,
     val isDownloaded: Boolean = false,
     val downloadProgress: Float = 0f,
-    val downloadedPages: Int = 0
+    val downloadedPages: Int = 0,
+    val isPdf: Boolean = false,
+    val pdfPageOffset: Int = 0
 )

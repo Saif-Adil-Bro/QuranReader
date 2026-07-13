@@ -1,5 +1,7 @@
 package com.example.ui.screens.mushaf
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,11 +9,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,15 +32,41 @@ fun MushafSelectionScreen(
     lastReadMushafPage: Int,
     onResumeReading: (String, Int) -> Unit,
     onSelectMushaf: (MushafStyle) -> Unit,
+    onImportPdf: (java.io.InputStream) -> Unit,
     onDownload: (MushafStyle) -> Unit,
     onPause: (String) -> Unit,
     onCancel: (String) -> Unit,
     onDelete: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val pdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                if (inputStream != null) {
+                    onImportPdf(inputStream)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("মুসহাফ লাইব্রেরি", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = { pdfLauncher.launch("application/pdf") }) {
+                        Icon(
+                            imageVector = Icons.Default.PictureAsPdf,
+                            contentDescription = "Import PDF",
+                            tint = Color(0xFF10B981)
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = Color(0xFF10B981)

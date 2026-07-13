@@ -12,6 +12,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,9 +40,12 @@ fun MushafViewerScreen(
 
     val currentPage by viewModel.currentPageNumber.collectAsState()
     val pagePath by viewModel.currentPagePath.collectAsState()
+    val isPdf by viewModel.isPdf.collectAsState()
+    val pdfPageOffset by viewModel.pdfPageOffset.collectAsState()
     
     val pagerState = rememberPagerState(initialPage = initialPage - 1, pageCount = { 604 })
     var showSelectorSheet by remember { mutableStateOf(false) }
+    var showOffsetDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(pagerState.currentPage) {
         val newPage = pagerState.currentPage + 1
@@ -66,6 +72,11 @@ fun MushafViewerScreen(
                     }
                 },
                 actions = {
+                    if (isPdf) {
+                        IconButton(onClick = { showOffsetDialog = true }) {
+                            Icon(Icons.Default.Tune, contentDescription = "Page Offset Alignment", tint = Color(0xFF10B981))
+                        }
+                    }
                     IconButton(onClick = { showSelectorSheet = true }) {
                         Icon(Icons.Default.List, contentDescription = "Surah / Para Selector", tint = Color(0xFF10B981))
                     }
@@ -90,14 +101,11 @@ fun MushafViewerScreen(
                 reverseLayout = true // Quran is read right-to-left
             ) { page ->
                 val pageNum = page + 1
-                val path = viewModel.getPagePath(mushafId, pageNum)
-                if (path != null) {
-                    PageViewer(pagePath = path)
-                } else {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFF10B981))
-                    }
-                }
+                OnDemandPageViewer(
+                    mushafId = mushafId,
+                    pageNumber = pageNum,
+                    viewModel = viewModel
+                )
             }
         }
     }
@@ -310,5 +318,120 @@ fun MushafViewerScreen(
                 }
             }
         }
+    }
+
+    if (showOffsetDialog) {
+        AlertDialog(
+            onDismissRequest = { showOffsetDialog = false },
+            title = {
+                Text(
+                    text = "পৃষ্ঠা সামঞ্জস্য (Page Offset Alignment)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF10B981)
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "যদি সূচী অনুযায়ী সূরার পাতাটি ঠিকভাবে না আসে, তাহলে অফসেট পরিবর্তন করুন। বর্তমান অফসেট পরিবর্তন করলে পাতার সংখ্যা ডানে বা বামে সরবে।",
+                        fontSize = 14.sp,
+                        color = Color.DarkGray
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { viewModel.adjustOffset(-1) }) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease Offset")
+                        }
+                        Text(
+                            text = "অফসেট: $pdfPageOffset",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        IconButton(onClick = { viewModel.adjustOffset(1) }) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase Offset")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showOffsetDialog = false }) {
+                    Text("ঠিক আছে", color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun OnDemandPageViewer(
+    mushafId: String,
+    pageNumber: Int,
+    viewModel: MushafViewerViewModel
+) {
+    var pagePath by remember(mushafId, pageNumber) { mutableStateOf<String?>(null) }
+    var isLoading by remember(mushafId, pageNumber) { mutableStateOf(true) }
+    var hasError by remember(mushafId, pageNumber) { mutableStateOf(false) }
+
+    LaunchedEffect(mushafId, pageNumber) {
+        isLoading = true
+        hasError = false
+        val path = viewModel.getPagePath(mushafId, pageNumber)
+        if (path != null) {
+            pagePath = path
+            isLoading = false
+        } else {
+            val success = viewModel.downloadPageOnDemand(mushafId, pageNumber)
+            if (success) {
+                pagePath = viewModel.getPagePath(mushafId, pageNumber)
+                isLoading = false
+            } else {
+                isLoading = false
+                hasError = true
+            }
+        }
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = Color(0xFF10B981))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("পাতা ডাউনলোড হচ্ছে...", color = Color.Gray, fontSize = 13.sp)
+            }
+        }
+    } else if (hasError) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("পাতা লোড করা যায়নি", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text("ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন", color = Color.Gray, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        isLoading = true
+                        hasError = false
+                        pagePath = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                ) {
+                    Text("আবার চেষ্টা করুন", color = Color.White)
+                }
+            }
+        }
+    } else if (pagePath != null) {
+        PageViewer(pagePath = pagePath!!)
     }
 }

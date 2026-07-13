@@ -140,4 +140,16 @@ class SettingsRepository(val context: Context) {
     suspend fun setHasAskedDownloadPrompt(hasAsked: Boolean) {
         context.dataStore.edit { preferences -> preferences[HAS_ASKED_DOWNLOAD_PROMPT_KEY] = hasAsked }
     }
+
+    fun getMushafOffset(mushafId: String): Flow<Int> {
+        return context.dataStore.data.map { preferences ->
+            preferences[intPreferencesKey("offset_$mushafId")] ?: -1
+        }
+    }
+
+    suspend fun setMushafOffset(mushafId: String, offset: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[intPreferencesKey("offset_$mushafId")] = offset
+        }
+    }
 }

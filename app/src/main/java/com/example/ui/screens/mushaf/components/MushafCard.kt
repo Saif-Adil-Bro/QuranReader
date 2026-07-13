@@ -39,7 +39,9 @@ fun MushafCard(
             .fillMaxWidth()
             .padding(8.dp)
             .clickable {
-                if (downloadStatus?.state == DownloadState.Downloaded) {
+                val canRead = downloadStatus?.state == DownloadState.Downloaded || 
+                              ((downloadStatus?.progress ?: 0) >= 10 && !mushaf.isPdf)
+                if (canRead) {
                     onSelect()
                 } else if (downloadStatus?.state != DownloadState.Downloading) {
                     onDownload()
@@ -92,6 +94,19 @@ fun MushafCard(
                     onPause = onPause,
                     onCancel = onCancel
                 )
+                if (downloadStatus.progress >= 10 && !mushaf.isPdf) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onSelect,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("পড়া শুরু করুন (আংশিক)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                }
             } else if (downloadStatus?.state == DownloadState.Downloaded) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -122,15 +137,47 @@ fun MushafCard(
                     }
                 }
             } else {
-                Button(
-                    onClick = onDownload,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("ডাউনলোড করুন (~${mushaf.fileSizeMB} MB)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                val isPartial = (downloadStatus?.progress ?: 0) >= 10 && !mushaf.isPdf
+                if (isPartial) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = onSelect,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("পড়ুন (আংশিক)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedButton(
+                            onClick = onDownload,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF10B981)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981))
+                        ) {
+                            Text("ডাউনলোড করুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = onDownload,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("ডাউনলোড করুন (~${mushaf.fileSizeMB} MB)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
                 }
                 
                 if ((downloadStatus?.downloadedPages ?: 0) > 0) {
