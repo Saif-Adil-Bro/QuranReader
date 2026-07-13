@@ -237,7 +237,7 @@ fun ReadingModeScreen(
                                                             append(textToDisplay)
                                                             
                                                             val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
-                                                            append(" ﴿$numInSurahStr﴾")
+                                                            append("﴿$numInSurahStr﴾")
                                                             
                                                             if (index < surahAyahs.lastIndex) {
                                                                 append("   ")

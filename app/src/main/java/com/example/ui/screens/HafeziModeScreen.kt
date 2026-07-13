@@ -693,7 +693,7 @@ fun HafeziPageContent(
                                     
                                     // Beautiful unicode ornament brackets for verse numbers
                                     val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
-                                    append(" ﴿$numInSurahStr﴾")
+                                    append("﴿$numInSurahStr﴾")
                                     
                                     val end = length
                                     

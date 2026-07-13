@@ -9,6 +9,7 @@ import com.example.data.model.Surah
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -74,7 +75,8 @@ class HomeViewModel(
                 for (i in 1..114) {
                     if (!quranRepository.isSurahDownloaded(i)) {
                         try {
-                            quranRepository.getSurahDetailsCombined(i)
+                            val edition = settingsRepository.tanzilTextStyleFlow.first()
+                            quranRepository.getSurahDetailsCombined(i, edition)
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }

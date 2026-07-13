@@ -186,7 +186,8 @@ class SettingsViewModel(
                 for (i in 1..114) {
                     if (!quranRepository.isSurahDownloaded(i)) {
                         try {
-                            quranRepository.getSurahDetailsCombined(i)
+                            val edition = tanzilTextStyle.value
+                            quranRepository.getSurahDetailsCombined(i, edition)
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }

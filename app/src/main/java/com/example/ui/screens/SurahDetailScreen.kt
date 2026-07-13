@@ -816,7 +816,7 @@ fun AyahCard(
                                     if (lastWordIndex != -1) {
                                         val lastWord = list[lastWordIndex]
                                         list[lastWordIndex] = lastWord.copy(
-                                            textUthmani = lastWord.textUthmani + " " + text
+                                            textUthmani = lastWord.textUthmani + text
                                         )
                                     } else {
                                         list.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
@@ -1573,7 +1573,7 @@ fun MushafPageView(
                                 if (lastWordIndex != -1) {
                                     val lastWord = processedWords[lastWordIndex]
                                     processedWords[lastWordIndex] = lastWord.copy(
-                                        textUthmani = lastWord.textUthmani + " " + text
+                                        textUthmani = lastWord.textUthmani + text
                                     )
                                 } else {
                                     processedWords.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
