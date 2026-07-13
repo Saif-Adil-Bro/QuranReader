@@ -304,7 +304,7 @@ fun ReadingSettingsContent(
     onTanzilTextStyleChange: (String) -> Unit,
     showWaqfSigns: Boolean = true,
     onShowWaqfSignsToggle: (Boolean) -> Unit = {},
-    arabicLineSpacing: Float = 1.65f,
+    arabicLineSpacing: Float = 2.0f,
     onArabicLineSpacingChange: (Float) -> Unit = {},
     topBarContentColor: Color,
     containerColor: Color
@@ -344,11 +344,11 @@ fun ReadingSettingsContent(
             label = "আরবি লাইন স্পেস",
             valueText = String.format("%.2f", arabicLineSpacing).toBengaliNumerals(),
             onDecrease = {
-                val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
+                val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(2.00f, 3.00f)
                 onArabicLineSpacingChange(newSpacing)
             },
             onIncrease = {
-                val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
+                val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(2.00f, 3.00f)
                 onArabicLineSpacingChange(newSpacing)
             }
         )

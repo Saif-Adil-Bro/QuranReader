@@ -319,11 +319,11 @@ fun HafeziModeScreen(
                         label = "আরবি লাইন স্পেস",
                         valueText = String.format("%.2f", arabicLineSpacing).toBengaliNumerals(),
                         onDecrease = {
-                            val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
+                            val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(2.00f, 3.00f)
                             viewModel.setArabicLineSpacing(newSpacing)
                         },
                         onIncrease = {
-                            val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
+                            val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(2.00f, 3.00f)
                             viewModel.setArabicLineSpacing(newSpacing)
                         }
                     )
@@ -587,7 +587,7 @@ fun HafeziPageContent(
     theme: String,
     currentPage: Int,
     showWaqfSigns: Boolean = true,
-    arabicLineSpacing: Float = 1.65f,
+    arabicLineSpacing: Float = 2.0f,
     onAyahClick: (Int) -> Unit
 ) {
     val arabicFont = getArabicFont(arabicFontName)

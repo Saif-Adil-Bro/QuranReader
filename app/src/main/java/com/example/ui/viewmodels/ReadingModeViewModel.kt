@@ -44,7 +44,7 @@ class ReadingModeViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.65f)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 2.0f)
 
     fun loadSurah(surahNumber: Int) {
         viewModelScope.launch {

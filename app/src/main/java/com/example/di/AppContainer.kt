@@ -2,6 +2,7 @@ package com.example.di
 
 import android.content.Context
 import com.example.data.api.QuranApi
+import com.example.data.api.QfTokenManager
 import com.example.data.repository.QuranRepository
 import com.example.data.repository.SettingsRepository
 import retrofit2.Retrofit
@@ -9,6 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 import okhttp3.OkHttpClient
 import okhttp3.Interceptor
+import com.example.BuildConfig
 
 /**
  * A manual Dependency Injection container.
@@ -17,19 +19,57 @@ import okhttp3.Interceptor
  */
 class AppContainer(private val context: Context) {
     private val BASE_URL = "https://api.alquran.cloud/v1/"
-    private val QURAN_COM_BASE_URL = "https://api.quran.com/api/v4/"
+    private val QURAN_COM_BASE_URL = "https://apis-prelive.quran.foundation/content/api/v4/"
+
+    private val qfTokenManager = QfTokenManager()
 
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder().addInterceptor { chain ->
-            val request = chain.request().newBuilder()
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .header("Accept", "application/json")
-                .build()
-            chain.proceed(request)
+            val originalRequest = chain.request()
+            val urlString = originalRequest.url.toString()
+            
+            // Check if this request is to the Quran Foundation Content API
+            if (urlString.contains("apis-prelive.quran.foundation") || urlString.contains("apis.quran.foundation")) {
+                val token = qfTokenManager.getAccessToken() ?: ""
+                val clientId = BuildConfig.QURAN_FOUNDATION_CLIENT_ID
+                
+                var request = originalRequest.newBuilder()
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("Accept", "application/json")
+                    .header("x-auth-token", token)
+                    .header("x-client-id", clientId)
+                    .build()
+                
+                var response = chain.proceed(request)
+                
+                // On a 401, clear token, request a fresh one, and retry once.
+                if (response.code == 401) {
+                    response.close() // Close the old response body before retrying
+                    qfTokenManager.clearToken()
+                    val newToken = qfTokenManager.getAccessToken() ?: ""
+                    
+                    request = originalRequest.newBuilder()
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .header("Accept", "application/json")
+                        .header("x-auth-token", newToken)
+                        .header("x-client-id", clientId)
+                        .build()
+                    response = chain.proceed(request)
+                }
+                response
+            } else {
+                // Default logic for alquran.cloud and other endpoints
+                val request = originalRequest.newBuilder()
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("Accept", "application/json")
+                    .build()
+                chain.proceed(request)
+            }
         }.build()
     }
 
     private val retrofit: Retrofit by lazy {
+
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)

@@ -65,7 +65,7 @@ class SettingsRepository(val context: Context) {
         .map { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] ?: "quran-simple" }
 
     val arabicLineSpacingFlow: Flow<Float> = context.dataStore.data
-        .map { preferences -> preferences[ARABIC_LINE_SPACING_KEY] ?: 1.65f }
+        .map { preferences -> (preferences[ARABIC_LINE_SPACING_KEY] ?: 2.0f).coerceAtLeast(2.0f) }
 
     val themeFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[THEME_KEY] ?: "Light" }
@@ -118,7 +118,7 @@ class SettingsRepository(val context: Context) {
     }
 
     suspend fun setArabicLineSpacing(spacing: Float) {
-        context.dataStore.edit { preferences -> preferences[ARABIC_LINE_SPACING_KEY] = spacing }
+        context.dataStore.edit { preferences -> preferences[ARABIC_LINE_SPACING_KEY] = spacing.coerceAtLeast(2.0f) }
     }
 
     suspend fun setTheme(theme: String) {

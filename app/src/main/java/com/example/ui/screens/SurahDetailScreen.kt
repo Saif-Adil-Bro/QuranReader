@@ -672,7 +672,7 @@ fun AyahCard(
     currentPlayingWordUrl: String? = null,
     isBookmarked: Boolean = false,
     onToggleBookmark: () -> Unit = {},
-    arabicLineSpacing: Float = 1.6f
+    arabicLineSpacing: Float = 2.0f
 ) {
     var showTafsirDialog by remember { mutableStateOf(false) }
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
@@ -1208,7 +1208,7 @@ fun ReaderSettingsBottomSheetContent(
     onDownloadClick: () -> Unit,
     onCancelDownloadClick: () -> Unit,
     onClose: () -> Unit,
-    arabicLineSpacing: Float = 1.65f,
+    arabicLineSpacing: Float = 2.0f,
     onArabicLineSpacingChange: (Float) -> Unit = {}
 ) {
     Column(
@@ -1322,11 +1322,11 @@ fun ReaderSettingsBottomSheetContent(
             label = "আরবি লাইন স্পেস",
             valueText = String.format(java.util.Locale.US, "%.2f", arabicLineSpacing).toBengaliNumerals(),
             onDecrease = {
-                val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(1.20f, 2.50f)
+                val newSpacing = (arabicLineSpacing - 0.05f).coerceIn(2.00f, 3.00f)
                 onArabicLineSpacingChange(newSpacing)
             },
             onIncrease = {
-                val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(1.20f, 2.50f)
+                val newSpacing = (arabicLineSpacing + 0.05f).coerceIn(2.00f, 3.00f)
                 onArabicLineSpacingChange(newSpacing)
             }
         )
@@ -1549,7 +1549,7 @@ fun MushafPageView(
     currentPlayingWordUrl: String? = null,
     currentPlayingAyahNumber: Int? = null,
     isPlaying: Boolean = false,
-    arabicLineSpacing: Float = 1.65f,
+    arabicLineSpacing: Float = 2.0f,
     tanzilTextStyle: String = "quran-simple"
 ) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
@@ -1772,7 +1772,7 @@ fun AyahInlineText(
     fontFamily: androidx.compose.ui.text.font.FontFamily,
     color: Color,
     modifier: Modifier = Modifier,
-    lineSpacing: Float = 1.6f
+    lineSpacing: Float = 2.0f
 ) {
     // The standard Uthmani way to display ayah numbers: 
     // Arabic text followed by U+FD3F (Ornate Left Parenthesis), ayah number in Arabic digits, U+FD3E (Ornate Right Parenthesis)

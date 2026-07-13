@@ -94,7 +94,7 @@ class SurahDetailViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 1.65f
+            initialValue = 2.0f
         )
 
     val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow

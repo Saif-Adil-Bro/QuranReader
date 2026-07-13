@@ -7,6 +7,7 @@ import com.example.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MushafViewerViewModel(
@@ -35,11 +36,10 @@ class MushafViewerViewModel(
         val defaultOffset = defaultStyle?.pdfPageOffset ?: 0
         
         viewModelScope.launch {
-            settingsRepository.getMushafOffset(mushafId).collect { savedOffset ->
-                val activeOffset = if (savedOffset != -1) savedOffset else defaultOffset
-                _pdfPageOffset.value = activeOffset
-                jumpToPage(initialPage)
-            }
+            val savedOffset = settingsRepository.getMushafOffset(mushafId).first()
+            val activeOffset = if (savedOffset != -1) savedOffset else defaultOffset
+            _pdfPageOffset.value = activeOffset
+            jumpToPage(initialPage)
         }
     }
 

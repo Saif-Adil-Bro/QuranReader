@@ -1,5 +1,7 @@
 package com.example.data.local
 
+import android.os.ParcelFileDescriptor
+import android.graphics.pdf.PdfRenderer
 import android.content.Context
 import com.example.data.model.DownloadState
 import com.example.data.model.DownloadStatus
@@ -103,11 +105,28 @@ class MushafDownloader(
         url: String,
         onProgress: (DownloadStatus) -> Unit
     ) = withContext(Dispatchers.IO) {
+        val destDir = storageManager.getMushafDirectory(mushafId)
+        val file = java.io.File(destDir, "mushaf.pdf")
+        val tempFile = java.io.File(destDir, "mushaf.pdf.tmp")
+        
         try {
-            val file = java.io.File(storageManager.getMushafDirectory(mushafId), "mushaf.pdf")
             if (file.exists() && file.length() > 0) {
-                onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, 604, 604))
-                return@withContext
+                // Verify if the PDF is readable
+                try {
+                    val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                    val renderer = PdfRenderer(pfd)
+                    renderer.close()
+                    pfd.close()
+                    onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, 604, 604))
+                    return@withContext
+                } catch (e: Exception) {
+                    // PDF file is corrupted or incomplete, delete and download again
+                    file.delete()
+                }
+            }
+            
+            if (tempFile.exists()) {
+                tempFile.delete()
             }
             
             onProgress(DownloadStatus(mushafId, DownloadState.Downloading, 0, 0, 604))
@@ -120,7 +139,7 @@ class MushafDownloader(
                 if (body != null) {
                     val contentLength = body.contentLength()
                     val inputStream = body.byteStream()
-                    val outputStream = FileOutputStream(file)
+                    val outputStream = FileOutputStream(tempFile)
                     
                     val buffer = ByteArray(8192)
                     var bytesRead: Int
@@ -131,7 +150,7 @@ class MushafDownloader(
                         if (pausedDownloads.contains(mushafId)) {
                             outputStream.close()
                             inputStream.close()
-                            file.delete()
+                            tempFile.delete()
                             return@withContext
                         }
                         outputStream.write(buffer, 0, bytesRead)
@@ -151,15 +170,25 @@ class MushafDownloader(
                     outputStream.close()
                     inputStream.close()
                     
-                    onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, 604, 604))
+                    if (tempFile.renameTo(file)) {
+                        onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, 604, 604))
+                    } else {
+                        tempFile.delete()
+                        onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
+                    }
                 } else {
+                    tempFile.delete()
                     onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
                 }
             } else {
+                tempFile.delete()
                 onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
             onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
         }
     }
