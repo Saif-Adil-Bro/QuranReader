@@ -25,6 +25,9 @@ class ReadingModeViewModel(
     val arabicFontSize: StateFlow<Float> = settingsRepository.arabicFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 24f)
 
+    val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Amiri Quran")
+
     val bengaliFontSize: StateFlow<Float> = settingsRepository.bengaliFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 16f)
 

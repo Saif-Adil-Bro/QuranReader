@@ -45,6 +45,7 @@ fun ReadingModeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
+    val arabicFontName by viewModel.arabicFontName.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
@@ -79,7 +80,7 @@ fun ReadingModeScreen(
                 title = { 
                     val firstAyah = (uiState as? UiState.Success)?.data?.firstOrNull()
                     val surahData = firstAyah?.let { com.example.data.QuranData.surahNames.find { s -> s.first == it.surahNumber } }
-                    val surahNameBangla = surahData?.second?.second ?: "সূরা $surahNumber"
+                    val surahNameBangla = surahData?.second?.first ?: "সূরা $surahNumber"
                     Text(surahNameBangla, fontWeight = FontWeight.Bold, fontSize = 18.sp) 
                 },
                 navigationIcon = {
@@ -156,7 +157,7 @@ fun ReadingModeScreen(
                                     theme = theme
                                 ) {
                                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                        val arabicFont = getArabicFont("") // Amiri Quran by default
+                                        val arabicFont = getArabicFont(arabicFontName)
                                         
                                         // Group ayahs on this page by their Surah
                                         val sections = remember(ayahs) {

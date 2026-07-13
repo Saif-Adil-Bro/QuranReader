@@ -66,17 +66,6 @@ class HafeziModeViewModel(
     private var currentPlaylistIndex = 0
     private var playbackJob: Job? = null
 
-    init {
-        // Observe playback completion to play next ayah or repeat
-        viewModelScope.launch {
-            audioRepository.isPlaying.collect { playing ->
-                if (!playing && currentPlayingAyahNumber.value == null && playlist.isNotEmpty()) {
-                    playNextAyah()
-                }
-            }
-        }
-    }
-
     fun loadPage(pageNumber: Int) {
         if (pageNumber !in 1..604) return
         _currentPage.value = pageNumber
@@ -147,15 +136,29 @@ class HafeziModeViewModel(
         playCurrentIndex()
     }
 
+    fun playAyah(ayahNumber: Int) {
+        if (playlist.isEmpty()) return
+        val index = playlist.indexOfFirst { it.number == ayahNumber }
+        if (index != -1) {
+            currentRepeatIteration = 0
+            currentPlaylistIndex = index
+            playCurrentIndex()
+        }
+    }
+
     fun pauseAudio() {
         audioRepository.pauseAudio()
     }
 
     fun resumeAudio() {
+        audioRepository.onPlaybackEnded = {
+            playNextAyah()
+        }
         audioRepository.resumeAudio()
     }
 
     fun stopAudio() {
+        audioRepository.onPlaybackEnded = null
         audioRepository.stopAudio()
         currentPlaylistIndex = 0
         currentRepeatIteration = 0
@@ -185,6 +188,9 @@ class HafeziModeViewModel(
         if (currentPlaylistIndex < playlist.size) {
             val ayah = playlist[currentPlaylistIndex]
             if (ayah.audioUrl != null) {
+                audioRepository.onPlaybackEnded = {
+                    playNextAyah()
+                }
                 audioRepository.playAudio(ayah.audioUrl, ayah.number)
             } else {
                 // Skip if no audio

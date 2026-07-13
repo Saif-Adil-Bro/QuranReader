@@ -625,11 +625,7 @@ fun QuickSurahPills(
                     .fillMaxHeight()
                     .shadow(if (isActive) 4.dp else 2.dp, RoundedCornerShape(100.dp))
                     .background(
-                        color = if (isActive) {
-                            if (isDark) item.dotColor.copy(alpha = 0.15f) else item.dotColor.copy(alpha = 0.10f)
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        },
+                        color = MaterialTheme.colorScheme.surface,
                         shape = RoundedCornerShape(100.dp)
                     )
                     .then(

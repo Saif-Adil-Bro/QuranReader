@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.List
@@ -40,6 +41,7 @@ import com.example.data.model.CombinedAyah
 import com.example.data.model.removeWaqfSigns
 import com.example.data.model.formatWaqfSigns
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.ClickableText
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.HafeziModeViewModel
@@ -67,6 +69,7 @@ fun HafeziModeScreen(
     
     var showSettings by remember { mutableStateOf(false) }
     var showJuzList by remember { mutableStateOf(false) }
+    var showJumpToPageDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(initialPage) {
         if (currentPage == 1 && initialPage != 1) {
@@ -97,11 +100,25 @@ fun HafeziModeScreen(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text(
-                        text = "পৃষ্ঠা ${currentPage.toBengaliNumerals()}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    ) 
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clickable { showJumpToPageDialog = true }
+                            .padding(vertical = 4.dp, horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = "পৃষ্ঠা ${currentPage.toBengaliNumerals()}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Jump to Page",
+                            modifier = Modifier.size(20.dp),
+                            tint = topBarContentColor
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -162,8 +179,15 @@ fun HafeziModeScreen(
                     
                     FloatingActionButton(
                         onClick = {
-                            if (isPlaying) viewModel.pauseAudio()
-                            else viewModel.playAudio()
+                            if (isPlaying) {
+                                viewModel.pauseAudio()
+                            } else {
+                                if (currentPlayingAyahNumber != null) {
+                                    viewModel.resumeAudio()
+                                } else {
+                                    viewModel.playAudio()
+                                }
+                            }
                         },
                         containerColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
                         contentColor = Color.White,
@@ -227,7 +251,8 @@ fun HafeziModeScreen(
                         theme = theme,
                         currentPage = currentPage,
                         showWaqfSigns = showWaqfSigns,
-                        arabicLineSpacing = arabicLineSpacing
+                        arabicLineSpacing = arabicLineSpacing,
+                        onAyahClick = { viewModel.playAyah(it) }
                     )
                 }
             }
@@ -462,6 +487,93 @@ fun HafeziModeScreen(
                 }
             }
         }
+
+        if (showJumpToPageDialog) {
+            var pageInput by remember { mutableStateOf("") }
+            var isError by remember { mutableStateOf(false) }
+            
+            AlertDialog(
+                onDismissRequest = { showJumpToPageDialog = false },
+                title = {
+                    Text(
+                        text = "পৃষ্ঠা পরিবর্তন করুন",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = topBarContentColor
+                    )
+                },
+                text = {
+                    Column {
+                        Text(
+                            text = "১ থেকে ৬০৪ এর মধ্যে পৃষ্ঠা নম্বর লিখুন:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = topBarContentColor.copy(alpha = 0.8f),
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        OutlinedTextField(
+                            value = pageInput,
+                            onValueChange = { input ->
+                                val englishInput = input.toEnglishNumerals()
+                                val filtered = englishInput.filter { it.isDigit() }
+                                pageInput = filtered
+                                if (filtered.isNotEmpty()) {
+                                    val num = filtered.toIntOrNull()
+                                    isError = num == null || num !in 1..604
+                                } else {
+                                    isError = false
+                                }
+                            },
+                            label = { Text("পৃষ্ঠা নম্বর") },
+                            placeholder = { Text("যেমন: ১২৩") },
+                            isError = isError,
+                            supportingText = {
+                                if (isError) {
+                                    Text("অনুগ্রহ করে ১ থেকে ৬০৪ এর মধ্যে একটি সঠিক নম্বর লিখুন", color = MaterialTheme.colorScheme.error)
+                                }
+                            },
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
+                                focusedLabelColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
+                                cursorColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val englishInput = pageInput.toEnglishNumerals()
+                            val num = englishInput.toIntOrNull()
+                            if (num != null && num in 1..604) {
+                                viewModel.loadPage(num)
+                                showJumpToPageDialog = false
+                            } else {
+                                isError = true
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
+                        )
+                    ) {
+                        Text("নিশ্চিত করুন")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showJumpToPageDialog = false },
+                        colors = ButtonDefaults.textButtonColors(contentColor = topBarContentColor)
+                    ) {
+                        Text("বাতিল")
+                    }
+                },
+                containerColor = containerColor
+            )
+        }
     }
 }
 
@@ -474,7 +586,8 @@ fun HafeziPageContent(
     theme: String,
     currentPage: Int,
     showWaqfSigns: Boolean = true,
-    arabicLineSpacing: Float = 1.65f
+    arabicLineSpacing: Float = 1.65f,
+    onAyahClick: (Int) -> Unit
 ) {
     val arabicFont = getArabicFont(arabicFontName)
     val firstAyah = ayahs.firstOrNull()
@@ -584,6 +697,13 @@ fun HafeziPageContent(
                                     
                                     val end = length
                                     
+                                    addStringAnnotation(
+                                        tag = "AYAH_NUMBER",
+                                        annotation = ayah.number.toString(),
+                                        start = start,
+                                        end = end
+                                    )
+
                                     // Highlight currently active/playing verse beautifully in green/accent shade
                                     if (ayah.number == playingAyahNumber) {
                                         addStyle(
@@ -604,17 +724,27 @@ fun HafeziPageContent(
                             }
                         }
 
-                        Text(
+                        ClickableText(
                             text = annotatedString,
-                            fontSize = arabicFontSize.sp,
-                            lineHeight = (arabicFontSize * arabicLineSpacing).sp,
-                            fontFamily = arabicFont,
-                            color = when (theme) {
-                                "Dark" -> Color(0xFFE0E0E0)
-                                "Sepia" -> Color(0xFF4E342E)
-                                else -> Color(0xFF1A1A1A)
+                            onClick = { offset ->
+                                annotatedString.getStringAnnotations(tag = "AYAH_NUMBER", start = offset, end = offset)
+                                    .firstOrNull()?.let { annotation ->
+                                        annotation.item.toIntOrNull()?.let { ayahNumber ->
+                                            onAyahClick(ayahNumber)
+                                        }
+                                    }
                             },
-                            textAlign = TextAlign.Justify,
+                            style = androidx.compose.ui.text.TextStyle(
+                                fontSize = arabicFontSize.sp,
+                                lineHeight = (arabicFontSize * arabicLineSpacing).sp,
+                                fontFamily = arabicFont,
+                                color = when (theme) {
+                                    "Dark" -> Color(0xFFE0E0E0)
+                                    "Sepia" -> Color(0xFF4E342E)
+                                    else -> Color(0xFF1A1A1A)
+                                },
+                                textAlign = TextAlign.Justify
+                            ),
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
                         )
                     }
@@ -747,4 +877,13 @@ fun TanzilMushafFrame(
             }
         }
     }
+}
+
+fun String.toEnglishNumerals(): String {
+    val englishNumerals = "0123456789"
+    val bengaliNumerals = "০১২৩৪৫৬৭৮৯"
+    return this.map { char ->
+        val index = bengaliNumerals.indexOf(char)
+        if (index != -1) englishNumerals[index] else char
+    }.joinToString("")
 }

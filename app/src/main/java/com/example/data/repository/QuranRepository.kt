@@ -40,6 +40,34 @@ class QuranRepository(
     private val cachedPageDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
     private val cachedJuzDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
 
+    private val muqattaatMap = mapOf(
+        "الم" to "الٓمٓ",
+        "المص" to "الٓمٓصٓ",
+        "الر" to "الٓر",
+        "المر" to "الٓمٓر",
+        "كهيعص" to "كٓهٰیٰعٓصٓ",
+        "طه" to "طٰهٰ",
+        "طسم" to "طسٓمٓ",
+        "طس" to "طسٓ",
+        "يس" to "يٰسٓ",
+        "ص" to "صٓ",
+        "حم" to "حٰمٓ",
+        "عسق" to "عٓسٓقٓ",
+        "ق" to "قٓ",
+        "ন" to "نٓ",
+        "ن" to "نٓ"
+    )
+
+    private fun formatHurufeMuqattaat(text: String): String {
+        val diacriticsRegex = Regex("[\\u064B-\\u065F\\u0670\\u06E1\\u06E2\\u06D6-\\u06DC]")
+        val words = text.split(" ")
+        val formattedWords = words.map { word ->
+            val cleanWord = word.replace(diacriticsRegex, "").trim()
+            muqattaatMap[cleanWord] ?: word
+        }
+        return formattedWords.joinToString(" ")
+    }
+
     private fun processArabicText(ayah: com.example.data.model.Ayah, defaultSurahNumber: Int = -1): String {
         val surahNumber = ayah.surah?.number ?: defaultSurahNumber
         var text = ayah.text
@@ -67,7 +95,21 @@ class QuranRepository(
                     }
                 }
             }
-            ayah.copy(words = rawWords, arabicText = cleanedArabicText)
+            
+            // Format Hurufe Muqatta'at in full text
+            cleanedArabicText = formatHurufeMuqattaat(cleanedArabicText)
+            
+            // Format Hurufe Muqatta'at in individual word-by-word text
+            val formattedWords = rawWords.map { word ->
+                val text = word.textUthmani
+                if (text != null) {
+                    word.copy(textUthmani = formatHurufeMuqattaat(text))
+                } else {
+                    word
+                }
+            }
+            
+            ayah.copy(words = formattedWords, arabicText = cleanedArabicText)
         }
     }
 
