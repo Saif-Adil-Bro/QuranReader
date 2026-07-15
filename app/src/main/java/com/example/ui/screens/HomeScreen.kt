@@ -21,6 +21,8 @@ import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -33,6 +35,8 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import com.example.ui.viewmodels.HomeViewModel
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
+import com.example.data.model.CombinedAyah
 import java.util.Calendar
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.border
@@ -62,6 +66,55 @@ fun Int.toBengaliNumerals(): String {
     return this.toString().toBengaliNumerals()
 }
 
+@Composable
+fun TajweedLegendDialog(onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            androidx.compose.material3.Text(
+                text = "তাজবীদের রঙের পরিচিতি",
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontSize = 20.sp,
+                color = com.example.ui.theme.DarkText
+            )
+        },
+        text = {
+            androidx.compose.foundation.lazy.LazyColumn(
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+            ) {
+                items(com.example.ui.theme.TajweedLegend.toList().size) { index ->
+                    val (key, pair) = com.example.ui.theme.TajweedLegend.toList()[index]
+                    val (label, color) = pair
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.foundation.layout.Box(
+                            modifier = androidx.compose.ui.Modifier
+                                .size(24.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(color)
+                        )
+                        androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.width(12.dp))
+                        androidx.compose.material3.Text(
+                            text = label,
+                            fontSize = 16.sp,
+                            color = com.example.ui.theme.DarkText
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                androidx.compose.material3.Text("বন্ধ করুন", color = com.example.ui.theme.PrimaryGreen)
+            }
+        },
+        containerColor = com.example.ui.theme.White,
+        titleContentColor = com.example.ui.theme.DarkText,
+        textContentColor = com.example.ui.theme.DarkText
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -69,28 +122,47 @@ fun HomeScreen(
     onNavigateToSurah: (Int) -> Unit,
     onNavigateToJuz: (Int) -> Unit,
     onNavigateToNormalMode: () -> Unit,
-    onNavigateToReadingMode: () -> Unit,
+    onNavigateToReadingMode: (Int) -> Unit,
     onNavigateToHafeziMode: (Int) -> Unit,
     onNavigateToSearch: () -> Unit,
     onSettingsClick: () -> Unit,
     onNavigateToMushaf: () -> Unit,
-    onNavigateToMushafPage: (String, Int) -> Unit,
-    onNavigateToSurahWithAyah: (Int, String, Int) -> Unit
+    onNavigateToMushafPage: (String, Int, Boolean) -> Unit,
+    onNavigateToSurahWithAyah: (Int, String, Int) -> Unit,
+    onNavigateToTajweedIndex: () -> Unit
 ) {
     val context = LocalContext.current
     val lastReadSurah by viewModel.lastReadSurah.collectAsState()
     val lastReadPage by viewModel.lastReadPage.collectAsState()
+    val defaultMushafId by viewModel.defaultMushafId.collectAsState()
     val surahList by viewModel.surahs.collectAsState()
     val currentTheme by viewModel.theme.collectAsState()
     val isDark = currentTheme == "Dark"
-    var selectedTab by remember { mutableStateOf(0) } // 0 for Surah, 1 for Para
+    // New premium bookmarks & audio player states
+    val bookmarks by viewModel.bookmarks.collectAsState(initial = emptyList())
+    val currentPlayingSurah by viewModel.currentPlayingSurah.collectAsState()
+    val currentPlayingAyahIndex by viewModel.currentPlayingAyahIndex.collectAsState()
+    val currentPlayingAyahs by viewModel.currentPlayingAyahs.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
+    val selectedQariId by viewModel.selectedQariId.collectAsState()
+    val isRepeatAyahEnabled by viewModel.isRepeatAyahEnabled.collectAsState()
+    val isRepeatSurahEnabled by viewModel.isRepeatSurahEnabled.collectAsState()
+    val playbackSpeed by viewModel.playbackSpeed.collectAsState()
+
+    var showQariSelectorDialog by remember { mutableStateOf(false) }
+    var showSurahSelectorDialog by remember { mutableStateOf(false) }
 
     val hasAskedDownloadPrompt by viewModel.hasAskedDownloadPrompt.collectAsState()
     val isDownloading by viewModel.isDownloading.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
     val downloadError by viewModel.downloadError.collectAsState()
+    var showTajweedLegend by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     // Show first-time download prompt dialog
+    if (showTajweedLegend) {
+        TajweedLegendDialog(onDismiss = { showTajweedLegend = false })
+    }
+
     if (!hasAskedDownloadPrompt) {
         AlertDialog(
             onDismissRequest = { viewModel.setHasAskedDownloadPrompt() },
@@ -241,7 +313,7 @@ fun HomeScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = horizontalPadding)
+                contentPadding = PaddingValues(start = horizontalPadding, end = horizontalPadding, bottom = 48.dp)
             ) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth()) {
@@ -257,39 +329,86 @@ fun HomeScreen(
                     }
                 }
                 item {
-                    Spacer(modifier = Modifier.height(48.dp))
-                    QuickAccessSection(
-                        selectedTab = selectedTab,
-                        lastReadSurah = lastReadSurah,
-                        onTabSelected = { selectedTab = it },
-                        onSurahClick = onNavigateToSurah
-                    )
-                }
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    ReadingModesSection(
-                        onNavigateToReadingMode = onNavigateToReadingMode,
-                        onNavigateToHafeziMode = { onNavigateToHafeziMode(1) },
-                        onNavigateToMushaf = onNavigateToMushaf
-                    )
-                }
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(36.dp))
                     QuickSurahPills(
                         onSurahClick = onNavigateToSurah,
                         onNavigateToSurahWithAyah = onNavigateToSurahWithAyah
                     )
                 }
                 item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    if (selectedTab == 0) {
-                        SurahGridSection(surahList = surahList, onSurahClick = onNavigateToSurah)
-                    } else {
-                        ParaGridSection(onNavigateToJuz)
-                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    BookmarksAndLastReadSection(
+                        lastReadSurah = lastReadSurah,
+                        lastReadPage = lastReadPage,
+                        bookmarks = bookmarks,
+                        onSurahClick = onNavigateToSurah,
+                        onPageClick = onNavigateToHafeziMode,
+                        onNavigateToSurahWithAyah = onNavigateToSurahWithAyah,
+                        onDeleteBookmark = { viewModel.deleteBookmark(it) }
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    ModesGridSection(
+                        onHafeziPdfClick = { onNavigateToMushafPage(defaultMushafId, 1, true) },
+                        onTajweedClick = onNavigateToTajweedIndex,
+                        onTranslationClick = onNavigateToNormalMode,
+                        onPlayerClick = { showSurahSelectorDialog = true }
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    RecitationPlayerPanel(
+                        currentPlayingSurah = currentPlayingSurah,
+                        currentPlayingAyahIndex = currentPlayingAyahIndex,
+                        currentPlayingAyahs = currentPlayingAyahs,
+                        isPlaying = isPlaying,
+                        selectedQariId = selectedQariId,
+                        isRepeatAyahEnabled = isRepeatAyahEnabled,
+                        isRepeatSurahEnabled = isRepeatSurahEnabled,
+                        playbackSpeed = playbackSpeed,
+                        onQariClick = { showQariSelectorDialog = true },
+                        onSurahSelectorClick = { showSurahSelectorDialog = true },
+                        onPlayPauseClick = {
+                            if (isPlaying) {
+                                viewModel.pauseSurahAudio()
+                            } else {
+                                if (currentPlayingSurah != null) {
+                                    viewModel.resumeSurahAudio()
+                                }
+                            }
+                        },
+                        onStopClick = { viewModel.stopSurahAudio() },
+                        onNextClick = { viewModel.nextAyah() },
+                        onPrevClick = { viewModel.previousAyah() },
+                        onToggleRepeatAyah = { viewModel.toggleRepeatAyah() },
+                        onToggleRepeatSurah = { viewModel.toggleRepeatSurah() },
+                        onSpeedClick = { speed -> viewModel.setPlaybackSpeed(speed) }
+                    )
                 }
             }
         }
+    }
+
+    if (showQariSelectorDialog) {
+        QariSelectorDialog(
+            selectedQariId = selectedQariId,
+            onDismiss = { showQariSelectorDialog = false },
+            onSelectQari = { qariId ->
+                viewModel.setSelectedQariId(qariId)
+                showQariSelectorDialog = false
+            }
+        )
+    }
+
+    if (showSurahSelectorDialog) {
+        SurahSelectorDialog(
+            onDismiss = { showSurahSelectorDialog = false },
+            onSelectSurah = { surahId ->
+                viewModel.playSurahAudio(surahId)
+                showSurahSelectorDialog = false
+            }
+        )
     }
 }
 
@@ -976,11 +1095,206 @@ fun SurahCard(
     }
 }
 
+private val paraNamesBangla = listOf(
+    "আলিফ লাম মীম", "সাইয়াকুল", "তিলকাল রুসুল", "লান তানালু", "ওয়াল মুহসানাত",
+    "লা ইউহিব্বুল্লাহ", "ওয়া ইজা সামিউ", "ওয়া লাও আন্নানা", "ক্বলাল মালাইউ", "ওয়া'লামু",
+    "ইয়া'তাজিরুন", "ওয়া মা মিন দাব্বাহ", "ওয়া মা উবাররিউ", "রুবামা", "সুবহানাল্লাজি",
+    "ক্বলা আলাম", "ইক্বতারা বা লিন্নাস", "ক্বদ আফলাহা", "ওয়া ক্বলাল্লাজিনা", "আম্মান খালাক্ব",
+    "উতলু মা উহিয়া", "ওয়া মান ইয়াক্বনুত", "ওয়া মালিয়া", "ফামান আজলামু", "ইলাইহি ইয়ুরাদদু",
+    "হা মীম", "ক্বলা ফামা খাতবুকুম", "ক্বদ সামিয়াল্লাহ", "তাবারাকাল্লাজি", "আম্মা ইয়াতাসায়ালুন"
+)
+
+private fun getJuzStartPage(juz: Int): Int {
+    if (juz == 1) return 1
+    return (juz - 1) * 20 + 2
+}
+
+private fun getJuzStartSurah(juz: Int): Int {
+    return when (juz) {
+        1 -> 1
+        2 -> 2
+        3 -> 2
+        4 -> 3
+        5 -> 4
+        6 -> 4
+        7 -> 5
+        8 -> 6
+        9 -> 7
+        10 -> 8
+        11 -> 9
+        12 -> 11
+        13 -> 12
+        14 -> 15
+        15 -> 17
+        16 -> 18
+        17 -> 21
+        18 -> 23
+        19 -> 25
+        20 -> 27
+        21 -> 29
+        22 -> 33
+        23 -> 36
+        24 -> 39
+        25 -> 41
+        26 -> 46
+        27 -> 51
+        28 -> 58
+        29 -> 67
+        30 -> 78
+        else -> 1
+    }
+}
+
 @Composable
-fun ReadingModesSection(
-    onNavigateToReadingMode: () -> Unit,
-    onNavigateToHafeziMode: () -> Unit,
-    onNavigateToMushaf: () -> Unit
+fun BookmarksAndLastReadSection(
+    lastReadSurah: Int,
+    lastReadPage: Int,
+    bookmarks: List<com.example.data.local.entity.BookmarkEntity>,
+    onSurahClick: (Int) -> Unit,
+    onPageClick: (Int) -> Unit,
+    onNavigateToSurahWithAyah: (Int, String, Int) -> Unit,
+    onDeleteBookmark: (com.example.data.local.entity.BookmarkEntity) -> Unit
+) {
+    val lastReadSurahName = QuranData.surahNames.find { it.first == lastReadSurah }?.second?.first ?: "আল ফাতিহা"
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        // Last Read Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, Border)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSurahClick(lastReadSurah) }
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(BackgroundGreen, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.MenuBook,
+                        contentDescription = null,
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "সর্বশেষ পঠিত সূরা",
+                        fontSize = 11.sp,
+                        color = GrayText,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = lastReadSurahName,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (lastReadPage > 0) {
+                        Text(
+                            text = "সর্বশেষ হাফেজী পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()}",
+                            fontSize = 11.sp,
+                            color = PrimaryGreen,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = GrayText
+                )
+            }
+        }
+
+        if (bookmarks.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "বুকমার্ক সমূহ",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(bookmarks) { bookmark ->
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = BackgroundGreen),
+                        border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
+                        modifier = Modifier.clickable {
+                            when (bookmark.type) {
+                                "SURAH" -> onSurahClick(bookmark.referenceId)
+                                "PAGE" -> onPageClick(bookmark.referenceId)
+                                "JUZ" -> {
+                                    val startPage = getJuzStartPage(bookmark.referenceId)
+                                    onPageClick(startPage)
+                                }
+                                "AYAH" -> {
+                                    val (surahNum, ayahNum) = com.example.data.QuranData.getSurahAndAyahFromGlobal(bookmark.referenceId)
+                                    onNavigateToSurahWithAyah(surahNum, "LIST", ayahNum)
+                                }
+                            }
+                        }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bookmark,
+                                contentDescription = null,
+                                tint = PrimaryGreen,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = bookmark.name,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryGreen
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Delete",
+                                tint = GrayText,
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clickable { onDeleteBookmark(bookmark) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ModesGridSection(
+    onHafeziPdfClick: () -> Unit,
+    onTajweedClick: () -> Unit,
+    onTranslationClick: () -> Unit,
+    onPlayerClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -988,46 +1302,59 @@ fun ReadingModesSection(
             .padding(horizontal = 16.dp)
     ) {
         Text(
-            text = "পঠন মোডসমূহ",
+            text = "কুরআন পঠন ও শ্রবণ মোড",
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 12.dp)
         )
+        
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Paragraph Reading Mode Card
-            ModeCard(
-                title = "প্যারাগ্রাফ মোড",
-                subtitle = "টানা পড়ার জন্য",
-                icon = Icons.Default.ChromeReaderMode,
-                backgroundColor = Color(0xFF10B981).copy(alpha = 0.08f),
-                iconColor = Color(0xFF10B981),
-                onClick = onNavigateToReadingMode,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Hafezi Mode Card
-            ModeCard(
+            ModeItemCard(
                 title = "হাফেজী মোড",
-                subtitle = "১৫ লাইন ফরম্যাট",
-                icon = Icons.Default.AutoStories,
-                backgroundColor = Color(0xFF3B82F6).copy(alpha = 0.08f),
-                iconColor = Color(0xFF3B82F6),
-                onClick = onNavigateToHafeziMode,
+                subtitle = "১৫ লাইন পিডিএফ",
+                icon = Icons.Default.PictureAsPdf,
+                containerColor = Color(0xFFECFDF5),
+                iconColor = Color(0xFF10B981),
+                onClick = onHafeziPdfClick,
                 modifier = Modifier.weight(1f)
             )
-
-            // Mushaf Mode Card
-            ModeCard(
-                title = "ডিজিটাল মুসহাফ",
-                subtitle = "আসল প্রিন্ট পেজ",
+            ModeItemCard(
+                title = "তাজবীদ মোড",
+                subtitle = "রঙিন তাজবীদ টেক্সট",
+                icon = Icons.Default.Palette,
+                containerColor = Color(0xFFEFF6FF),
+                iconColor = Color(0xFF3B82F6),
+                onClick = onTajweedClick,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(10.dp))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ModeItemCard(
+                title = "অনুবাদ ও তাফসীর",
+                subtitle = "গভীর তাফসীর ও অর্থ",
                 icon = Icons.AutoMirrored.Filled.MenuBook,
-                backgroundColor = Color(0xFFF59E0B).copy(alpha = 0.08f),
-                iconColor = Color(0xFFF59E0B),
-                onClick = onNavigateToMushaf,
+                containerColor = Color(0xFFF5F3FF),
+                iconColor = Color(0xFF8B5CF6),
+                onClick = onTranslationClick,
+                modifier = Modifier.weight(1f)
+            )
+            ModeItemCard(
+                title = "তেলাওয়াত প্লেয়ার",
+                subtitle = "ক্বারী সহ তেলাওয়াত",
+                icon = Icons.Default.PlayCircle,
+                containerColor = Color(0xFFFFF7ED),
+                iconColor = Color(0xFFF97316),
+                onClick = onPlayerClick,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -1035,54 +1362,543 @@ fun ReadingModesSection(
 }
 
 @Composable
-fun ModeCard(
+fun ModeItemCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    backgroundColor: Color,
+    containerColor: Color,
     iconColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Card(
         modifier = modifier
-            .shadow(1.dp, RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
-            .clickable { onClick() }
-            .padding(10.dp)
+            .shadow(2.dp, RoundedCornerShape(16.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Border)
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .background(backgroundColor, CircleShape),
+                    .size(40.dp)
+                    .background(containerColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = title,
-                fontSize = 11.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                lineHeight = 12.sp,
-                textAlign = TextAlign.Center
+                maxLines = 1
             )
             Text(
                 text = subtitle,
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 color = GrayText,
-                maxLines = 1,
-                lineHeight = 10.sp,
-                textAlign = TextAlign.Center
+                maxLines = 1
             )
         }
     }
 }
 
-// Removed old BottomNavBar
+
+
+@Composable
+fun QariSelectorDialog(
+    selectedQariId: String,
+    onDismiss: () -> Unit,
+    onSelectQari: (String) -> Unit
+) {
+    val qariList = listOf(
+        "ar.alafasy" to "Mishary Rashid Alafasy",
+        "ar.abdulbasitmurattal" to "Abdul Basit",
+        "ar.abdullahbasfar" to "Abdullah Basfar",
+        "ar.abdurrahmaansudais" to "Abdurrahmaan As-Sudais",
+        "ar.hudhaify" to "Ali Al-Hudhaify",
+        "ar.husary" to "Mahmoud Khalil Al-Husary",
+        "ar.mahermuaiqly" to "Maher Al Muaiqly",
+        "ar.minshawi" to "Mohamed Siddiq al-Minshawi",
+        "ar.muhammadayyoub" to "Muhammad Ayyoub"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "ক্বারী নির্বাচন করুন",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Box(modifier = Modifier.height(300.dp)) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(qariList) { qari ->
+                        val isSelected = selectedQariId == qari.first
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelectQari(qari.first) },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) BackgroundGreen else MaterialTheme.colorScheme.surface
+                            ),
+                            border = BorderStroke(1.dp, if (isSelected) PrimaryGreen else Border)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    tint = if (isSelected) PrimaryGreen else GrayText,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = qari.second,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("বন্ধ করুন", color = GrayText)
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp)
+    )
+}
+
+@Composable
+fun SurahSelectorDialog(
+    onDismiss: () -> Unit,
+    onSelectSurah: (Int) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredSurahs = remember(searchQuery) {
+        QuranData.surahNames.filter { surah ->
+            surah.second.first.contains(searchQuery, ignoreCase = true) ||
+            surah.second.second.contains(searchQuery, ignoreCase = true) ||
+            surah.first.toString().contains(searchQuery)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "সূরা নির্বাচন করুন",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("সূরা খুঁজুন...", fontSize = 14.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryGreen,
+                        unfocusedBorderColor = Border
+                    ),
+                    singleLine = true
+                )
+            }
+        },
+        text = {
+            Box(modifier = Modifier.height(300.dp)) {
+                if (filteredSurahs.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("কোনো সূরা পাওয়া যায়নি!", color = GrayText, fontSize = 14.sp)
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(filteredSurahs) { surahPair ->
+                            val surahId = surahPair.first
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelectSurah(surahId) },
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = BorderStroke(1.dp, Border)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .background(BackgroundGreen, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = surahId.toBengaliNumerals(),
+                                            color = PrimaryGreen,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = surahPair.second.first,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = surahPair.second.second,
+                                            fontSize = 11.sp,
+                                            color = GrayText
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("বন্ধ করুন", color = GrayText)
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp)
+    )
+}
+
+@Composable
+fun RecitationPlayerPanel(
+    currentPlayingSurah: Int?,
+    currentPlayingAyahIndex: Int,
+    currentPlayingAyahs: List<CombinedAyah>,
+    isPlaying: Boolean,
+    selectedQariId: String,
+    isRepeatAyahEnabled: Boolean,
+    isRepeatSurahEnabled: Boolean,
+    playbackSpeed: Float,
+    onQariClick: () -> Unit,
+    onSurahSelectorClick: () -> Unit,
+    onPlayPauseClick: () -> Unit,
+    onStopClick: () -> Unit,
+    onNextClick: () -> Unit,
+    onPrevClick: () -> Unit,
+    onToggleRepeatAyah: () -> Unit,
+    onToggleRepeatSurah: () -> Unit,
+    onSpeedClick: (Float) -> Unit
+) {
+    val qariList = listOf(
+        "ar.alafasy" to "Mishary Rashid Alafasy",
+        "ar.abdulbasitmurattal" to "Abdul Basit",
+        "ar.abdullahbasfar" to "Abdullah Basfar",
+        "ar.abdurrahmaansudais" to "Abdurrahmaan As-Sudais",
+        "ar.hudhaify" to "Ali Al-Hudhaify",
+        "ar.husary" to "Mahmoud Khalil Al-Husary",
+        "ar.mahermuaiqly" to "Maher Al Muaiqly",
+        "ar.minshawi" to "Mohamed Siddiq al-Minshawi",
+        "ar.muhammadayyoub" to "Muhammad Ayyoub"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "সূরা তেলাওয়াত প্লেয়ার",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 10.dp)
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.5.dp, PrimaryGreen.copy(alpha = 0.15f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                if (currentPlayingSurah != null) {
+                    val surahName = QuranData.surahNames.find { it.first == currentPlayingSurah }?.second?.first ?: "সূরা"
+                    val qariName = qariList.find { it.first == selectedQariId }?.second ?: "Alafasy"
+                    val totalAyahs = currentPlayingAyahs.size
+                    val progress = if (totalAyahs > 0) (currentPlayingAyahIndex.toFloat() / totalAyahs.toFloat()) else 0f
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(BackgroundGreen, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = PrimaryGreen,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "সূরা $surahName",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "ক্বারী: $qariName",
+                                fontSize = 12.sp,
+                                color = GrayText
+                            )
+                            Text(
+                                text = "আয়াত: ${(currentPlayingAyahIndex + 1).toBengaliNumerals()} / ${totalAyahs.toBengaliNumerals()}",
+                                fontSize = 11.sp,
+                                color = PrimaryGreen,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Currently Playing Ayah with Arabic and Bangla translation
+                    val currentAyahObj = currentPlayingAyahs.getOrNull(currentPlayingAyahIndex)
+                    if (currentAyahObj != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(BackgroundGreen.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                                .border(1.dp, PrimaryGreen.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = currentAyahObj.arabicText,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryGreen,
+                                textAlign = TextAlign.Right,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = currentAyahObj.bengaliText,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Left,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    
+                    // Progress Bar
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(100.dp)),
+                        color = PrimaryGreen,
+                        trackColor = Border
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Controls Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = onPrevClick) {
+                            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = PrimaryGreen, modifier = Modifier.size(32.dp))
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        FilledIconButton(
+                            onClick = onPlayPauseClick,
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = PrimaryGreen),
+                            modifier = Modifier.size(54.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                tint = White,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        IconButton(onClick = onNextClick) {
+                            Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = PrimaryGreen, modifier = Modifier.size(32.dp))
+                        }
+                        Spacer(modifier = Modifier.width(20.dp))
+                        IconButton(onClick = onStopClick) {
+                            Icon(Icons.Default.Stop, contentDescription = "Stop", tint = Color.Red, modifier = Modifier.size(28.dp))
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Speed & Loop control buttons row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Speed Cycle toggle
+                        val nextSpeed = when(playbackSpeed) {
+                            0.75f -> 1.0f
+                            1.0f -> 1.25f
+                            1.25f -> 1.5f
+                            1.5f -> 1.75f
+                            1.75f -> 2.0f
+                            else -> 0.75f
+                        }
+                        Button(
+                            onClick = { onSpeedClick(nextSpeed) },
+                            colors = ButtonDefaults.buttonColors(containerColor = BackgroundGreen),
+                            border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Speed,
+                                contentDescription = null,
+                                tint = PrimaryGreen,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("${playbackSpeed}x", color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+
+                        // Ayah repeat
+                        Button(
+                            onClick = onToggleRepeatAyah,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isRepeatAyahEnabled) PrimaryGreen else BackgroundGreen
+                            ),
+                            border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RepeatOne,
+                                contentDescription = null,
+                                tint = if (isRepeatAyahEnabled) White else PrimaryGreen,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("আয়াত লুপ", color = if (isRepeatAyahEnabled) White else PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+
+                        // Surah repeat
+                        Button(
+                            onClick = onToggleRepeatSurah,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isRepeatSurahEnabled) PrimaryGreen else BackgroundGreen
+                            ),
+                            border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Repeat,
+                                contentDescription = null,
+                                tint = if (isRepeatSurahEnabled) White else PrimaryGreen,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("সূরা লুপ", color = if (isRepeatSurahEnabled) White else PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                    }
+                } else {
+                    // Placeholder / Set Selection
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "কোনো তেলাওয়াত সচল নেই",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "ক্বারী ও সূরা নির্বাচন করে তেলাওয়াত উপভোগ করুন",
+                            fontSize = 11.sp,
+                            color = GrayText,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = onQariClick,
+                                colors = ButtonDefaults.buttonColors(containerColor = BackgroundGreen),
+                                border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(vertical = 12.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.AccountCircle, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("ক্বারী নির্বাচন", color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+                            }
+                            
+                            Button(
+                                onClick = onSurahSelectorClick,
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(vertical = 12.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = White, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("সূরা চালু করুন", color = White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

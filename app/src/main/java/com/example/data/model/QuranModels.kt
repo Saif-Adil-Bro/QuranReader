@@ -21,7 +21,7 @@ data class ApiResponse<T>(
  */
 data class Surah(
     @SerializedName("number") val number: Int,
-    @SerializedName("name") val name: String,
+    @SerializedName("name") val name: String? = null,
     @SerializedName("englishName") val englishName: String,
     @SerializedName("englishNameTranslation") val englishNameTranslation: String,
     @SerializedName("numberOfAyahs") val numberOfAyahs: Int,
@@ -33,7 +33,7 @@ data class Surah(
  */
 data class SurahDetail(
     @SerializedName("number") val number: Int,
-    @SerializedName("name") val name: String,
+    @SerializedName("name") val name: String? = null,
     @SerializedName("englishName") val englishName: String,
     @SerializedName("englishNameTranslation") val englishNameTranslation: String,
     @SerializedName("revelationType") val revelationType: String,
@@ -65,7 +65,7 @@ data class Ayah(
 data class Edition(
     @SerializedName("identifier") val identifier: String,
     @SerializedName("language") val language: String,
-    @SerializedName("name") val name: String,
+    @SerializedName("name") val name: String? = null,
     @SerializedName("englishName") val englishName: String,
     @SerializedName("format") val format: String,
     @SerializedName("type") val type: String
@@ -99,7 +99,8 @@ data class CombinedAyah(
     val bengaliText: String,
     val tafsirText: String? = null,
     val audioUrl: String? = null,
-    val words: List<QuranComWord> = emptyList()
+    val words: List<QuranComWord> = emptyList(),
+    val textUthmaniTajweed: String? = null
 )
 
 /**
@@ -130,6 +131,7 @@ data class QuranComVerse(
     @SerializedName("verse_key") val verseKey: String,
     @SerializedName("verse_number") val verseNumber: Int,
     @SerializedName("words") val words: List<QuranComWord> = emptyList(),
+    @SerializedName("text_uthmani_tajweed") val textUthmaniTajweed: String? = null,
     @SerializedName("translations") val translations: List<QuranComTranslation>? = null,
     @SerializedName("tafsirs") val tafsirs: List<QuranComTafsir>? = null
 )
@@ -144,10 +146,18 @@ data class QuranComWord(
     @SerializedName("position") val position: Int,
     @SerializedName("char_type_name") val charTypeName: String,
     @SerializedName("text_uthmani") val textUthmani: String? = null,
-    @SerializedName("translation") val translation: QuranComWordTranslation? = null
+    @SerializedName("translation") val translation: QuranComWordTranslation? = null,
+    @SerializedName("transliteration") val transliteration: QuranComWordTransliteration? = null,
+    @SerializedName("audio_url") val audioUrl: String? = null
 )
 
+typealias WordDto = QuranComWord
+
 data class QuranComWordTranslation(
+    @SerializedName("text") val text: String?
+)
+
+data class QuranComWordTransliteration(
     @SerializedName("text") val text: String?
 )
 
@@ -222,3 +232,21 @@ fun AnnotatedString.Builder.appendStyledWaqfText(text: String, fontSize: Float, 
         append(text.substring(lastIndex))
     }
 }
+
+data class TafsirResourceResponse(
+    @SerializedName("tafsirs") val tafsirs: List<TafsirResourceDto>
+)
+
+data class TafsirResourceDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("author_name") val authorName: String? = null,
+    @SerializedName("slug") val slug: String? = null,
+    @SerializedName("language_name") val languageName: String,
+    @SerializedName("translated_name") val translatedName: TranslatedName? = null
+)
+
+data class TranslatedName(
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("language_name") val languageName: String
+)

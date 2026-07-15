@@ -1,38 +1,20 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.List
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -42,80 +24,78 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CombinedAyah
-import com.example.data.model.removeWaqfSigns
-import com.example.data.model.formatWaqfSigns
 import com.example.data.model.appendStyledWaqfText
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.ClickableText
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
-import com.example.ui.viewmodels.HafeziModeViewModel
+import com.example.ui.viewmodels.TajweedModeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HafeziModeScreen(
-    viewModel: HafeziModeViewModel,
+fun TajweedModeScreen(
+    viewModel: TajweedModeViewModel,
     initialPage: Int,
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val isBookmarked by viewModel.isBookmarked.collectAsState()
-    val isPageMemorized by viewModel.isPageMemorized.collectAsState()
-    val currentPlayingAyahNumber by viewModel.currentPlayingAyahNumber.collectAsState()
-    val repeatCount by viewModel.repeatCount.collectAsState()
-    
     val currentPage by viewModel.currentPage.collectAsState()
+    val isPageMemorized by viewModel.isPageMemorized.collectAsState()
+    val isBookmarked by viewModel.isBookmarked.collectAsState()
+
+    val isPlaying by viewModel.isPlaying.collectAsState()
+    val currentPlayingAyahNumber by viewModel.currentPlayingAyahNumber.collectAsState()
+
+    val repeatCount by viewModel.repeatCount.collectAsState()
+    val showTajweed by viewModel.showTajweed.collectAsState()
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val arabicFontName by viewModel.arabicFontName.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
     val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
-    val showTajweed by viewModel.showTajweed.collectAsState()
-    
+
     var showSettings by remember { mutableStateOf(false) }
     var showJuzList by remember { mutableStateOf(false) }
     var showJumpToPageDialog by remember { mutableStateOf(false) }
+    var jumpPageInput by remember { mutableStateOf("") }
 
+    // First load
     LaunchedEffect(initialPage) {
-        if (currentPage == 1 && initialPage != 1) {
-            viewModel.loadPage(initialPage)
-        } else if (uiState is UiState.Loading) {
-            viewModel.loadPage(currentPage)
-        }
+        viewModel.loadPage(initialPage)
     }
 
-    // Dynamic coloring based on user-selected reading theme
+    // Colors mapping to custom Quran viewer themes
     val backgroundColor = when (theme) {
-        "Dark" -> Color(0xFF121212)
-        "Sepia" -> Color(0xFFFBF0D9)
-        else -> Color(0xFFF8F6F0)
+        "Dark" -> Color(0xFF1A1A1A)
+        "Sepia" -> Color(0xFFFBF0DB)
+        else -> Color(0xFFF9F7F2)
     }
+
     val containerColor = when (theme) {
         "Dark" -> Color(0xFF1E1E1E)
-        "Sepia" -> Color(0xFFF1E4C3)
-        else -> Color(0xFFEFECE4)
+        "Sepia" -> Color(0xFFF4E4C1)
+        else -> Color(0xFFF2ECE0)
     }
+
     val topBarContentColor = when (theme) {
         "Dark" -> Color(0xFFE0E0E0)
         "Sepia" -> Color(0xFF5D4037)
-        else -> Color(0xFF333333)
+        else -> Color(0xFF2E4F4F)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clickable { showJumpToPageDialog = true }
-                            .padding(vertical = 4.dp, horizontal = 8.dp)
+                            .padding(vertical = 4.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "পৃষ্ঠা ${currentPage.toBengaliNumerals()}",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
+                            fontSize = 18.sp,
+                            color = topBarContentColor
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
@@ -127,8 +107,15 @@ fun HafeziModeScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = {
+                        viewModel.stopAudio()
+                        onNavigateBack()
+                    }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                            contentDescription = "Back",
+                            tint = topBarContentColor
+                        )
                     }
                 },
                 actions = {
@@ -141,20 +128,24 @@ fun HafeziModeScreen(
                     }
                     IconButton(onClick = { viewModel.toggleBookmark() }) {
                         Icon(
-                            if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                             contentDescription = "Bookmark",
                             tint = if (isBookmarked) Color(0xFFE5A93C) else topBarContentColor
                         )
                     }
-                    IconButton(onClick = { viewModel.toggleMemorized() }) {
+                    IconButton(onClick = { viewModel.togglePageMemorized() }) {
                         Icon(
-                            if (isPageMemorized) Icons.Default.CheckCircle else Icons.Outlined.Circle,
+                            imageVector = if (isPageMemorized) Icons.Default.CheckCircle else Icons.Outlined.Circle,
                             contentDescription = "Mark Memorized",
                             tint = if (isPageMemorized) Color(0xFF1E5631) else topBarContentColor
                         )
                     }
                     IconButton(onClick = { showSettings = true }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(
+                            imageVector = Icons.Default.Settings, 
+                            contentDescription = "Settings",
+                            tint = topBarContentColor
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -171,7 +162,9 @@ fun HafeziModeScreen(
                 contentColor = topBarContentColor
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -200,7 +193,7 @@ fun HafeziModeScreen(
                         elevation = FloatingActionButtonDefaults.elevation(2.dp)
                     ) {
                         Icon(
-                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = "Play/Pause"
                         )
                     }
@@ -249,7 +242,8 @@ fun HafeziModeScreen(
                     }
                 }
                 is UiState.Success -> {
-                    HafeziPageContent(
+                    // Reusing our beautiful text page-by-page layout structure but optimized for Tajweed Mode
+                    TajweedPageContent(
                         ayahs = state.data,
                         playingAyahNumber = currentPlayingAyahNumber,
                         arabicFontSize = arabicFontSize,
@@ -264,7 +258,58 @@ fun HafeziModeScreen(
                 }
             }
         }
-        
+
+        // Jump to Page Dialog
+        if (showJumpToPageDialog) {
+            AlertDialog(
+                onDismissRequest = { showJumpToPageDialog = false },
+                title = { Text("পৃষ্ঠায় যান", color = topBarContentColor, fontWeight = FontWeight.Bold) },
+                text = {
+                    Column {
+                        Text("১ থেকে ৬০৪ এর মধ্যে একটি পৃষ্ঠা নম্বর লিখুন:", modifier = Modifier.padding(bottom = 8.dp))
+                        OutlinedTextField(
+                            value = jumpPageInput,
+                            onValueChange = { input ->
+                                if (input.isEmpty() || input.all { it.isDigit() }) {
+                                    jumpPageInput = input
+                                }
+                            },
+                            label = { Text("পৃষ্ঠা নম্বর") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val targetPage = jumpPageInput.toIntOrNull()
+                            if (targetPage != null && targetPage in 1..604) {
+                                viewModel.stopAudio()
+                                viewModel.loadPage(targetPage)
+                                showJumpToPageDialog = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
+                        )
+                    ) {
+                        Text("যান", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showJumpToPageDialog = false },
+                        colors = ButtonDefaults.textButtonColors(contentColor = topBarContentColor)
+                    ) {
+                        Text("বাতিল")
+                    }
+                },
+                containerColor = containerColor
+            )
+        }
+
+        // Settings Bottom Sheet
         if (showSettings) {
             ModalBottomSheet(
                 onDismissRequest = { showSettings = false },
@@ -278,7 +323,7 @@ fun HafeziModeScreen(
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     Text(
-                        text = "পঠন ও অডিও সেটিংস",
+                        text = "তাজবীদ পঠন ও অডিও সেটিংস",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = topBarContentColor,
@@ -395,31 +440,6 @@ fun HafeziModeScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Tajweed Colors toggle
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "তাজবীদ কালার",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = topBarContentColor
-                        )
-                        Switch(
-                            checked = showTajweed,
-                            onCheckedChange = { viewModel.setShowTajweed(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
-                                uncheckedThumbColor = Color.Gray,
-                                uncheckedTrackColor = containerColor.copy(alpha = 0.5f)
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Font style selector
                     Text(
@@ -460,6 +480,7 @@ fun HafeziModeScreen(
             }
         }
 
+        // Juz & Surah Selection Sheet
         if (showJuzList) {
             var selectedTabIndex by remember { mutableStateOf(0) }
             ModalBottomSheet(
@@ -472,7 +493,7 @@ fun HafeziModeScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
-                    androidx.compose.material3.TabRow(
+                    TabRow(
                         selectedTabIndex = selectedTabIndex,
                         containerColor = containerColor,
                         contentColor = topBarContentColor,
@@ -483,12 +504,12 @@ fun HafeziModeScreen(
                             )
                         }
                     ) {
-                        androidx.compose.material3.Tab(
+                        Tab(
                             selected = selectedTabIndex == 0,
                             onClick = { selectedTabIndex = 0 },
                             text = { Text("পারা", fontWeight = FontWeight.Bold) }
                         )
-                        androidx.compose.material3.Tab(
+                        Tab(
                             selected = selectedTabIndex == 1,
                             onClick = { selectedTabIndex = 1 },
                             text = { Text("সূরা", fontWeight = FontWeight.Bold) }
@@ -512,6 +533,7 @@ fun HafeziModeScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
+                                            viewModel.stopAudio()
                                             viewModel.loadPage(startPage)
                                             showJuzList = false
                                         }
@@ -547,13 +569,14 @@ fun HafeziModeScreen(
                             items(114) { index ->
                                 val surahNum = index + 1
                                 val surahName = com.example.data.QuranData.surahNames.find { it.first == surahNum }?.second?.first ?: ""
-                                val surahNameArabic = ""
+                                val surahNameArabic = com.example.data.QuranData.surahNames.find { it.first == surahNum }?.second?.second ?: ""
                                 val startPage = com.example.data.QuranData.surahStartPages[index]
                                 
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
+                                            viewModel.stopAudio()
                                             viewModel.loadPage(startPage)
                                             showJuzList = false
                                         }
@@ -588,102 +611,14 @@ fun HafeziModeScreen(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
-        }
-
-        if (showJumpToPageDialog) {
-            var pageInput by remember { mutableStateOf("") }
-            var isError by remember { mutableStateOf(false) }
-            
-            AlertDialog(
-                onDismissRequest = { showJumpToPageDialog = false },
-                title = {
-                    Text(
-                        text = "পৃষ্ঠা পরিবর্তন করুন",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = topBarContentColor
-                    )
-                },
-                text = {
-                    Column {
-                        Text(
-                            text = "১ থেকে ৬০৪ এর মধ্যে পৃষ্ঠা নম্বর লিখুন:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = topBarContentColor.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-                        OutlinedTextField(
-                            value = pageInput,
-                            onValueChange = { input ->
-                                val englishInput = input.toEnglishNumerals()
-                                val filtered = englishInput.filter { it.isDigit() }
-                                pageInput = filtered
-                                if (filtered.isNotEmpty()) {
-                                    val num = filtered.toIntOrNull()
-                                    isError = num == null || num !in 1..604
-                                } else {
-                                    isError = false
-                                }
-                            },
-                            label = { Text("পৃষ্ঠা নম্বর") },
-                            placeholder = { Text("যেমন: ১২৩") },
-                            isError = isError,
-                            supportingText = {
-                                if (isError) {
-                                    Text("অনুগ্রহ করে ১ থেকে ৬০৪ এর মধ্যে একটি সঠিক নম্বর লিখুন", color = MaterialTheme.colorScheme.error)
-                                }
-                            },
-                            singleLine = true,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                            ),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
-                                focusedLabelColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631),
-                                cursorColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val englishInput = pageInput.toEnglishNumerals()
-                            val num = englishInput.toIntOrNull()
-                            if (num != null && num in 1..604) {
-                                viewModel.loadPage(num)
-                                showJumpToPageDialog = false
-                            } else {
-                                isError = true
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
-                        )
-                    ) {
-                        Text("নিশ্চিত করুন")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { showJumpToPageDialog = false },
-                        colors = ButtonDefaults.textButtonColors(contentColor = topBarContentColor)
-                    ) {
-                        Text("বাতিল")
-                    }
-                },
-                containerColor = containerColor
-            )
         }
     }
 }
 
 @Composable
-fun HafeziPageContent(
+fun TajweedPageContent(
     ayahs: List<CombinedAyah>, 
     playingAyahNumber: Int?,
     arabicFontSize: Float,
@@ -692,7 +627,7 @@ fun HafeziPageContent(
     currentPage: Int,
     showWaqfSigns: Boolean = true,
     arabicLineSpacing: Float = 2.0f,
-    showTajweed: Boolean = false,
+    showTajweed: Boolean = true, // Defaults to true for Tajweed mode
     onAyahClick: (Int) -> Unit
 ) {
     val arabicFont = getArabicFont(arabicFontName)
@@ -700,7 +635,7 @@ fun HafeziPageContent(
     
     // Resolve Page Headers
     val surahData = firstAyah?.let { com.example.data.QuranData.surahNames.find { s -> s.first == it.surahNumber } }
-    val surahNameArabic = surahData?.second?.first ?: "" // e.g. سورة الفাতحة
+    val surahNameArabic = surahData?.second?.first ?: "" 
     val juzNum = firstAyah?.juz ?: 1
     val juzName = "পারা ${juzNum.toBengaliNumerals()}"
 
@@ -710,13 +645,12 @@ fun HafeziPageContent(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        TanzilMushafFrame(
+        TajweedMushafFrame(
             titleRight = surahNameArabic,
             titleLeft = juzName,
             pageNumber = currentPage.toBengaliNumerals(),
             theme = theme
         ) {
-            // Flow the text in Right-to-Left (RTL) mode, completely avoiding bracket layout bugs
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 // Group ayahs on this page by their Surah
                 val sections = remember(ayahs) {
@@ -747,12 +681,12 @@ fun HafeziPageContent(
                         val firstAyahOfSurah = surahAyahs.firstOrNull()
                         
                         if (firstAyahOfSurah?.numberInSurah == 1) {
-                            val surahInfo = com.example.data.surahInfoList.find { it.first == surahId }?.second
+                            val surahInfo = com.example.data.surahInfoList.find { it.first == surIdCompat(surahId) }?.second
                             val arabicName = surahInfo?.arabicName ?: "سورة $surahId"
                             val ayahsArabic = com.example.data.QuranData.toArabicNumerals(surahInfo?.ayahCount ?: 0)
-                            val rukusArabic = com.example.data.QuranData.toArabicNumerals(surahInfo?.rukuCount ?: 0)
+                            val rukuArabic = com.example.data.QuranData.toArabicNumerals(surahInfo?.rukuCount ?: 0)
                             
-                            // Surah Banner
+                            // Surah Header Banner
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -779,7 +713,7 @@ fun HafeziPageContent(
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "آيات: $ayahsArabic  |  ركوع: $rukusArabic",
+                                        text = "آيات: $ayahsArabic  |  ركوع: $rukuArabic",
                                         fontSize = 14.sp,
                                         fontFamily = arabicFont,
                                         color = if (theme == "Dark") Color(0xFFA0A0A0) else Color(0xFF606060)
@@ -787,9 +721,12 @@ fun HafeziPageContent(
                                 }
                             }
                             
+                            // Bismillah
                             if (surahId != 1 && surahId != 9) {
                                 Box(
-                                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 12.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -807,11 +744,11 @@ fun HafeziPageContent(
                             }
                         }
 
-                        val annotatedString = remember(surahAyahs, playingAyahNumber, theme, showWaqfSigns) {
+                        val annotatedString = remember(surahAyahs, playingAyahNumber, theme, showWaqfSigns, showTajweed) {
                             buildAnnotatedString {
                                 surahAyahs.forEachIndexed { index, ayah ->
                                     val start = length
-                                    var textToDisplay = ayah.arabicText // Base text without processing
+                                    var textToDisplay = ayah.arabicText
                                     
                                     val prefixes = listOf(
                                         "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ",
@@ -820,21 +757,22 @@ fun HafeziPageContent(
                                         "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
                                         "بِسْمِ اللَّهِ الرَّحْمَٰনِ الرَّحِيمِ ",
                                         "بِسْمِ اللَّهِ الرَّحْمَٰনِ الرَّحِيمِ",
-                                        "بِسْمِ office.etc ",
-                                        "بِسْمِ office.etc",
                                         "بِسْمِ اللهِ الرَّحْمٰনِ الرَّحِيْمِ ",
-                                        "بِسْمِ office.etc",
                                         "بِسْمِ اللهِ الرَّحْمٰনِ الرَّحِيْمِ",
                                         "بسم الله الرحمن الرحيم ",
                                         "بسم الله الرحمن الرحيم"
                                     )
 
+                                    // Render Tajweed or standard text
                                     if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
-                                        val tajweedParsed = com.example.ui.components.parseTajweedText(ayah.textUthmaniTajweed, when (theme) {
-                                            "Dark" -> Color(0xFFE0E0E0)
-                                            "Sepia" -> Color(0xFF4E342E)
-                                            else -> Color(0xFF1A1A1A)
-                                        })
+                                        val tajweedParsed = com.example.ui.components.parseTajweedText(
+                                            ayah.textUthmaniTajweed, 
+                                            when (theme) {
+                                                "Dark" -> Color(0xFFE0E0E0)
+                                                "Sepia" -> Color(0xFF4E342E)
+                                                else -> Color(0xFF1A1A1A)
+                                            }
+                                        )
                                         
                                         var finalParsed = tajweedParsed
                                         if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
@@ -842,8 +780,7 @@ fun HafeziPageContent(
                                                 if (finalParsed.text.startsWith(prefix)) {
                                                     val stripLen = prefix.length
                                                     finalParsed = finalParsed.subSequence(stripLen, finalParsed.length)
-                                                    // Also remove leading spaces if any
-                                                    while(finalParsed.text.isNotEmpty() && finalParsed.text[0] == ' ') {
+                                                    while (finalParsed.text.isNotEmpty() && finalParsed.text[0] == ' ') {
                                                         finalParsed = finalParsed.subSequence(1, finalParsed.length)
                                                     }
                                                     break
@@ -865,7 +802,6 @@ fun HafeziPageContent(
                                         append("﴿$numInSurahStr﴾")
                                     }
                                     
-                                    
                                     val end = length
                                     
                                     addStringAnnotation(
@@ -875,7 +811,7 @@ fun HafeziPageContent(
                                         end = end
                                     )
 
-                                    // Highlight currently active/playing verse beautifully in green/accent shade
+                                    // Playback highlighting
                                     if (ayah.number == playingAyahNumber) {
                                         addStyle(
                                             style = SpanStyle(
@@ -889,7 +825,7 @@ fun HafeziPageContent(
                                     }
                                     
                                     if (index < surahAyahs.lastIndex) {
-                                        append("   ") // Visual negative space between consecutive verses
+                                        append("   ") 
                                     }
                                 }
                             }
@@ -916,7 +852,9 @@ fun HafeziPageContent(
                                 },
                                 textAlign = TextAlign.Justify
                             ),
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp)
                         )
                     }
                 }
@@ -925,12 +863,17 @@ fun HafeziPageContent(
     }
 }
 
+// Compat function for Surah Info ID
+private fun surIdCompat(id: Int): Int {
+    return id
+}
+
 private val paraNamesBangla = listOf(
     "আলিফ লাম মীম", "সাইয়াকুল", "তিলকাল রুসুল", "লান তানালু", "ওয়াল মুহসানাত",
     "লা ইউহিব্বুল্লাহ", "ওয়া ইজা সামিউ", "ওয়া লাও আন্নানা", "ক্বলাল মালাইউ", "ওয়া'লামু",
     "ইয়া'তাজিরুন", "ওয়া মা মিন দাব্বাহ", "ওয়া মা উবাররিউ", "রুবামা", "সুবহানাল্লাজি",
     "ক্বলা আলাম", "ইক্বতারা বা লিন্নাস", "ক্বদ আফলাহা", "ওয়া ক্বলাল্লাজিনা", "আম্মান খালাক্ব",
-    "উতলু মা উহিয়া", "ওয়া মান ইয়াক্বনুত", "ওয়া মালিয়া", "ফামান আজলামু", "ইলাইহি ইয়ুরাদদু",
+    "উতলু মা উহিয়া", "ওয়া মান ইয়াক্বনুত", "ওয়া মالية", "ফামান আজলামু", "ইলাইহি ইয়ুরাদদু",
     "হা মীম", "ক্বলা ফামা খাতবুকুম", "ক্বদ সামিয়াল্লাহ", "তাবারাকাল্লাজি", "আম্মা ইয়াতাসায়ালুন"
 )
 
@@ -940,7 +883,7 @@ private fun getJuzStartPage(juz: Int): Int {
 }
 
 @Composable
-fun TanzilMushafFrame(
+private fun TajweedMushafFrame(
     titleRight: String = "",
     titleLeft: String = "",
     pageNumber: String = "",
@@ -1050,11 +993,3 @@ fun TanzilMushafFrame(
     }
 }
 
-fun String.toEnglishNumerals(): String {
-    val englishNumerals = "0123456789"
-    val bengaliNumerals = "০১২৩৪৫৬৭৮৯"
-    return this.map { char ->
-        val index = bengaliNumerals.indexOf(char)
-        if (index != -1) englishNumerals[index] else char
-    }.joinToString("")
-}

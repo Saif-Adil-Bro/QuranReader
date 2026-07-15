@@ -10,11 +10,15 @@ import androidx.compose.foundation.gestures.calculateRotation
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.positionChanged
 import kotlin.math.abs
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -28,6 +32,7 @@ import java.io.File
 @Composable
 fun PageViewer(
     pagePath: String?,
+    isDark: Boolean = false,
     onZoomChanged: (Float) -> Unit = {}
 ) {
     var scale by remember { mutableStateOf(1f) }
@@ -37,6 +42,7 @@ fun PageViewer(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (isDark) Color.Black else Color.White)
             .pointerInput(Unit) {
                 detectZoomableTransformGestures(
                     currentScale = { scale },
@@ -58,10 +64,26 @@ fun PageViewer(
         contentAlignment = Alignment.Center
     ) {
         if (pagePath != null) {
+            val colorFilter = if (isDark) {
+                ColorFilter.colorMatrix(
+                    ColorMatrix(
+                        floatArrayOf(
+                            -1f,  0f,  0f, 0f, 255f,
+                             0f, -1f,  0f, 0f, 255f,
+                             0f,  0f, -1f, 0f, 255f,
+                             0f,  0f,  0f, 1f,   0f
+                        )
+                    )
+                )
+            } else {
+                null
+            }
+
             SubcomposeAsyncImage(
                 model = File(pagePath),
                 contentDescription = "Mushaf Page",
                 contentScale = ContentScale.Fit,
+                colorFilter = colorFilter,
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer(
@@ -72,12 +94,16 @@ fun PageViewer(
                     ),
                 loading = {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = if (isDark) Color(0xFF10B981) else Color.Gray)
                     }
                 },
                 error = {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Error, contentDescription = "Error loading image")
+                        Icon(
+                            Icons.Default.Error, 
+                            contentDescription = "Error loading image",
+                            tint = if (isDark) Color.Red else Color.Black
+                        )
                     }
                 }
             )

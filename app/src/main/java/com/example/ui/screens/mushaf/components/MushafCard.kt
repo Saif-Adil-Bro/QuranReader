@@ -23,11 +23,15 @@ import coil.compose.AsyncImage
 import com.example.data.model.DownloadState
 import com.example.data.model.DownloadStatus
 import com.example.data.model.MushafStyle
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 
 @Composable
 fun MushafCard(
     mushaf: MushafStyle,
     downloadStatus: DownloadStatus?,
+    isDefault: Boolean = false,
+    onSetDefault: () -> Unit = {},
     onSelect: () -> Unit,
     onDownload: () -> Unit,
     onPause: () -> Unit,
@@ -136,6 +140,44 @@ fun MushafCard(
                         Text("মুছুন", fontWeight = FontWeight.Medium, fontSize = 14.sp)
                     }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+                if (isDefault) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFE0F2FE), RoundedCornerShape(8.dp))
+                            .padding(vertical = 8.dp, horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Default",
+                            tint = Color(0xFF0284C7),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "ডিফল্ট কুরআন হিসেবে সেট করা",
+                            color = Color(0xFF0369A1),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = onSetDefault,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF0284C7)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF0284C7)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("ডিফল্ট কুরআন হিসেবে সেট করুন", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
             } else {
                 val isPartial = (downloadStatus?.progress ?: 0) >= 10 && !mushaf.isPdf
                 if (isPartial) {
@@ -199,97 +241,26 @@ fun MushafBookCoverPreview(
     mushaf: MushafStyle,
     isDownloaded: Boolean
 ) {
-    // Determine gradient based on Mushaf ID for premium physical book look
-    val coverGradient = when (mushaf.id) {
-        "madani" -> Brush.verticalGradient(
-            listOf(Color(0xFF0F5132), Color(0xFF052C16)) // Emerald to Deep Forest Green
-        )
-        "makkah" -> Brush.verticalGradient(
-            listOf(Color(0xFF1A1A1A), Color(0xFF0A0A0A)) // Rich Charcoal to Jet Black
-        )
-        "indopak" -> Brush.verticalGradient(
-            listOf(Color(0xFF78350F), Color(0xFF451A03)) // Warm Sienna to Deep Chocolate Brown
-        )
-        else -> Brush.verticalGradient(
-            listOf(Color(0xFF0F4C81), Color(0xFF07223C)) // Royal Navy to Midnight Blue
-        )
-    }
-
-    val goldColor = Color(0xFFD4AF37) // Majestic Metallic Gold
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(280.dp)
+            .height(240.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(coverGradient)
+            .background(Color(0xFFFAF6EB)) // Soft cream page background color
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
     ) {
-        // Intricate Gold-Foiled Double Border Accent
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-                .border(2.dp, goldColor.copy(alpha = 0.8f), RoundedCornerShape(10.dp))
-                .padding(3.dp)
-                .border(0.7.dp, goldColor.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+        AsyncImage(
+            model = mushaf.thumbnailUrl,
+            contentDescription = "Page Preview",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
         )
 
-        // Hanging Silk Bookmark Ribbon
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 24.dp)
-                .width(14.dp)
-                .height(48.dp)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFFDC2626), Color(0xFF991B1B)) // Crimson red silk ribbon
-                    ),
-                    shape = RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp)
-                )
-                .border(0.5.dp, goldColor.copy(alpha = 0.3f), RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp))
-        )
-
-        // Floating Framed Interactive Page Preview
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .width(130.dp)
-                .height(190.dp)
-                .rotate(-3f) // Slight 3D book slant
-                .shadow(12.dp, RoundedCornerShape(8.dp))
-                .background(Color.White, RoundedCornerShape(8.dp))
-                .border(2.dp, goldColor.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
-                .padding(4.dp)
-        ) {
-            // Elegant background pattern behind page loader
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFFAF6EB), RoundedCornerShape(4.dp)), // Soft cream page color
-                contentAlignment = Alignment.Center
-            ) {
-                AsyncImage(
-                    model = mushaf.thumbnailUrl,
-                    contentDescription = "Page Preview",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                
-                // Fallback elegant calligraphy watermark / emblem
-                IslamicEmblem(
-                    modifier = Modifier.size(54.dp),
-                    color = goldColor.copy(alpha = 0.15f)
-                )
-            }
-        }
-
-        // Mini Badge for selected Mushaf on the book spine or corner
         if (isDownloaded) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(20.dp)
+                    .padding(12.dp)
                     .shadow(4.dp, RoundedCornerShape(8.dp))
                     .background(Color(0xFF10B981), RoundedCornerShape(8.dp))
                     .padding(horizontal = 8.dp, vertical = 4.dp)

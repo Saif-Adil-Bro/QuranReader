@@ -16,12 +16,15 @@ fun MushafTabScreen(
     val downloadStatus by viewModel.downloadStatus.collectAsState()
     val lastReadMushafId by viewModel.lastReadMushafId.collectAsState()
     val lastReadMushafPage by viewModel.lastReadMushafPage.collectAsState()
+    val defaultMushafId by viewModel.defaultMushafId.collectAsState()
 
     MushafSelectionScreen(
         mushafs = mushafs,
         downloadStatus = downloadStatus,
         lastReadMushafId = lastReadMushafId,
         lastReadMushafPage = lastReadMushafPage,
+        defaultMushafId = defaultMushafId,
+        onSetDefaultMushaf = { viewModel.setDefaultMushafId(it) },
         onResumeReading = onLastReadSelected,
         onSelectMushaf = onMushafSelected,
         onImportPdf = { viewModel.importCustomPdf(it) },

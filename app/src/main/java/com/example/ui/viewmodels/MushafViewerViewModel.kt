@@ -8,12 +8,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MushafViewerViewModel(
     private val repository: MushafRepository,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    val theme: StateFlow<String> = settingsRepository.themeFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = "Light"
+    )
+
+    val scrollDirection: StateFlow<String> = settingsRepository.mushafScrollDirectionFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = "Horizontal"
+    )
 
     private val _currentPagePath = MutableStateFlow<String?>(null)
     val currentPagePath: StateFlow<String?> = _currentPagePath.asStateFlow()
@@ -27,13 +41,18 @@ class MushafViewerViewModel(
     private val _isPdf = MutableStateFlow(false)
     val isPdf: StateFlow<Boolean> = _isPdf.asStateFlow()
 
+    private val _totalPages = MutableStateFlow(604)
+    val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
+
     private var currentMushafId: String = ""
 
     fun initMushaf(mushafId: String, initialPage: Int) {
         currentMushafId = mushafId
         val defaultStyle = repository.getAvailableMushafs().find { it.id == mushafId }
         _isPdf.value = defaultStyle?.isPdf == true
+        _totalPages.value = defaultStyle?.totalPages ?: 604
         val defaultOffset = defaultStyle?.pdfPageOffset ?: 0
+        _currentPageNumber.value = initialPage
         
         viewModelScope.launch {
             val savedOffset = settingsRepository.getMushafOffset(mushafId).first()
@@ -44,7 +63,7 @@ class MushafViewerViewModel(
     }
 
     fun nextPage() {
-        if (_currentPageNumber.value < 604) {
+        if (_currentPageNumber.value < _totalPages.value) {
             jumpToPage(_currentPageNumber.value + 1)
         }
     }
@@ -56,7 +75,7 @@ class MushafViewerViewModel(
     }
 
     fun jumpToPage(pageNumber: Int) {
-        if (pageNumber in 1..604) {
+        if (pageNumber in 1.._totalPages.value) {
             _currentPageNumber.value = pageNumber
             _currentPagePath.value = repository.getMushafPagePath(currentMushafId, pageNumber, _pdfPageOffset.value)
             viewModelScope.launch {
@@ -82,6 +101,20 @@ class MushafViewerViewModel(
             settingsRepository.setMushafOffset(currentMushafId, newOffset)
             repository.clearRenderedPages(currentMushafId)
             jumpToPage(_currentPageNumber.value)
+        }
+    }
+
+    fun toggleTheme() {
+        viewModelScope.launch {
+            val current = settingsRepository.themeFlow.first()
+            val next = if (current == "Dark") "Light" else "Dark"
+            settingsRepository.setTheme(next)
+        }
+    }
+
+    fun setScrollDirection(direction: String) {
+        viewModelScope.launch {
+            settingsRepository.setMushafScrollDirection(direction)
         }
     }
 }

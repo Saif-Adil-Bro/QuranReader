@@ -30,6 +30,8 @@ fun MushafSelectionScreen(
     downloadStatus: Map<String, DownloadStatus>,
     lastReadMushafId: String?,
     lastReadMushafPage: Int,
+    defaultMushafId: String,
+    onSetDefaultMushaf: (String) -> Unit,
     onResumeReading: (String, Int) -> Unit,
     onSelectMushaf: (MushafStyle) -> Unit,
     onImportPdf: (java.io.InputStream) -> Unit,
@@ -166,6 +168,8 @@ fun MushafSelectionScreen(
                         MushafCard(
                             mushaf = mushaf,
                             downloadStatus = downloadStatus[mushaf.id],
+                            isDefault = defaultMushafId == mushaf.id,
+                            onSetDefault = { onSetDefaultMushaf(mushaf.id) },
                             onSelect = { onSelectMushaf(mushaf) },
                             onDownload = { onDownload(mushaf) },
                             onPause = { onPause(mushaf.id) },

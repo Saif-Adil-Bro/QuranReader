@@ -25,8 +25,11 @@ import com.example.ui.screens.QuranListScreen
 import com.example.ui.screens.ReadingModeScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.SurahDetailScreen
+import com.example.ui.screens.TajweedIndexScreen
+import com.example.ui.screens.TajweedModeScreen
 import com.example.ui.viewmodels.AppViewModelFactory
 import com.example.ui.viewmodels.HafeziModeViewModel
+import com.example.ui.viewmodels.TajweedModeViewModel
 import com.example.ui.viewmodels.HomeViewModel
 import com.example.ui.viewmodels.QuranListViewModel
 import com.example.ui.viewmodels.ReadingModeViewModel
@@ -94,18 +97,21 @@ fun AppNavGraph(
         }
 
         composable(
-            route = "mushaf/viewer/{mushafId}?page={page}",
+            route = "mushaf/viewer/{mushafId}?page={page}&showIndex={showIndex}",
             arguments = listOf(
                 navArgument("mushafId") { type = NavType.StringType },
-                navArgument("page") { type = NavType.IntType; defaultValue = 1 }
+                navArgument("page") { type = NavType.IntType; defaultValue = 1 },
+                navArgument("showIndex") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val mushafId = backStackEntry.arguments?.getString("mushafId") ?: "madani"
             val page = backStackEntry.arguments?.getInt("page") ?: 1
+            val showIndex = backStackEntry.arguments?.getBoolean("showIndex") ?: false
             val viewModel: MushafViewerViewModel = viewModel(factory = viewModelFactory)
             MushafViewerScreen(
                 mushafId = mushafId,
                 initialPage = page,
+                initialShowIndex = showIndex,
                 onBack = { navController.popBackStack() },
                 viewModel = viewModel
             )
@@ -118,15 +124,48 @@ fun AppNavGraph(
                 onNavigateToSurah = { surahNumber -> navController.navigate("detail/$surahNumber") },
                 onNavigateToJuz = { juzNumber -> navController.navigate("juz/$juzNumber") },
                 onNavigateToNormalMode = { navController.navigate("list/normal") },
-                onNavigateToReadingMode = { navController.navigate("list/reading") },
+                onNavigateToReadingMode = { surahNumber -> navController.navigate("reading/$surahNumber") },
                 onNavigateToHafeziMode = { page -> navController.navigate("hafezi/$page") },
                 onNavigateToSearch = { navController.navigate("search") },
                 onSettingsClick = { navController.navigate("settings") },
                 onNavigateToMushaf = { navController.navigate("mushaf") },
-                onNavigateToMushafPage = { mushafId, page -> navController.navigate("mushaf/viewer/$mushafId?page=$page") },
+                onNavigateToMushafPage = { mushafId, page, showIndex ->
+                    navController.navigate("mushaf/viewer/$mushafId?page=$page&showIndex=$showIndex")
+                },
                 onNavigateToSurahWithAyah = { surahNumber, viewMode, initialAyah ->
                     navController.navigate("detail/$surahNumber?viewMode=$viewMode&initialAyah=$initialAyah")
+                },
+                onNavigateToTajweedIndex = {
+                    navController.navigate("tajweed/index")
                 }
+            )
+        }
+
+        composable("tajweed/index") {
+            TajweedIndexScreen(
+                onBackClick = { navController.popBackStack() },
+                onSurahClick = { surahId ->
+                    val startPage = com.example.data.QuranData.surahStartPages[surahId - 1]
+                    navController.navigate("tajweed/$startPage")
+                },
+                onJuzClick = { juzId ->
+                    val startPage = if (juzId == 1) 1 else (juzId - 1) * 20 + 2
+                    navController.navigate("tajweed/$startPage")
+                },
+                onSettingsClick = { navController.navigate("settings") }
+            )
+        }
+
+        composable(
+            route = "tajweed/{page}",
+            arguments = listOf(navArgument("page") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val page = backStackEntry.arguments?.getInt("page") ?: 1
+            val viewModel: TajweedModeViewModel = viewModel(factory = viewModelFactory)
+            TajweedModeScreen(
+                viewModel = viewModel,
+                initialPage = page,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -144,6 +183,46 @@ fun AppNavGraph(
                         navController.navigate("detail/$surahNumber")
                     } else {
                         navController.navigate("reading/$surahNumber")
+                    }
+                },
+                onJuzClick = { juzNumber ->
+                    if (mode == "normal") {
+                        navController.navigate("juz/$juzNumber")
+                    } else {
+                        val startSurah = when (juzNumber) {
+                            1 -> 1
+                            2 -> 2
+                            3 -> 2
+                            4 -> 3
+                            5 -> 4
+                            6 -> 4
+                            7 -> 5
+                            8 -> 6
+                            9 -> 7
+                            10 -> 8
+                            11 -> 9
+                            12 -> 11
+                            13 -> 12
+                            14 -> 15
+                            15 -> 17
+                            16 -> 18
+                            17 -> 21
+                            18 -> 23
+                            19 -> 25
+                            20 -> 27
+                            21 -> 29
+                            22 -> 33
+                            23 -> 36
+                            24 -> 39
+                            25 -> 41
+                            26 -> 46
+                            27 -> 51
+                            28 -> 58
+                            29 -> 67
+                            30 -> 78
+                            else -> 1
+                        }
+                        navController.navigate("reading/$startSurah")
                     }
                 },
                 onSettingsClick = {
@@ -200,7 +279,13 @@ fun AppNavGraph(
             ReadingModeScreen(
                 surahNumber = surahNumber,
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { 
+                    if (!navController.popBackStack("list/reading", false)) {
+                        navController.navigate("list/reading") {
+                            popUpTo("home") { saveState = true }
+                        }
+                    }
+                }
             )
         }
 

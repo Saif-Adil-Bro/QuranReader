@@ -13,7 +13,7 @@ class QfTokenManager {
     private var expiresAt: Long = 0L
     private val client = OkHttpClient()
 
-    private val AUTH_URL = "https://prelive-oauth2.quran.foundation/oauth2/token"
+    private val AUTH_URL = "https://oauth2.quran.foundation/oauth2/token"
 
     @Synchronized
     fun getAccessToken(): String? {

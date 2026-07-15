@@ -11,33 +11,39 @@ interface QuranComApi {
     suspend fun getSurahVerses(
         @Path("chapter_number") chapterNumber: Int,
         @Query("words") words: Boolean = true,
-        @Query("word_fields") wordFields: String = "text_uthmani,location",
+        @Query("word_fields") wordFields: String = "text_uthmani,translation,transliteration,position,location,audio_url",
         @Query("translations") translations: Int = 161,
         @Query("language") language: String = "bn",
         @Query("word_translation_language") wordTranslationLanguage: String = "bn",
-        @Query("per_page") perPage: Int = 1000
+        @Query("fields") fields: String = "text_uthmani_tajweed",
+        @Query("per_page") perPage: Int = 1000,
+        @Query("tafsirs") tafsirs: String? = null
     ): QuranComResponse
 
     @GET("verses/by_juz/{juz_number}")
     suspend fun getJuzVerses(
         @Path("juz_number") juzNumber: Int,
         @Query("words") words: Boolean = true,
-        @Query("word_fields") wordFields: String = "text_uthmani,location",
+        @Query("word_fields") wordFields: String = "text_uthmani,translation,transliteration,position,location,audio_url",
         @Query("translations") translations: Int = 161,
         @Query("language") language: String = "bn",
         @Query("word_translation_language") wordTranslationLanguage: String = "bn",
-        @Query("per_page") perPage: Int = 1000
+        @Query("fields") fields: String = "text_uthmani_tajweed",
+        @Query("per_page") perPage: Int = 1000,
+        @Query("tafsirs") tafsirs: String? = null
     ): QuranComResponse
 
     @GET("verses/by_page/{page_number}")
     suspend fun getPageVerses(
         @Path("page_number") pageNumber: Int,
         @Query("words") words: Boolean = true,
-        @Query("word_fields") wordFields: String = "text_uthmani,location",
+        @Query("word_fields") wordFields: String = "text_uthmani,translation,transliteration,position,location,audio_url",
         @Query("translations") translations: Int = 161,
         @Query("language") language: String = "bn",
         @Query("word_translation_language") wordTranslationLanguage: String = "bn",
-        @Query("per_page") perPage: Int = 1000
+        @Query("fields") fields: String = "text_uthmani_tajweed",
+        @Query("per_page") perPage: Int = 1000,
+        @Query("tafsirs") tafsirs: String? = null
     ): QuranComResponse
 
     @GET("tafsirs/{tafsir_id}/by_chapter/{chapter_number}")
@@ -60,4 +66,9 @@ interface QuranComApi {
         @Path("tafsir_id") tafsirId: String = "164",
         @Query("per_page") perPage: Int = 1000
     ): QuranComTafsirResponse
+
+    @GET("resources/tafsirs")
+    suspend fun getAvailableTafsirs(
+        @Query("language") language: String = "bn"
+    ): com.example.data.model.TafsirResourceResponse
 }

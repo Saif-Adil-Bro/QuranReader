@@ -59,6 +59,8 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     
     val showTranslation by viewModel.showTranslation.collectAsState()
+    val showTransliteration by viewModel.showTransliteration.collectAsState()
+    val showTajweed by viewModel.showTajweed.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     val username by viewModel.username.collectAsState()
     val readingTime by viewModel.readingTimeMinutes.collectAsState()
@@ -338,6 +340,296 @@ fun SettingsScreen(
                             checkedTrackColor = PrimaryGreen
                         )
                     )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Border)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "শব্দে শব্দে উচ্চারণ (Word Transliteration)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "প্রতিটি শব্দের নিচে বাংলা উচ্চারণ প্রদর্শন করুন",
+                            fontSize = 12.sp,
+                            color = GrayText
+                        )
+                    }
+                    Switch(
+                        checked = showTransliteration,
+                        onCheckedChange = { viewModel.setShowTransliteration(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = PrimaryGreen
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Border)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "তাজবীদ কালার (Tajweed Colors)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "আরবি আয়াতে তাজবীদের নিয়ম অনুযায়ী বিভিন্ন রঙ প্রদর্শন করুন",
+                            fontSize = 12.sp,
+                            color = GrayText
+                        )
+                    }
+                    Switch(
+                        checked = showTajweed,
+                        onCheckedChange = { viewModel.setShowTajweed(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = PrimaryGreen
+                        )
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val availableTafsirs by viewModel.availableTafsirs.collectAsState()
+            val selectedTafsirIds by viewModel.selectedTafsirIds.collectAsState()
+            val downloadedTafsirIds by viewModel.downloadedTafsirIds.collectAsState()
+            val downloadingTafsirIds by viewModel.downloadingTafsirIds.collectAsState()
+            val tafsirDownloadProgress by viewModel.tafsirDownloadProgress.collectAsState()
+            val selectedQariId by viewModel.selectedQariId.collectAsState()
+            var showTafsirDialog by remember { mutableStateOf(false) }
+            var showQariDialog by remember { mutableStateOf(false) }
+
+            val qariList = listOf(
+                "ar.alafasy" to "Mishary Rashid Alafasy",
+                "ar.abdulbasitmurattal" to "Abdul Basit",
+                "ar.abdullahbasfar" to "Abdullah Basfar",
+                "ar.abdurrahmaansudais" to "Abdurrahmaan As-Sudais",
+                "ar.hudhaify" to "Ali Al-Hudhaify",
+                "ar.husary" to "Mahmoud Khalil Al-Husary",
+                "ar.husarymujawwad" to "Mahmoud Khalil Al-Husary Mujawwad",
+                "ar.mahermuaiqly" to "Maher Al Muaiqly",
+                "ar.minshawi" to "Mohamed Siddiq al-Minshawi",
+                "ar.muhammadayyoub" to "Muhammad Ayyoub",
+                "ar.muhammadjibreel" to "Muhammad Jibreel"
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Border)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    // Qari Selection
+                    Text(
+                        text = "ক্বারী নির্বাচন করুন (Qari)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = { showQariDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkText)
+                    ) {
+                        val selectedQariName = qariList.find { it.first == selectedQariId }?.second ?: "Mishary Rashid Alafasy"
+                        Text(text = selectedQariName, modifier = Modifier.weight(1f))
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Qari")
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "তাফসীর নির্বাচন করুন",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "একসাথে সর্বোচ্চ ৩টি তাফসীর নির্বাচন করতে পারবেন",
+                        fontSize = 12.sp,
+                        color = GrayText
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    OutlinedButton(
+                        onClick = { showTafsirDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkText)
+                    ) {
+                        val selectedCount = selectedTafsirIds.size
+                        Text(text = "$selectedCount টি তাফসীর নির্বাচিত", modifier = Modifier.weight(1f))
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Tafsir")
+                    }
+                    
+                    if (showQariDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showQariDialog = false },
+                            title = { Text("ক্বারী নির্বাচন করুন") },
+                            text = {
+                                LazyColumn {
+                                    items(qariList) { qari ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    viewModel.setSelectedQariId(qari.first)
+                                                    showQariDialog = false
+                                                }
+                                                .padding(vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            RadioButton(
+                                                selected = selectedQariId == qari.first,
+                                                onClick = {
+                                                    viewModel.setSelectedQariId(qari.first)
+                                                    showQariDialog = false
+                                                }
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(text = qari.second)
+                                        }
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                androidx.compose.material3.TextButton(onClick = { showQariDialog = false }) {
+                                    Text("বন্ধ করুন")
+                                }
+                            }
+                        )
+                    }
+
+                    if (showTafsirDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showTafsirDialog = false },
+                            title = {
+                                Text("তাফসীর নির্বাচন করুন (সর্বোচ্চ ৩টি)")
+                            },
+                            text = {
+                                LazyColumn {
+                                    items(availableTafsirs) { tafsir ->
+                                        val tafsirId = tafsir.id.toString()
+                                        val isSelected = selectedTafsirIds.contains(tafsirId)
+                                        val isDownloaded = downloadedTafsirIds.contains(tafsirId)
+                                        val isDownloading = downloadingTafsirIds.contains(tafsirId)
+                                        val progress = tafsirDownloadProgress[tafsirId] ?: 0f
+
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable(enabled = isDownloaded) { viewModel.toggleTafsir(tafsirId) }
+                                                .padding(vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (isDownloaded) {
+                                                androidx.compose.material3.Checkbox(
+                                                    checked = isSelected,
+                                                    onCheckedChange = { viewModel.toggleTafsir(tafsirId) },
+                                                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = PrimaryGreen)
+                                                )
+                                            } else if (isDownloading) {
+                                                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp).padding(2.dp)) {
+                                                    androidx.compose.material3.CircularProgressIndicator(
+                                                        progress = progress,
+                                                        color = PrimaryGreen,
+                                                        strokeWidth = 2.dp
+                                                    )
+                                                }
+                                            } else {
+                                                IconButton(
+                                                    onClick = { viewModel.downloadTafsir(tafsirId) },
+                                                    modifier = Modifier.size(24.dp)
+                                                ) {
+                                                    Icon(
+                                                        androidx.compose.material.icons.Icons.Default.Download,
+                                                        contentDescription = "Download Tafsir",
+                                                        tint = PrimaryGreen
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text(
+                                                        text = tafsir.name ?: "Unknown", 
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.weight(1f),
+                                                        color = if (isDownloaded) MaterialTheme.colorScheme.onSurface else GrayText
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .background(PrimaryGreen.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = tafsir.languageName.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
+                                                            fontSize = 10.sp,
+                                                            color = PrimaryGreen,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                }
+                                                Text(text = tafsir.authorName ?: "Unknown", fontSize = 12.sp, color = GrayText)
+                                            }
+                                        }
+                                    }
+                                    if (availableTafsirs.isEmpty()) {
+                                        item {
+                                            Text("তাফসীর লোড হচ্ছে...", modifier = Modifier.padding(16.dp))
+                                        }
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                androidx.compose.material3.TextButton(onClick = { showTafsirDialog = false }) {
+                                    Text("বন্ধ করুন", color = PrimaryGreen)
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
@@ -1113,7 +1405,7 @@ fun PlayerDialogContent() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("কারী বা তেলাওয়াতকারী নির্বাচন করুন", fontSize = 12.sp, color = GrayText)
+        Text("ক্বারী বা তেলাওয়াতকারী নির্বাচন করুন", fontSize = 12.sp, color = GrayText)
         Spacer(modifier = Modifier.height(6.dp))
         reciters.forEach { r ->
             val isSel = currentReciter == r
@@ -1298,7 +1590,7 @@ fun VideoDialogContent() {
         Pair("তাজবিদ পাঠ ১: আরবী উচ্চারণের নিয়মাবলী", "১০:১৫ মিনিট • ট্রেইনার: হাফেজ মাওলানা আব্দুর রহমান"),
         Pair("তাজবিদ পাঠ ২: সহজ উপায়ে মাখরাজ শিক্ষা", "১২:৪০ মিনিট • ট্রেইনার: হাফেজ মাওলানা আব্দুর রহমান"),
         Pair("তাফসির: সুরা ফাতিহার তাফসির ও বিশ্লেষণ", "২৫:৩০ মিনিট • তাফসিরকারী: ড. আবু বকর মুহাম্মাদ যাকারিয়া"),
-        Pair("কুরআন তিলাওয়াত শুদ্ধিকরণ কর্মশালা", "১৮:৪৫ মিনিট • তেলাওয়াতকারী: কারী আশরাফ আলী")
+        Pair("কুরআন তিলাওয়াত শুদ্ধিকরণ কর্মশালা", "১৮:৪৫ মিনিট • তেলাওয়াতকারী: ক্বারী আশরাফ আলী")
     )
     
     val context = LocalContext.current
@@ -1821,7 +2113,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
             surahList
         } else {
             surahList.filter { 
-                it.name.contains(searchQuery, ignoreCase = true) || 
+                (it.name ?: "").contains(searchQuery, ignoreCase = true) || 
                 it.englishName.contains(searchQuery, ignoreCase = true) || 
                 it.number.toString() == searchQuery
             }
@@ -1874,7 +2166,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        viewModel.downloadAudioForSurah(surah.number, surah.name)
+                                        viewModel.downloadAudioForSurah(surah.number, surah.name ?: "Unknown")
                                         showSurahSelectorSheet = false
                                     }
                                     .padding(vertical = 12.dp, horizontal = 8.dp),
@@ -1900,7 +2192,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                                     }
                                     Column {
                                         Text(
-                                            text = surah.name,
+                                            text = surah.name ?: "Unknown",
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp,
                                             color = DarkText

@@ -25,6 +25,15 @@ class MushafSelectionViewModel(
     val lastReadMushafPage: StateFlow<Int> = settingsRepository.lastReadMushafPageFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
 
+    val defaultMushafId: StateFlow<String> = settingsRepository.defaultMushafIdFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "hafizi_15line")
+
+    fun setDefaultMushafId(mushafId: String) {
+        viewModelScope.launch {
+            settingsRepository.setDefaultMushafId(mushafId)
+        }
+    }
+
     private val _mushafs = MutableStateFlow<List<MushafStyle>>(emptyList())
     val mushafs: StateFlow<List<MushafStyle>> = _mushafs.asStateFlow()
 

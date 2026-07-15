@@ -5,10 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.repository.QuranRepository
 import com.example.data.repository.SettingsRepository
 import com.example.data.repository.MushafRepository
+import com.example.data.repository.AudioRepository
+import com.example.data.local.dao.BookmarkDao
+import com.example.data.local.entity.BookmarkEntity
 import com.example.data.model.Surah
+import com.example.data.model.CombinedAyah
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -16,7 +21,9 @@ import kotlinx.coroutines.launch
 class HomeViewModel(
     private val settingsRepository: SettingsRepository,
     private val quranRepository: QuranRepository,
-    private val mushafRepository: MushafRepository
+    private val mushafRepository: MushafRepository,
+    private val bookmarkDao: BookmarkDao,
+    private val audioRepository: AudioRepository
 ) : ViewModel() {
 
     val lastReadSurah: StateFlow<Int> = settingsRepository.lastReadSurahFlow
@@ -24,6 +31,13 @@ class HomeViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = 1
+        )
+
+    val defaultMushafId: StateFlow<String> = settingsRepository.defaultMushafIdFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "hafizi_15line"
         )
 
     val lastReadPage: StateFlow<Int> = settingsRepository.lastReadPageFlow
@@ -59,6 +73,12 @@ class HomeViewModel(
     fun setHasAskedDownloadPrompt() {
         viewModelScope.launch {
             settingsRepository.setHasAskedDownloadPrompt(true)
+        }
+    }
+
+    fun enableTajweedMode() {
+        viewModelScope.launch {
+            settingsRepository.setShowTajweed(true)
         }
     }
 
@@ -117,5 +137,138 @@ class HomeViewModel(
 
     fun isMushafDownloaded(mushafId: String): Boolean {
         return mushafRepository.isMushafDownloaded(mushafId)
+    }
+
+    // --- Bookmarks Support ---
+    val bookmarks: StateFlow<List<BookmarkEntity>> = bookmarkDao.getAllBookmarks()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun deleteBookmark(bookmark: BookmarkEntity) {
+        viewModelScope.launch {
+            bookmarkDao.deleteBookmark(bookmark)
+        }
+    }
+
+    // --- Audio Player Support ---
+    private val _currentPlayingSurah = MutableStateFlow<Int?>(null)
+    val currentPlayingSurah: StateFlow<Int?> = _currentPlayingSurah.asStateFlow()
+
+    private val _currentPlayingAyahIndex = MutableStateFlow(0)
+    val currentPlayingAyahIndex: StateFlow<Int> = _currentPlayingAyahIndex.asStateFlow()
+
+    private val _currentPlayingAyahs = MutableStateFlow<List<CombinedAyah>>(emptyList())
+    val currentPlayingAyahs: StateFlow<List<CombinedAyah>> = _currentPlayingAyahs.asStateFlow()
+
+    val isPlaying: StateFlow<Boolean> = audioRepository.isPlaying
+    val currentPlayingAyahNumber: StateFlow<Int?> = audioRepository.currentPlayingAyahNumber
+
+    val selectedQariId: StateFlow<String> = settingsRepository.selectedQariIdFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "ar.alafasy")
+
+    private val _isRepeatAyahEnabled = MutableStateFlow(false)
+    val isRepeatAyahEnabled: StateFlow<Boolean> = _isRepeatAyahEnabled.asStateFlow()
+
+    private val _isRepeatSurahEnabled = MutableStateFlow(false)
+    val isRepeatSurahEnabled: StateFlow<Boolean> = _isRepeatSurahEnabled.asStateFlow()
+
+    val playbackSpeed: StateFlow<Float> = audioRepository.playbackSpeed
+
+    fun toggleRepeatAyah() {
+        _isRepeatAyahEnabled.value = !_isRepeatAyahEnabled.value
+        if (_isRepeatAyahEnabled.value) {
+            _isRepeatSurahEnabled.value = false
+        }
+    }
+
+    fun toggleRepeatSurah() {
+        _isRepeatSurahEnabled.value = !_isRepeatSurahEnabled.value
+        if (_isRepeatSurahEnabled.value) {
+            _isRepeatAyahEnabled.value = false
+        }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        audioRepository.setPlaybackSpeed(speed)
+    }
+
+    fun setSelectedQariId(qariId: String) {
+        viewModelScope.launch {
+            settingsRepository.setSelectedQariId(qariId)
+        }
+    }
+
+    fun playSurahAudio(surahNumber: Int, startAyahIndex: Int = 0) {
+        viewModelScope.launch {
+            try {
+                val qari = selectedQariId.value
+                val edition = settingsRepository.tanzilTextStyleFlow.first()
+                val ayahs = quranRepository.getSurahDetailsCombined(surahNumber, edition)
+                _currentPlayingSurah.value = surahNumber
+                _currentPlayingAyahs.value = ayahs
+                _currentPlayingAyahIndex.value = startAyahIndex
+                
+                if (ayahs.isNotEmpty() && startAyahIndex < ayahs.size) {
+                    playAyahAtIndex(startAyahIndex)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun playAyahAtIndex(index: Int) {
+        val ayahs = _currentPlayingAyahs.value
+        if (index >= 0 && index < ayahs.size) {
+            _currentPlayingAyahIndex.value = index
+            val ayah = ayahs[index]
+            val qari = selectedQariId.value
+            val audioUrl = ayah.audioUrl ?: "https://cdn.islamic.network/quran/audio/128/$qari/${ayah.number}.mp3"
+            
+            audioRepository.playAudio(audioUrl, ayah.numberInSurah)
+            audioRepository.onPlaybackEnded = {
+                if (_isRepeatAyahEnabled.value) {
+                    playAyahAtIndex(index)
+                } else if (index + 1 < ayahs.size) {
+                    playAyahAtIndex(index + 1)
+                } else if (_isRepeatSurahEnabled.value) {
+                    playSurahAudio(currentPlayingSurah.value ?: 1, 0)
+                } else {
+                    stopSurahAudio()
+                }
+            }
+        }
+    }
+
+    fun pauseSurahAudio() {
+        audioRepository.pauseAudio()
+    }
+
+    fun resumeSurahAudio() {
+        audioRepository.resumeAudio()
+    }
+
+    fun stopSurahAudio() {
+        audioRepository.stopAudio()
+        _currentPlayingSurah.value = null
+        _currentPlayingAyahs.value = emptyList()
+        _currentPlayingAyahIndex.value = 0
+    }
+
+    fun nextAyah() {
+        val nextIndex = _currentPlayingAyahIndex.value + 1
+        if (nextIndex < _currentPlayingAyahs.value.size) {
+            playAyahAtIndex(nextIndex)
+        }
+    }
+
+    fun previousAyah() {
+        val prevIndex = _currentPlayingAyahIndex.value - 1
+        if (prevIndex >= 0) {
+            playAyahAtIndex(prevIndex)
+        }
     }
 }

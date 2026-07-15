@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,10 +16,15 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,20 +37,27 @@ import com.example.ui.viewmodels.MushafViewerViewModel
 fun MushafViewerScreen(
     mushafId: String,
     initialPage: Int = 1,
+    initialShowIndex: Boolean = false,
     onBack: () -> Unit,
     viewModel: MushafViewerViewModel
 ) {
-    LaunchedEffect(mushafId, initialPage) {
+    remember(mushafId, initialPage) {
         viewModel.initMushaf(mushafId, initialPage)
+        true
     }
 
     val currentPage by viewModel.currentPageNumber.collectAsState()
     val pagePath by viewModel.currentPagePath.collectAsState()
     val isPdf by viewModel.isPdf.collectAsState()
     val pdfPageOffset by viewModel.pdfPageOffset.collectAsState()
+    val totalPages by viewModel.totalPages.collectAsState()
+    val currentTheme by viewModel.theme.collectAsState()
+    val scrollDirection by viewModel.scrollDirection.collectAsState()
+    val isDark = currentTheme == "Dark"
+    val isVertical = scrollDirection == "Vertical"
     
-    val pagerState = rememberPagerState(initialPage = initialPage - 1, pageCount = { 604 })
-    var showSelectorSheet by remember { mutableStateOf(false) }
+    val pagerState = rememberPagerState(initialPage = initialPage - 1, pageCount = { totalPages })
+    var showSelectorSheet by remember { mutableStateOf(initialShowIndex) }
     var showOffsetDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(pagerState.currentPage) {
@@ -56,7 +69,7 @@ fun MushafViewerScreen(
     
     LaunchedEffect(currentPage) {
         if (pagerState.currentPage + 1 != currentPage) {
-            pagerState.animateScrollToPage(currentPage - 1)
+            pagerState.scrollToPage(currentPage - 1)
         }
     }
 
@@ -64,14 +77,39 @@ fun MushafViewerScreen(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text("পৃষ্ঠা $currentPage", fontWeight = FontWeight.Bold, fontSize = 18.sp) 
+                    Text(
+                        text = "পৃষ্ঠা $currentPage", 
+                        fontWeight = FontWeight.Bold, 
+                        fontSize = 18.sp,
+                        color = Color(0xFF10B981)
+                    ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                            contentDescription = "Back",
+                            tint = if (isDark) Color.White else Color.Black
+                        )
                     }
                 },
                 actions = {
+                    IconButton(onClick = { viewModel.toggleTheme() }) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Toggle Theme",
+                            tint = Color(0xFF10B981)
+                        )
+                    }
+                    IconButton(onClick = { 
+                        viewModel.setScrollDirection(if (isVertical) "Horizontal" else "Vertical") 
+                    }) {
+                        Icon(
+                            imageVector = if (isVertical) Icons.Default.SwapHoriz else Icons.Default.SwapVert,
+                            contentDescription = "Toggle Scroll Direction",
+                            tint = Color(0xFF10B981)
+                        )
+                    }
                     if (isPdf) {
                         IconButton(onClick = { showOffsetDialog = true }) {
                             Icon(Icons.Default.Tune, contentDescription = "Page Offset Alignment", tint = Color(0xFF10B981))
@@ -82,30 +120,47 @@ fun MushafViewerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
+                    containerColor = if (isDark) Color(0xFF1A1A1A) else Color.White,
                     titleContentColor = Color(0xFF10B981),
-                    navigationIconContentColor = Color.Black
+                    navigationIconContentColor = if (isDark) Color.White else Color.Black
                 )
             )
         },
-        containerColor = Color.White
+        containerColor = if (isDark) Color.Black else Color.White
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(if (isDark) Color.Black else Color.White)
                 .padding(paddingValues)
         ) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                reverseLayout = true // Quran is read right-to-left
-            ) { page ->
-                val pageNum = page + 1
-                OnDemandPageViewer(
-                    mushafId = mushafId,
-                    pageNumber = pageNum,
-                    viewModel = viewModel
-                )
+            if (isVertical) {
+                VerticalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    val pageNum = page + 1
+                    OnDemandPageViewer(
+                        mushafId = mushafId,
+                        pageNumber = pageNum,
+                        isDark = isDark,
+                        viewModel = viewModel
+                    )
+                }
+            } else {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    reverseLayout = true // Quran is read right-to-left
+                ) { page ->
+                    val pageNum = page + 1
+                    OnDemandPageViewer(
+                        mushafId = mushafId,
+                        pageNumber = pageNum,
+                        isDark = isDark,
+                        viewModel = viewModel
+                    )
+                }
             }
         }
     }
@@ -132,6 +187,55 @@ fun MushafViewerScreen(
                     color = Color(0xFF10B981),
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
+
+                // Scroll settings row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "পাতা পরিবর্তন পদ্ধতি:",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = if (isDark) Color.White else Color.Black
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            onClick = { viewModel.setScrollDirection("Horizontal") },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (!isVertical) Color(0xFF10B981) else (if (isDark) Color(0xFF2D2D2D) else Color(0xFFF3F4F6)),
+                            contentColor = if (!isVertical) Color.White else (if (isDark) Color.LightGray else Color.DarkGray),
+                            modifier = Modifier.testTag("scroll_horizontal_option")
+                        ) {
+                            Text(
+                                text = "ডানে-বামে",
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                        
+                        Surface(
+                            onClick = { viewModel.setScrollDirection("Vertical") },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isVertical) Color(0xFF10B981) else (if (isDark) Color(0xFF2D2D2D) else Color(0xFFF3F4F6)),
+                            contentColor = if (isVertical) Color.White else (if (isDark) Color.LightGray else Color.DarkGray),
+                            modifier = Modifier.testTag("scroll_vertical_option")
+                        ) {
+                            Text(
+                                text = "উপর-নিচে",
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
 
                 TabRow(
                     selectedTabIndex = selectedTab,
@@ -185,7 +289,7 @@ fun MushafViewerScreen(
                             val name = surah.second.first
                             val meaning = surah.second.second
                             val startPage = com.example.data.QuranData.surahStartPages[surahNum - 1]
-                            val isCurrent = currentPage in startPage..(if (surahNum < 114) com.example.data.QuranData.surahStartPages[surahNum] - 1 else 604)
+                            val isCurrent = currentPage in startPage..(if (surahNum < 114) com.example.data.QuranData.surahStartPages[surahNum] - 1 else totalPages)
                             
                             Surface(
                                 onClick = {
@@ -261,8 +365,18 @@ fun MushafViewerScreen(
                         items(filteredParas) { juz ->
                             val juzNum = juz.first
                             val name = juz.second
-                            val startPage = juz.third
-                            val isCurrent = currentPage in startPage..(if (juzNum < 30) com.example.data.QuranData.juzList[juzNum].third - 1 else 604)
+                            val isHafezi = (mushafId == "hafizi_15line" || mushafId == "custom_pdf")
+                            val startPage = if (isHafezi) {
+                                com.example.data.HafeziQuranData.getParaStartPage(juzNum, 1)
+                            } else {
+                                juz.third
+                            }
+                            val endPage = if (isHafezi) {
+                                if (juzNum < 30) com.example.data.HafeziQuranData.getParaStartPage(juzNum + 1, 1) - 1 else totalPages
+                            } else {
+                                if (juzNum < 30) com.example.data.QuranData.juzList[juzNum].third - 1 else totalPages
+                            }
+                            val isCurrent = currentPage in startPage..endPage
                             
                             Surface(
                                 onClick = {
@@ -325,7 +439,7 @@ fun MushafViewerScreen(
             onDismissRequest = { showOffsetDialog = false },
             title = {
                 Text(
-                    text = "পৃষ্ঠা সামঞ্জস্য (Page Offset Alignment)",
+                    text = "সূরা ফাতিহা পৃষ্ঠা সমন্বয়",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     color = Color(0xFF10B981)
@@ -337,27 +451,88 @@ fun MushafViewerScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "যদি সূচী অনুযায়ী সূরার পাতাটি ঠিকভাবে না আসে, তাহলে অফসেট পরিবর্তন করুন। বর্তমান অফসেট পরিবর্তন করলে পাতার সংখ্যা ডানে বা বামে সরবে।",
-                        fontSize = 14.sp,
+                        text = "আপনার পিডিএফ কিতাবের কত নম্বর পাতায় সূরা ফাতিহা বা মূল কুরআন শুরু হয়েছে তা সিলেক্ট করুন। এর পর অফসেট স্বয়ংক্রিয়ভাবে সমন্বয় হয়ে যাবে।",
+                        fontSize = 13.sp,
                         color = Color.DarkGray
+                    )
+                    
+                    val currentFatihahPage = pdfPageOffset + 1
+                    
+                    Text(
+                        text = "সূরা ফাতিহা এর পৃষ্ঠা নম্বর (PDF অনুযায়ী):",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color.Black
                     )
                     
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { viewModel.adjustOffset(-1) }) {
-                            Icon(Icons.Default.Remove, contentDescription = "Decrease Offset")
+                        IconButton(
+                            onClick = { 
+                                if (currentFatihahPage > 1) {
+                                    viewModel.adjustOffset(-1)
+                                }
+                            },
+                            modifier = Modifier.background(Color(0xFFF3F4F6), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease Page")
                         }
+                        
                         Text(
-                            text = "অফসেট: $pdfPageOffset",
+                            text = "$currentFatihahPage নং পৃষ্ঠা",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
+                            fontSize = 20.sp,
+                            color = Color(0xFF10B981),
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
-                        IconButton(onClick = { viewModel.adjustOffset(1) }) {
-                            Icon(Icons.Default.Add, contentDescription = "Increase Offset")
+                        
+                        IconButton(
+                            onClick = { viewModel.adjustOffset(1) },
+                            modifier = Modifier.background(Color(0xFFF3F4F6), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase Page")
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "সহজ নির্বাচন (ক্লিক করুন):",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(1, 2, 3, 4, 5).forEach { pageNum ->
+                            val isSelected = currentFatihahPage == pageNum
+                            Surface(
+                                onClick = {
+                                    val newOffset = pageNum - 1
+                                    val diff = newOffset - pdfPageOffset
+                                    viewModel.adjustOffset(diff)
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) Color(0xFF10B981) else Color(0xFFF3F4F6),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = pageNum.toString(),
+                                        color = if (isSelected) Color.White else Color.Black,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -375,6 +550,7 @@ fun MushafViewerScreen(
 fun OnDemandPageViewer(
     mushafId: String,
     pageNumber: Int,
+    isDark: Boolean,
     viewModel: MushafViewerViewModel
 ) {
     var pagePath by remember(mushafId, pageNumber) { mutableStateOf<String?>(null) }
@@ -401,15 +577,25 @@ fun OnDemandPageViewer(
     }
 
     if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(if (isDark) Color.Black else Color.White), 
+            contentAlignment = Alignment.Center
+        ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(color = Color(0xFF10B981))
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("পাতা ডাউনলোড হচ্ছে...", color = Color.Gray, fontSize = 13.sp)
+                Text("পাতা ডাউনলোড হচ্ছে...", color = if (isDark) Color.LightGray else Color.Gray, fontSize = 13.sp)
             }
         }
     } else if (hasError) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(if (isDark) Color.Black else Color.White), 
+            contentAlignment = Alignment.Center
+        ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(16.dp),
@@ -417,7 +603,7 @@ fun OnDemandPageViewer(
             ) {
                 Text("পাতা লোড করা যায়নি", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Spacer(modifier = Modifier.height(6.dp))
-                Text("ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন", color = Color.Gray, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন", color = if (isDark) Color.LightGray else Color.Gray, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = {
@@ -432,6 +618,6 @@ fun OnDemandPageViewer(
             }
         }
     } else if (pagePath != null) {
-        PageViewer(pagePath = pagePath!!)
+        PageViewer(pagePath = pagePath!!, isDark = isDark)
     }
 }

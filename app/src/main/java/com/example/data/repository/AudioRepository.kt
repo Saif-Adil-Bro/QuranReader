@@ -29,7 +29,15 @@ class AudioRepository(private val context: Context) {
     private val _currentPlayingWordUrl = MutableStateFlow<String?>(null)
     val currentPlayingWordUrl: StateFlow<String?> = _currentPlayingWordUrl.asStateFlow()
 
+    private val _playbackSpeed = MutableStateFlow(1.0f)
+    val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
+
     var onPlaybackEnded: (() -> Unit)? = null
+
+    fun setPlaybackSpeed(speed: Float) {
+        _playbackSpeed.value = speed
+        exoPlayer?.setPlaybackSpeed(speed)
+    }
 
     fun getLocalAudioFile(url: String): File {
         val dir = File(context.filesDir, "quran_audio")
@@ -47,8 +55,14 @@ class AudioRepository(private val context: Context) {
                 .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC)
                 .build()
 
-            exoPlayer = ExoPlayer.Builder(context).build().apply {
+            val audioContext = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                context.createAttributionContext("quran_audio")
+            } else {
+                context
+            }
+            exoPlayer = ExoPlayer.Builder(audioContext).build().apply {
                 setAudioAttributes(audioAttributes, true)
+                setPlaybackSpeed(_playbackSpeed.value)
                 addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlayingState: Boolean) {
                         _isPlaying.value = isPlayingState
@@ -88,6 +102,7 @@ class AudioRepository(private val context: Context) {
 
         exoPlayer?.apply {
             setMediaItem(MediaItem.fromUri(uri))
+            setPlaybackSpeed(_playbackSpeed.value)
             prepare()
             play()
             _currentPlayingAyahNumber.value = ayahNumber

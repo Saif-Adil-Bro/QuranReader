@@ -37,11 +37,12 @@ class MushafRepository(
                 nameBengali = "হাফেজী ১৫-লাইন কুরআন",
                 description = "Standard 15-Line Hafizi Quran PDF",
                 descriptionBengali = "স্ট্যান্ডার্ড ১৫-লাইন হাফেজী কুরআন (একক ফাইল, সম্পূর্ণ অফলাইন)",
+                totalPages = 611,
                 fileSizeMB = 45,
                 thumbnailUrl = "https://pub-26d400c878304ce889b8454325e14661.r2.dev/IMG_20260713_174626.jpg",
                 baseUrl = "https://pub-26d400c878304ce889b8454325e14661.r2.dev/hafizi-quran-15-line.pdf",
                 isPdf = true,
-                pdfPageOffset = 2
+                pdfPageOffset = 1
             ),
             MushafStyle(
                 id = "indopak",
@@ -66,6 +67,7 @@ class MushafRepository(
                     nameBengali = "আপনার পিডিএফ কুরআন",
                     description = "Your custom imported Quran PDF file",
                     descriptionBengali = "আপনার ডিভাইস থেকে আমদানিকৃত পিডিএফ কুরআন",
+                    totalPages = 611,
                     fileSizeMB = if (customSizeMB > 0) customSizeMB else 1,
                     thumbnailUrl = "https://cdn.islamic.network/quran/images/1_1.png",
                     baseUrl = "",

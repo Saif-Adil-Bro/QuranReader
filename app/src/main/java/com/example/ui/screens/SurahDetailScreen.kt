@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.text.ClickableText
@@ -42,12 +43,14 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -63,6 +66,8 @@ import com.example.ui.theme.*
 import com.example.ui.screens.toBengaliNumerals
 import com.example.ui.viewmodels.SurahDetailViewModel
 import com.example.ui.viewmodels.PlaybackMode
+import com.example.ui.components.WordByWordText
+import com.example.ui.components.parseHtmlToAnnotatedString
 
 enum class ViewMode { LIST, READING, MUSHAF, TAFSIR }
 
@@ -71,7 +76,8 @@ data class ProcessedWord(
     val position: Int,
     val charTypeName: String,
     val textUthmani: String,
-    val translationText: String?
+    val translationText: String?,
+    val audioUrl: String? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,6 +92,8 @@ fun SurahDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val showTranslation by viewModel.showTranslation.collectAsState()
+    val showTransliteration by viewModel.showTransliteration.collectAsState()
+    val showTajweed by viewModel.showTajweed.collectAsState()
     val bookmarkList by viewModel.bookmarks.collectAsState()
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val bengaliFontSize by viewModel.bengaliFontSize.collectAsState()
@@ -400,6 +408,8 @@ fun SurahDetailScreen(
                                     onPlayWord = { viewModel.playWord(it) },
                                     isPlaying = isAyahPlaying,
                                     showTranslation = showTranslation,
+                                    showTransliteration = showTransliteration,
+                                    showTajweed = showTajweed,
                                     arabicFontSize = arabicFontSize,
                                     bengaliFontSize = bengaliFontSize,
                                     arabicFontName = arabicFontName,
@@ -666,6 +676,8 @@ fun AyahCard(
     onPlayWord: (String) -> Unit,
     isPlaying: Boolean,
     showTranslation: Boolean,
+    showTransliteration: Boolean = false,
+    showTajweed: Boolean = false,
     arabicFontSize: Float,
     bengaliFontSize: Float,
     arabicFontName: String = "Amiri Quran",
@@ -675,6 +687,19 @@ fun AyahCard(
     arabicLineSpacing: Float = 2.0f
 ) {
     var showTafsirDialog by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    
+    val shareText = buildString {
+        append(ayah.arabicText)
+        append("\n\n")
+        append(ayah.bengaliText)
+        if (!ayah.tafsirText.isNullOrEmpty()) {
+            append("\n\nতাফসীর:\n")
+            append(android.text.Html.fromHtml(ayah.tafsirText, android.text.Html.FROM_HTML_MODE_LEGACY).toString())
+        }
+    }
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
 
     if (showTafsirDialog) {
@@ -691,19 +716,13 @@ fun AyahCard(
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     if (ayah.tafsirText != null) {
-                        val paragraphs = ayah.tafsirText.split(Regex("\\n+"))
-                        paragraphs.forEach { paragraph ->
-                            if (paragraph.isNotBlank()) {
-                                Text(
-                                    text = paragraph.trim(),
-                                    fontSize = 16.sp,
-                                    lineHeight = 24.sp,
-                                    color = DarkText,
-                                    textAlign = TextAlign.Justify
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                        }
+                        Text(
+                            text = ayah.tafsirText.parseHtmlToAnnotatedString(PrimaryGreen),
+                            fontSize = 16.sp,
+                            lineHeight = 24.sp,
+                            color = DarkText,
+                            textAlign = TextAlign.Justify
+                        )
                     } else {
                         Text(text = "এই আয়াতের তাফসীর পাওয়া যায়নি।", fontSize = 16.sp, color = GrayText)
                     }
@@ -759,8 +778,38 @@ fun AyahCard(
                                 tint = if (isPlaying) PrimaryGreen else GrayText
                             )
                         }
-                        IconButton(onClick = { /* TODO: More */ }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = GrayText)
+                        Box {
+                            IconButton(onClick = { showMoreMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = GrayText)
+                            }
+                            DropdownMenu(
+                                expanded = showMoreMenu,
+                                onDismissRequest = { showMoreMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("কপি করুন", color = DarkText) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        clipboardManager.setText(AnnotatedString(shareText))
+                                        Toast.makeText(context, "কপি করা হয়েছে", Toast.LENGTH_SHORT).show()
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = PrimaryGreen) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("শেয়ার করুন", color = DarkText) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        val sendIntent: Intent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_TEXT, shareText)
+                                            type = "text/plain"
+                                        }
+                                        val shareIntent = Intent.createChooser(sendIntent, null)
+                                        context.startActivity(shareIntent)
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = PrimaryGreen) }
+                                )
+                            }
                         }
                     }
                 }
@@ -797,106 +846,74 @@ fun AyahCard(
                                 tint = if (isPlaying) PrimaryGreen else GrayText
                             )
                         }
-                        IconButton(onClick = { /* TODO: More */ }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = GrayText)
+                        Box {
+                            IconButton(onClick = { showMoreMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = GrayText)
+                            }
+                            DropdownMenu(
+                                expanded = showMoreMenu,
+                                onDismissRequest = { showMoreMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("কপি করুন", color = DarkText) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        clipboardManager.setText(AnnotatedString(shareText))
+                                        Toast.makeText(context, "কপি করা হয়েছে", Toast.LENGTH_SHORT).show()
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = PrimaryGreen) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("শেয়ার করুন", color = DarkText) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        val sendIntent: Intent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_TEXT, shareText)
+                                            type = "text/plain"
+                                        }
+                                        val shareIntent = Intent.createChooser(sendIntent, null)
+                                        context.startActivity(shareIntent)
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = PrimaryGreen) }
+                                )
+                            }
                         }
                     }
                 }
-                CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
-                    if (ayah.words.isNotEmpty()) {
-                        val processedWords = remember(ayah.words) {
-                            val list = mutableListOf<ProcessedWord>()
-                            ayah.words.forEach { word ->
-                                val text = word.textUthmani ?: ""
-                                val isPause = word.charTypeName == "pause" || 
-                                              word.charTypeName == "stop" ||
-                                              text.trim() in listOf("ۖ", "ۗ", "ۚ", "ۛ", "ۜ", "ۘ", "ۙ", "ج", "لا", "صلى", "صلے", "قلے", "قلى")
-                                
-                                if (isPause) {
-                                    val lastWordIndex = list.indexOfLast { it.charTypeName == "word" }
-                                    if (lastWordIndex != -1) {
-                                        val lastWord = list[lastWordIndex]
-                                        list[lastWordIndex] = lastWord.copy(
-                                            textUthmani = lastWord.textUthmani + text
-                                        )
-                                    } else {
-                                        list.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
-                                    }
-                                } else {
-                                    list.add(ProcessedWord(word.id, word.position, word.charTypeName, text, word.translation?.text))
-                                }
-                            }
-                            list
-                        }
-
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            processedWords.forEach { word ->
-                                if (word.charTypeName != "end") {
-                                    val wordUrl = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
-                                    val isHighlighted = currentPlayingWordUrl == wordUrl
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier
-                                            .clickable {
-                                                onPlayWord(wordUrl)
-                                            }
-                                            .background(
-                                                color = if (isHighlighted) PrimaryGreen.copy(alpha = 0.2f) else Color.Transparent,
-                                                shape = RoundedCornerShape(8.dp)
-                                            )
-                                            .border(
-                                                width = if (isHighlighted) 1.dp else 0.dp,
-                                                color = if (isHighlighted) PrimaryGreen.copy(alpha = 0.6f) else Color.Transparent,
-                                                shape = RoundedCornerShape(8.dp)
-                                            )
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Text(
-                                            text = androidx.compose.ui.text.buildAnnotatedString {
-                                                appendStyledWaqfText(word.textUthmani, arabicFontSize, true)
-                                            },
-                                            fontSize = arabicFontSize.sp,
-                                            color = if (isHighlighted) PrimaryGreen else DarkText,
-                                            fontFamily = arabicFont,
-                                            fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = word.translationText ?: "",
-                                            fontSize = 12.sp,
-                                            color = if (isHighlighted) PrimaryGreen.copy(alpha = 0.8f) else GrayText,
-                                            fontWeight = if (isHighlighted) FontWeight.Medium else FontWeight.Normal
-                                        )
-                                    }
-                                } else {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        AyahCircle(
-                                            number = ayah.numberInSurah,
-                                            fontSize = arabicFontSize.toFloat(),
-                                            color = PrimaryGreen
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text("", fontSize = 12.sp)
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // Fallback to beautiful cohesive AyahInlineText instead of splitting by space and showing "শব্দ" placeholders
-                        AyahInlineText(
-                            arabicText = ayah.arabicText,
-                            ayahNumber = ayah.numberInSurah,
-                            fontSize = arabicFontSize.toFloat(),
-                            fontFamily = arabicFont,
-                            color = DarkText,
-                            modifier = Modifier.fillMaxWidth(),
-                            lineSpacing = arabicLineSpacing
-                        )
-                    }
+                if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
+                    com.example.ui.components.TajweedText(
+                        rawTajweedText = ayah.textUthmaniTajweed ?: "",
+                        modifier = Modifier.fillMaxWidth(),
+                        color = DarkText,
+                        fontSize = arabicFontSize.sp,
+                        lineHeight = (arabicFontSize * arabicLineSpacing).sp,
+                        fontFamily = arabicFont,
+                        textAlign = TextAlign.Right
+                    )
+                } else if (ayah.words.isNotEmpty()) {
+                    WordByWordText(
+                        words = ayah.words,
+                        ayahNumber = ayah.numberInSurah,
+                        arabicFontSize = arabicFontSize,
+                        arabicFont = arabicFont,
+                        showTransliteration = showTransliteration,
+                        onWordPlay = { onPlayWord(it) },
+                        currentPlayingWordUrl = currentPlayingWordUrl,
+                        surahNumber = surahNumber,
+                        ayahNumberInSurah = ayah.numberInSurah,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    AyahInlineText(
+                        arabicText = ayah.arabicText,
+                        ayahNumber = ayah.numberInSurah,
+                        fontSize = arabicFontSize.toFloat(),
+                        fontFamily = arabicFont,
+                        color = DarkText,
+                        modifier = Modifier.fillMaxWidth(),
+                        lineSpacing = arabicLineSpacing
+                    )
                 }
                 if (showTranslation) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -908,15 +925,27 @@ fun AyahCard(
                     )
                 }
             } else if (viewMode == ViewMode.TAFSIR) {
-                AyahInlineText(
-                    arabicText = ayah.arabicText,
-                    ayahNumber = ayah.numberInSurah,
-                    fontSize = arabicFontSize.toFloat(),
-                    fontFamily = arabicFont,
-                    color = DarkText,
-                    modifier = Modifier.fillMaxWidth(),
-                    lineSpacing = arabicLineSpacing
-                )
+                if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
+                    com.example.ui.components.TajweedText(
+                        rawTajweedText = ayah.textUthmaniTajweed ?: "",
+                        modifier = Modifier.fillMaxWidth(),
+                        color = DarkText,
+                        fontSize = arabicFontSize.sp,
+                        lineHeight = (arabicFontSize * arabicLineSpacing).sp,
+                        fontFamily = arabicFont,
+                        textAlign = TextAlign.Right
+                    )
+                } else {
+                    AyahInlineText(
+                        arabicText = ayah.arabicText,
+                        ayahNumber = ayah.numberInSurah,
+                        fontSize = arabicFontSize.toFloat(),
+                        fontFamily = arabicFont,
+                        color = DarkText,
+                        modifier = Modifier.fillMaxWidth(),
+                        lineSpacing = arabicLineSpacing
+                    )
+                }
                 if (showTranslation) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -929,20 +958,14 @@ fun AyahCard(
                 }
                 if (ayah.tafsirText != null) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    val paragraphs = ayah.tafsirText.split(Regex("\\n+"))
-                    paragraphs.forEach { paragraph ->
-                        if (paragraph.isNotBlank()) {
-                            Text(
-                                text = paragraph.trim(),
-                                fontSize = 15.sp,
-                                color = DarkText,
-                                lineHeight = 24.sp,
-                                textAlign = TextAlign.Justify,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    }
+                    Text(
+                        text = ayah.tafsirText.parseHtmlToAnnotatedString(PrimaryGreen),
+                        fontSize = 15.sp,
+                        color = DarkText,
+                        lineHeight = 24.sp,
+                        textAlign = TextAlign.Justify,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             } else {
                 AyahInlineText(
@@ -1579,17 +1602,34 @@ fun MushafPageView(
                                         textUthmani = lastWord.textUthmani + text
                                     )
                                 } else {
-                                    processedWords.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text))
+                                    processedWords.add(ProcessedWord(word.id, word.position, "word", text, word.translation?.text, word.audioUrl))
                                 }
                             } else {
-                                processedWords.add(ProcessedWord(word.id, word.position, word.charTypeName, text, word.translation?.text))
+                                processedWords.add(ProcessedWord(word.id, word.position, word.charTypeName, text, word.translation?.text, word.audioUrl))
                             }
                         }
                         
                         processedWords.forEachIndexed { wIndex, word ->
                             if (word.charTypeName != "end") {
                                 val wordStart = length
-                                val url = String.format(java.util.Locale.US, "https://verses.quran.com/wbw/%03d_%03d_%03d.mp3", surahNumber, ayah.numberInSurah, word.position)
+                                val rawAudioUrl = word.audioUrl
+                                val url = if (!rawAudioUrl.isNullOrEmpty()) {
+                                    if (rawAudioUrl.startsWith("http://") || rawAudioUrl.startsWith("https://")) {
+                                        rawAudioUrl
+                                    } else if (rawAudioUrl.startsWith("//")) {
+                                        "https:$rawAudioUrl"
+                                    } else {
+                                        "https://audio.qurancdn.com/$rawAudioUrl"
+                                    }
+                                } else {
+                                    String.format(
+                                        java.util.Locale.US,
+                                        "https://audio.qurancdn.com/wbw/%03d_%03d_%03d.mp3",
+                                        surahNumber,
+                                        ayah.numberInSurah,
+                                        word.position
+                                    )
+                                }
                                 val isHighlighted = url == currentPlayingWordUrl
                                 
                                 if (isHighlighted) {

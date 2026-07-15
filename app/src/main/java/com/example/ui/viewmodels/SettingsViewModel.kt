@@ -43,6 +43,50 @@ class SettingsViewModel(
     val audioRepository: AudioRepository
 ) : ViewModel() {
 
+
+    private val _downloadingTafsirIds = MutableStateFlow<Set<String>>(emptySet())
+    val downloadingTafsirIds: StateFlow<Set<String>> = _downloadingTafsirIds.asStateFlow()
+
+    private val _downloadedTafsirIds = MutableStateFlow<Set<String>>(emptySet())
+    val downloadedTafsirIds: StateFlow<Set<String>> = _downloadedTafsirIds.asStateFlow()
+
+    private val _tafsirDownloadProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val tafsirDownloadProgress: StateFlow<Map<String, Float>> = _tafsirDownloadProgress.asStateFlow()
+    
+    fun updateDownloadedTafsirs() {
+        viewModelScope.launch {
+            val available = _availableTafsirs.value
+            val downloaded = available.filter { quranRepository.isTafsirDownloaded(it.id.toString()) }.map { it.id.toString() }.toSet()
+            _downloadedTafsirIds.value = downloaded
+            
+            // Auto-select 164 if nothing is selected and it's downloaded
+            val currentSelected = selectedTafsirIds.value
+            if (currentSelected.isEmpty() && downloaded.contains("164")) {
+                setSelectedTafsirIds(setOf("164"))
+            }
+        }
+    }
+
+    fun downloadTafsir(id: String) {
+        if (_downloadingTafsirIds.value.contains(id)) return
+        _downloadingTafsirIds.value = _downloadingTafsirIds.value + id
+        _tafsirDownloadProgress.value = _tafsirDownloadProgress.value.toMutableMap().apply { put(id, 0f) }
+        
+        viewModelScope.launch {
+            try {
+                quranRepository.downloadTafsir(id) { progress ->
+                    _tafsirDownloadProgress.value = _tafsirDownloadProgress.value.toMutableMap().apply { put(id, progress) }
+                }
+                updateDownloadedTafsirs()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _downloadingTafsirIds.value = _downloadingTafsirIds.value - id
+                _tafsirDownloadProgress.value = _tafsirDownloadProgress.value.toMutableMap().apply { remove(id) }
+            }
+        }
+    }
+
     // ---------------- Offline Sync States ----------------
     private val _isDownloadingQuran = MutableStateFlow(false)
     val isDownloadingQuran: StateFlow<Boolean> = _isDownloadingQuran.asStateFlow()
@@ -227,6 +271,67 @@ class SettingsViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = true
         )
+
+    val showTransliteration: StateFlow<Boolean> = repository.showTransliterationFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    val showTajweed: StateFlow<Boolean> = repository.showTajweedFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+        
+    fun setShowTransliteration(show: Boolean) {
+        viewModelScope.launch { repository.setShowTransliteration(show) }
+    }
+    fun setShowTajweed(show: Boolean) {
+        viewModelScope.launch { repository.setShowTajweed(show) }
+    }
+
+    private val _availableTafsirs = MutableStateFlow<List<com.example.data.model.TafsirResourceDto>>(emptyList())
+    val availableTafsirs: StateFlow<List<com.example.data.model.TafsirResourceDto>> = _availableTafsirs.asStateFlow()
+
+    val selectedTafsirIds: StateFlow<Set<String>> = repository.selectedTafsirIdsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = setOf("164", "169")
+        )
+
+    fun setSelectedTafsirIds(ids: Set<String>) {
+        viewModelScope.launch { repository.setSelectedTafsirIds(ids) }
+    }
+
+    val selectedQariId: StateFlow<String> = repository.selectedQariIdFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "ar.alafasy"
+        )
+
+    fun setSelectedQariId(qariId: String) {
+        viewModelScope.launch { repository.setSelectedQariId(qariId) }
+    }
+    
+    fun toggleTafsir(id: String) {
+        val current = selectedTafsirIds.value.toMutableSet()
+        if (current.contains(id)) {
+            if (current.size > 1) { // ensure at least one is selected
+                current.remove(id)
+                setSelectedTafsirIds(current)
+            }
+        } else {
+            if (current.size < 3) {
+                current.add(id)
+                setSelectedTafsirIds(current)
+            }
+        }
+    }
 
     val tanzilTextStyle: StateFlow<String> = repository.tanzilTextStyleFlow
         .stateIn(
@@ -413,5 +518,10 @@ class SettingsViewModel(
         loadNotesFromPrefs()
         updateDownloadedSurahsCount()
         updateAudioCacheSize()
+        
+        viewModelScope.launch {
+            _availableTafsirs.value = quranRepository.getAvailableTafsirs("bn")
+            updateDownloadedTafsirs()
+        }
     }
 }

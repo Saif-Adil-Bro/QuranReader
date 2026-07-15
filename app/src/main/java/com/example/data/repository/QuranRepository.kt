@@ -9,7 +9,12 @@ import com.example.data.model.QuranComTafsirResponse
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
 import java.io.File
 
 /**
@@ -18,8 +23,113 @@ import java.io.File
 class QuranRepository(
     private val api: QuranApi,
     private val quranComApi: QuranComApi,
+    private val settingsRepository: SettingsRepository,
     val context: Context
 ) {
+    fun isTafsirDownloaded(tafsirId: String): Boolean {
+        val dir = File(context.filesDir, "tafsir_cache/$tafsirId")
+        if (!dir.exists()) return false
+        return (dir.listFiles()?.size ?: 0) >= 114
+    }
+
+    suspend fun downloadTafsir(tafsirId: String, onProgress: (Float) -> Unit) {
+        val dir = File(context.filesDir, "tafsir_cache/$tafsirId")
+        dir.mkdirs()
+        for (i in 1..114) {
+            val file = File(dir, "$i.json")
+            if (!file.exists() || file.length() == 0L) {
+                try {
+                    val response = quranComApi.getSurahTafsirs(i, tafsirId)
+                    file.writeText(Gson().toJson(response))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    throw Exception("Failed to download Surah $i for tafsir $tafsirId: ${e.message}")
+                }
+            }
+            onProgress(i / 114f)
+        }
+    }
+
+    private suspend fun fetchSingleSurahTafsir(surahNumber: Int, tafsirId: String): QuranComTafsirResponse? {
+        val file = File(context.filesDir, "tafsir_cache/$tafsirId/$surahNumber.json")
+        if (file.exists() && file.length() > 0) {
+            try {
+                return Gson().fromJson(file.readText(), QuranComTafsirResponse::class.java)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return try {
+            quranComApi.getSurahTafsirs(surahNumber, tafsirId)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+
+    private suspend fun getCombinedSurahTafsirs(surahNumber: Int, tafsirIdsStr: String): QuranComTafsirResponse? = coroutineScope {
+        try {
+            val ids = tafsirIdsStr.split(",")
+            val deferreds = ids.map { id ->
+                async { fetchSingleSurahTafsir(surahNumber, id.trim()) }
+            }
+            val responses = deferreds.awaitAll()
+            val allTafsirs = responses.flatMap { it?.tafsirs ?: emptyList() }
+            QuranComTafsirResponse(tafsirs = allTafsirs)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private suspend fun getCombinedPageTafsirs(pageNumber: Int, tafsirIdsStr: String): QuranComTafsirResponse? = coroutineScope {
+        try {
+            val ids = tafsirIdsStr.split(",")
+            val deferreds = ids.map { id ->
+                async { quranComApi.getPageTafsirs(pageNumber, id.trim()) }
+            }
+            val responses = deferreds.awaitAll()
+            val allTafsirs = responses.flatMap { it?.tafsirs ?: emptyList() }
+            QuranComTafsirResponse(tafsirs = allTafsirs)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private suspend fun getCombinedJuzTafsirs(juzNumber: Int, tafsirIdsStr: String): QuranComTafsirResponse? = coroutineScope {
+        try {
+            val ids = tafsirIdsStr.split(",")
+            val deferreds = ids.map { id ->
+                async { quranComApi.getJuzTafsirs(juzNumber, id.trim()) }
+            }
+            val responses = deferreds.awaitAll()
+            val allTafsirs = responses.flatMap { it?.tafsirs ?: emptyList() }
+            QuranComTafsirResponse(tafsirs = allTafsirs)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private suspend fun buildCombinedTafsirText(tafsirs: List<com.example.data.model.QuranComTafsirItem>?, verseKey: String): String? {
+        if (tafsirs.isNullOrEmpty()) return null
+        val verseTafsirs = tafsirs.filter { it.verseKey == verseKey }
+        if (verseTafsirs.isEmpty()) return null
+        
+        if (verseTafsirs.size == 1) {
+            return verseTafsirs.first().text
+        }
+        
+        val availableTafsirs = getAvailableTafsirs("bn")
+        return verseTafsirs.joinToString("<br><br>") { item ->
+            val tafsirInfo = availableTafsirs.find { it.id == item.resourceId }
+            val name = tafsirInfo?.name ?: "Tafsir ${item.resourceId}"
+            val lang = tafsirInfo?.languageName?.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() } ?: ""
+            "<b>$name ($lang)</b><br>${item.text}"
+        }
+    }
+
 
     private val BISMILLAH_PREFIXES = listOf(
         "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ",
@@ -37,8 +147,8 @@ class QuranRepository(
     // In-memory caching structures to optimize loading times and prevent repeated network calls
     private var cachedSurahs: List<Surah>? = null
     private val cachedSurahDetails = java.util.concurrent.ConcurrentHashMap<String, List<CombinedAyah>>()
-    private val cachedPageDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
-    private val cachedJuzDetails = java.util.concurrent.ConcurrentHashMap<Int, List<CombinedAyah>>()
+    private val cachedPageDetails = java.util.concurrent.ConcurrentHashMap<String, List<CombinedAyah>>()
+    private val cachedJuzDetails = java.util.concurrent.ConcurrentHashMap<String, List<CombinedAyah>>()
 
     private val muqattaatMap = mapOf(
         "الم" to "الٓمٓ",
@@ -121,26 +231,26 @@ class QuranRepository(
         File(context.filesDir, "quran_text_cache/surahs.json")
     }
 
-    private fun getSurahDetailsCacheFile(surahNumber: Int, arabicEdition: String = "quran-uthmani"): File {
+    private fun getSurahDetailsCacheFile(surahNumber: Int, tafsirIds: String, arabicEdition: String = "quran-uthmani"): File {
         return if (arabicEdition == "quran-uthmani") {
-            File(context.filesDir, "quran_text_cache/surah_details_$surahNumber.json")
+            File(context.filesDir, "quran_text_cache/surah_details_${surahNumber}_$tafsirIds.json")
         } else {
-            File(context.filesDir, "quran_text_cache/surah_details_${surahNumber}_$arabicEdition.json")
+            File(context.filesDir, "quran_text_cache/surah_details_${surahNumber}_${arabicEdition}_$tafsirIds.json")
         }
     }
 
-    private fun getPageDetailsCacheFile(pageNumber: Int): File {
-        return File(context.filesDir, "quran_text_cache/page_details_$pageNumber.json")
+    private fun getPageDetailsCacheFile(pageNumber: Int, tafsirIds: String): File {
+        return File(context.filesDir, "quran_text_cache/page_details_${pageNumber}_$tafsirIds.json")
     }
 
-    private fun getJuzDetailsCacheFile(juzNumber: Int): File {
-        return File(context.filesDir, "quran_text_cache/juz_details_$juzNumber.json")
+    private fun getJuzDetailsCacheFile(juzNumber: Int, tafsirIds: String): File {
+        return File(context.filesDir, "quran_text_cache/juz_details_${juzNumber}_$tafsirIds.json")
     }
 
     fun getDownloadedSurahsCount(): Int {
         var count = 0
         for (i in 1..114) {
-            if (getSurahDetailsCacheFile(i).exists()) {
+            if (isSurahDownloaded(i)) {
                 count++
             }
         }
@@ -148,7 +258,32 @@ class QuranRepository(
     }
 
     fun isSurahDownloaded(surahNumber: Int): Boolean {
-        return getSurahDetailsCacheFile(surahNumber).exists()
+        val cacheDir = File(context.filesDir, "quran_text_cache")
+        if (!cacheDir.exists()) return false
+        val cacheFiles = cacheDir.listFiles { _, name ->
+            name.startsWith("surah_details_${surahNumber}_") && name.endsWith(".json")
+        }
+        if (cacheFiles.isNullOrEmpty()) return false
+        
+        for (cacheFile in cacheFiles) {
+            if (cacheFile.length() == 0L) continue
+            try {
+                val json = cacheFile.readText()
+                val type = object : com.google.gson.reflect.TypeToken<List<com.example.data.model.CombinedAyah>>() {}.type
+                val list = com.google.gson.Gson().fromJson<List<com.example.data.model.CombinedAyah>>(json, type)
+                if (!list.isNullOrEmpty()) {
+                    val hasWords = list.any { it.words.isNotEmpty() }
+                    val hasBengaliWords = hasWords && list.any { ayah ->
+                        ayah.words.any { word ->
+                            word.translation?.text?.any { it in 'ঀ'..'৿' } == true
+                        }
+                    }
+                    if (hasBengaliWords) return true
+                }
+            } catch (e: Exception) {
+            }
+        }
+        return false
     }
 
     fun isAllSurahsDownloaded(): Boolean {
@@ -210,95 +345,129 @@ class QuranRepository(
      * and combines them into a list of CombinedAyah for easy UI consumption.
      */
     suspend fun getSurahDetailsCombined(surahNumber: Int, arabicEdition: String = "quran-uthmani"): List<CombinedAyah> {
-        val cacheKey = "${surahNumber}_$arabicEdition"
-        cachedSurahDetails[cacheKey]?.let { return it }
+        val tafsirIdsSet = settingsRepository.selectedTafsirIdsFlow.first()
+        val tafsirIdsStr = tafsirIdsSet.joinToString(",")
+        val audioEdition = settingsRepository.selectedQariIdFlow.first()
+        val cacheKey = "${surahNumber}_${arabicEdition}_${tafsirIdsStr}_${audioEdition}"
+        val inMemory = cachedSurahDetails[cacheKey]
+        if (inMemory != null) {
+            val hasWords = inMemory.any { it.words.isNotEmpty() }
+            val hasTajweed = inMemory.any { !it.textUthmaniTajweed.isNullOrEmpty() }
+            val hasBengaliWords = hasWords && inMemory.any { ayah ->
+                ayah.words.any { word ->
+                    word.translation?.text?.any { it in '\u0980'..'\u09FF' } == true
+                }
+            }
+            if (hasBengaliWords && hasTajweed) {
+                return inMemory
+            }
+        }
         return withContext(Dispatchers.IO) {
-            val cacheFile = getSurahDetailsCacheFile(surahNumber, arabicEdition)
+            val cacheFile = getSurahDetailsCacheFile(surahNumber, tafsirIdsStr, "${arabicEdition}_${audioEdition}")
+            var cachedList: List<CombinedAyah>? = null
             if (cacheFile.exists() && cacheFile.length() > 0) {
                 try {
                     val json = cacheFile.readText()
                     val type = object : TypeToken<List<CombinedAyah>>() {}.type
                     val list = Gson().fromJson<List<CombinedAyah>>(json, type)
-                    
-                    // Invalidate cache if it contains ayahs with missing words (to recover from past bugs/timeouts)
-                    val hasMissingWords = list.any { it.words.isEmpty() }
-                    
-                    if (!list.isNullOrEmpty() && !hasMissingWords) {
+                    if (!list.isNullOrEmpty()) {
                         val cleanedList = cleanCombinedAyahList(list)
-                        cachedSurahDetails[cacheKey] = cleanedList
-                        return@withContext cleanedList
+                        cachedList = cleanedList
+                        
+                        // If it has words for some ayahs and has Bengali translations, return it immediately
+                        val hasWords = list.any { it.words.isNotEmpty() }
+                        val hasTajweed = list.any { !it.textUthmaniTajweed.isNullOrEmpty() }
+                        val hasBengaliWords = hasWords && list.any { ayah ->
+                            ayah.words.any { word ->
+                                word.translation?.text?.any { it in '\u0980'..'\u09FF' } == true
+                            }
+                        }
+                        if (hasBengaliWords && hasTajweed) {
+                            cachedSurahDetails[cacheKey] = cleanedList
+                            return@withContext cleanedList
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
             }
 
-            val response = if (arabicEdition == "quran-uthmani") {
-                api.getSurahWithTranslation(surahNumber)
-            } else {
-                api.getSurahWithEditions(surahNumber, "$arabicEdition,bn.bengali,ar.alafasy")
-            }
-            
-            val quranComResponse = try {
-                quranComApi.getSurahVerses(surahNumber)
+            try {
+                val result = withTimeoutOrNull(5000) {
+                    val response = if (arabicEdition == "quran-uthmani") {
+                        api.getSurahWithEditions(surahNumber, "quran-uthmani,bn.bengali,$audioEdition")
+                    } else {
+                        api.getSurahWithEditions(surahNumber, "$arabicEdition,bn.bengali,$audioEdition")
+                    }
+                    
+                    val quranComResponse = try {
+                        quranComApi.getSurahVerses(surahNumber)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        null
+                    }
+
+                    val quranComTafsirResponse = getCombinedSurahTafsirs(surahNumber, tafsirIdsStr)
+
+                    if (response.code == 200 && response.data.size >= 2) {
+                        // Determine which edition is which based on language code and format
+                        val arabicEditionObj = response.data.find { it.edition.identifier == arabicEdition }
+                            ?: response.data.find { it.edition.language == "ar" && it.edition.format == "text" }
+                        val bengaliEdition = response.data.find { it.edition.identifier == "bn.bengali" }
+                        val audioEdition = response.data.find { it.edition.identifier == "ar.alafasy" }
+
+                        if (arabicEditionObj == null || bengaliEdition == null) {
+                            throw Exception("Missing Arabic or Bengali editions in the response.")
+                        }
+
+                        val arabicAyahs = arabicEditionObj.ayahs
+                        val bengaliAyahs = bengaliEdition.ayahs
+                        val audioAyahs = audioEdition?.ayahs
+
+                        // Combine them
+                        val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
+                            val quranComVerse = quranComResponse?.verses?.find { it.verseNumber == arabicAyah.numberInSurah }
+                            val verseKey = "$surahNumber:${arabicAyah.numberInSurah}"
+                            val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
+                            val cachedWords = cachedList?.getOrNull(index)?.words ?: emptyList()
+                            CombinedAyah(
+                                number = arabicAyah.number,
+                                numberInSurah = arabicAyah.numberInSurah,
+                                page = arabicAyah.page,
+                                juz = arabicAyah.juz,
+                                surahNumber = surahNumber,
+                                arabicText = processArabicText(arabicAyah, surahNumber),
+                                bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
+                                tafsirText = tafsir,
+                                audioUrl = audioAyahs?.getOrNull(index)?.audio,
+                                words = if (quranComVerse != null && quranComVerse.words.isNotEmpty()) quranComVerse.words else cachedWords,
+                                textUthmaniTajweed = quranComVerse?.textUthmaniTajweed ?: cachedList?.getOrNull(index)?.textUthmaniTajweed
+                            )
+                        }
+                        val cleaned = cleanCombinedAyahList(combined)
+                        cachedSurahDetails[cacheKey] = cleaned
+                        
+                        try {
+                            cacheFile.parentFile?.mkdirs()
+                            cacheFile.writeText(Gson().toJson(cleaned))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        cleaned
+                    } else {
+                        null
+                    }
+                }
+
+                if (result != null) {
+                    result
+                } else {
+                    cachedList?.let { return@withContext it }
+                    throw Exception("Failed to load Surah details: Timeout or invalid response.")
+                }
             } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-
-            val quranComTafsirResponse = try {
-                quranComApi.getSurahTafsirs(surahNumber)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-
-            if (response.code == 200 && response.data.size >= 2) {
-                // Determine which edition is which based on language code and format
-                val arabicEditionObj = response.data.find { it.edition.identifier == arabicEdition }
-                    ?: response.data.find { it.edition.language == "ar" && it.edition.format == "text" }
-                val bengaliEdition = response.data.find { it.edition.identifier == "bn.bengali" }
-                val audioEdition = response.data.find { it.edition.identifier == "ar.alafasy" }
-
-                if (arabicEditionObj == null || bengaliEdition == null) {
-                    throw Exception("Missing Arabic or Bengali editions in the response.")
-                }
-
-                val arabicAyahs = arabicEditionObj.ayahs
-                val bengaliAyahs = bengaliEdition.ayahs
-                val audioAyahs = audioEdition?.ayahs
-
-                // Combine them
-                val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
-                    val quranComVerse = quranComResponse?.verses?.find { it.verseNumber == arabicAyah.numberInSurah }
-                    val verseKey = "$surahNumber:${arabicAyah.numberInSurah}"
-                    val tafsirItem = quranComTafsirResponse?.tafsirs?.find { it.verseKey == verseKey }
-                    val tafsir = tafsirItem?.text?.let { android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_COMPACT).toString() }
-                    CombinedAyah(
-                        number = arabicAyah.number,
-                        numberInSurah = arabicAyah.numberInSurah,
-                        page = arabicAyah.page,
-                        juz = arabicAyah.juz,
-                        surahNumber = arabicAyah.surah?.number ?: surahNumber,
-                        arabicText = processArabicText(arabicAyah, surahNumber),
-                        bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
-                        tafsirText = tafsir,
-                        audioUrl = audioAyahs?.getOrNull(index)?.audio,
-                        words = quranComVerse?.words ?: emptyList()
-                    )
-                }
-                val cleaned = cleanCombinedAyahList(combined)
-                cachedSurahDetails[cacheKey] = cleaned
-                
-                try {
-                    cacheFile.parentFile?.mkdirs()
-                    cacheFile.writeText(Gson().toJson(cleaned))
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                cleaned
-            } else {
-                throw Exception("Failed to load Surah details: Invalid response structure.")
+                cachedList?.let { return@withContext it }
+                throw e
             }
         }
     }
@@ -307,21 +476,36 @@ class QuranRepository(
      * Fetches a specific page of the Quran
      */
     suspend fun getPageCombined(pageNumber: Int): List<CombinedAyah> {
-        cachedPageDetails[pageNumber]?.let { return it }
+        val tafsirIdsSet = settingsRepository.selectedTafsirIdsFlow.first()
+        val tafsirIdsStr = tafsirIdsSet.joinToString(",")
+        val audioEdition = settingsRepository.selectedQariIdFlow.first()
+        val cacheKey = "${pageNumber}_${tafsirIdsStr}"
+        val inMemory = cachedPageDetails[cacheKey]
+        if (inMemory != null) {
+            val hasMissingWords = inMemory.any { it.words.isEmpty() }
+            val hasMissingTajweed = inMemory.any { it.textUthmaniTajweed.isNullOrEmpty() }
+            if (!hasMissingWords && !hasMissingTajweed) {
+                return inMemory
+            }
+        }
         return withContext(Dispatchers.IO) {
-            val cacheFile = getPageDetailsCacheFile(pageNumber)
+            val cacheFile = getPageDetailsCacheFile(pageNumber, "${tafsirIdsStr}_${audioEdition}")
+            var cachedList: List<CombinedAyah>? = null
             if (cacheFile.exists() && cacheFile.length() > 0) {
                 try {
                     val json = cacheFile.readText()
                     val type = object : TypeToken<List<CombinedAyah>>() {}.type
                     val list = Gson().fromJson<List<CombinedAyah>>(json, type)
-                    
-                    val hasMissingWords = list.any { it.words.isEmpty() }
-                    
-                    if (!list.isNullOrEmpty() && !hasMissingWords) {
+                    if (!list.isNullOrEmpty()) {
                         val cleanedList = cleanCombinedAyahList(list)
-                        cachedPageDetails[pageNumber] = cleanedList
-                        return@withContext cleanedList
+                        cachedList = cleanedList
+                        val hasMissingWords = list.any { it.words.isEmpty() }
+                        val hasMissingTajweed = list.any { it.textUthmaniTajweed.isNullOrEmpty() }
+                        
+                        if (!hasMissingWords && !hasMissingTajweed) {
+                            cachedPageDetails[cacheKey] = cleanedList
+                            return@withContext cleanedList
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -329,62 +513,68 @@ class QuranRepository(
             }
 
             try {
-                val arabicResponse = api.getPageArabic(pageNumber)
-                val audioResponse = api.getPageAudio(pageNumber)
-                
-                val quranComResponse = try {
-                    quranComApi.getPageVerses(pageNumber)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
-
-                val quranComTafsirResponse = try {
-                    quranComApi.getPageTafsirs(pageNumber)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
-
-                if (arabicResponse.code == 200 && audioResponse.code == 200) {
-                    val arabicAyahs = arabicResponse.data.ayahs
-                    val audioAyahs = audioResponse.data.ayahs
+                val result = withTimeoutOrNull(5000) {
+                    val arabicResponse = api.getPageArabic(pageNumber)
+                    val audioResponse = api.getPageEdition(pageNumber, audioEdition)
                     
-                    val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
-                        val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
-                        val verseKey = "${arabicAyah.surah?.number ?: 0}:${arabicAyah.numberInSurah}"
-                        val tafsirItem = quranComTafsirResponse?.tafsirs?.find { it.verseKey == verseKey }
-                        val tafsir = tafsirItem?.text?.let { android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_COMPACT).toString() }
-                        CombinedAyah(
-                            number = arabicAyah.number,
-                            numberInSurah = arabicAyah.numberInSurah,
-                            page = arabicAyah.page,
-                            juz = arabicAyah.juz,
-                            surahNumber = arabicAyah.surah?.number ?: 0,
-                            arabicText = processArabicText(arabicAyah),
-                            bengaliText = "", // Hafezi mode doesn't need translation
-                            tafsirText = tafsir,
-                            audioUrl = audioAyahs.getOrNull(index)?.audio,
-                            words = quranComVerse?.words ?: emptyList()
-                        )
-                    }
-                    val cleaned = cleanCombinedAyahList(combined)
-                    cachedPageDetails[pageNumber] = cleaned
-                    
-                    try {
-                        cacheFile.parentFile?.mkdirs()
-                        cacheFile.writeText(Gson().toJson(cleaned))
+                    val quranComResponse = try {
+                        quranComApi.getPageVerses(pageNumber)
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        null
                     }
-                    cleaned
+
+                    val quranComTafsirResponse = getCombinedPageTafsirs(pageNumber, tafsirIdsStr)
+
+                    if (arabicResponse.code == 200 && audioResponse.code == 200) {
+                        val arabicAyahs = arabicResponse.data.ayahs
+                        val audioAyahs = audioResponse.data.ayahs
+                        
+                        val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
+                            val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
+                            val verseKey = "${arabicAyah.surah?.number ?: 0}:${arabicAyah.numberInSurah}"
+                            val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
+                            CombinedAyah(
+                                number = arabicAyah.number,
+                                numberInSurah = arabicAyah.numberInSurah,
+                                page = arabicAyah.page,
+                                juz = arabicAyah.juz,
+                                surahNumber = arabicAyah.surah?.number ?: 0,
+                                arabicText = processArabicText(arabicAyah),
+                                bengaliText = "", // Hafezi mode doesn't need translation
+                                tafsirText = tafsir,
+                                audioUrl = audioAyahs.getOrNull(index)?.audio,
+                                words = quranComVerse?.words ?: emptyList(),
+                                textUthmaniTajweed = quranComVerse?.textUthmaniTajweed
+                            )
+                        }
+                        val cleaned = cleanCombinedAyahList(combined)
+                        cachedPageDetails[cacheKey] = cleaned
+                        
+                        try {
+                            cacheFile.parentFile?.mkdirs()
+                            cacheFile.writeText(Gson().toJson(cleaned))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        cleaned
+                    } else {
+                        null
+                    }
+                }
+
+                if (result != null) {
+                    result
                 } else {
-                    throw Exception("Failed to load Page details: Invalid response.")
+                    cachedList?.let { return@withContext it }
+                    throw Exception("Failed to load Page details: Timeout or invalid response.")
                 }
             } catch (e: retrofit2.HttpException) {
+                cachedList?.let { return@withContext it }
                 val errorBody = e.response()?.errorBody()?.string()
                 throw Exception("HTTP Error ${e.code()}: $errorBody")
             } catch (e: Exception) {
+                cachedList?.let { return@withContext it }
                 throw Exception(e.toString())
             }
         }
@@ -394,21 +584,47 @@ class QuranRepository(
      * Fetches a specific Juz of the Quran
      */
     suspend fun getJuzCombined(juzNumber: Int): List<CombinedAyah> {
-        cachedJuzDetails[juzNumber]?.let { return it }
+        val tafsirIdsSet = settingsRepository.selectedTafsirIdsFlow.first()
+        val tafsirIdsStr = tafsirIdsSet.joinToString(",")
+        val audioEdition = settingsRepository.selectedQariIdFlow.first()
+        val cacheKey = "${juzNumber}_${tafsirIdsStr}"
+        val inMemory = cachedJuzDetails[cacheKey]
+        if (inMemory != null) {
+            val hasWords = inMemory.any { it.words.isNotEmpty() }
+            val hasTajweed = inMemory.any { !it.textUthmaniTajweed.isNullOrEmpty() }
+            val hasBengaliWords = hasWords && inMemory.any { ayah ->
+                ayah.words.any { word ->
+                    word.translation?.text?.any { it in '\u0980'..'\u09FF' } == true
+                }
+            }
+            if (hasBengaliWords && hasTajweed) {
+                return inMemory
+            }
+        }
         return withContext(Dispatchers.IO) {
-            val cacheFile = getJuzDetailsCacheFile(juzNumber)
+            val cacheFile = getJuzDetailsCacheFile(juzNumber, "${tafsirIdsStr}_${audioEdition}")
+            var cachedList: List<CombinedAyah>? = null
             if (cacheFile.exists() && cacheFile.length() > 0) {
                 try {
                     val json = cacheFile.readText()
                     val type = object : TypeToken<List<CombinedAyah>>() {}.type
                     val list = Gson().fromJson<List<CombinedAyah>>(json, type)
-                    
-                    val hasMissingWords = list.any { it.words.isEmpty() }
-                    
-                    if (!list.isNullOrEmpty() && !hasMissingWords) {
+                    if (!list.isNullOrEmpty()) {
                         val cleanedList = cleanCombinedAyahList(list)
-                        cachedJuzDetails[juzNumber] = cleanedList
-                        return@withContext cleanedList
+                        cachedList = cleanedList
+                        
+                        // If it has words for some ayahs and contains Bengali, return it immediately
+                        val hasWords = list.any { it.words.isNotEmpty() }
+                        val hasTajweed = list.any { !it.textUthmaniTajweed.isNullOrEmpty() }
+                        val hasBengaliWords = hasWords && list.any { ayah ->
+                            ayah.words.any { word ->
+                                word.translation?.text?.any { it in '\u0980'..'\u09FF' } == true
+                            }
+                        }
+                        if (hasBengaliWords && hasTajweed) {
+                            cachedJuzDetails[cacheKey] = cleanedList
+                            return@withContext cleanedList
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -416,65 +632,68 @@ class QuranRepository(
             }
 
             try {
-                val arabicResponse = api.getJuzArabic(juzNumber)
-                val bengaliResponse = api.getJuzBengali(juzNumber)
-                val audioResponse = api.getJuzAudio(juzNumber)
-                
-                val quranComResponse = try {
-                    quranComApi.getJuzVerses(juzNumber)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
-
-                val quranComTafsirResponse = try {
-                    quranComApi.getJuzTafsirs(juzNumber)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
-
-                if (arabicResponse.code == 200 && bengaliResponse.code == 200) {
-                    val arabicAyahs = arabicResponse.data.ayahs
-                    val bengaliAyahs = bengaliResponse.data.ayahs
-                    val audioAyahs = audioResponse.data.ayahs
+                val result = withTimeoutOrNull(5000) {
+                    val arabicResponse = api.getJuzArabic(juzNumber)
+                    val bengaliResponse = api.getJuzBengali(juzNumber)
+                    val audioResponse = api.getJuzEdition(juzNumber, audioEdition)
                     
-                    val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
-                        val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
-                        val verseKey = "${arabicAyah.surah?.number ?: 0}:${arabicAyah.numberInSurah}"
-                        val tafsirItem = quranComTafsirResponse?.tafsirs?.find { it.verseKey == verseKey }
-                        val tafsir = tafsirItem?.text?.let { android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_COMPACT).toString() }
-                        CombinedAyah(
-                            number = arabicAyah.number,
-                            numberInSurah = arabicAyah.numberInSurah,
-                            page = arabicAyah.page,
-                            juz = arabicAyah.juz,
-                            surahNumber = arabicAyah.surah?.number ?: 0,
-                            arabicText = processArabicText(arabicAyah),
-                            bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
-                            tafsirText = tafsir,
-                            audioUrl = audioAyahs.getOrNull(index)?.audio,
-                            words = quranComVerse?.words ?: emptyList()
-                        )
-                    }
-                    val cleaned = cleanCombinedAyahList(combined)
-                    cachedJuzDetails[juzNumber] = cleaned
-                    
-                    try {
-                        cacheFile.parentFile?.mkdirs()
-                        cacheFile.writeText(Gson().toJson(cleaned))
+                    val quranComResponse = try {
+                        quranComApi.getJuzVerses(juzNumber)
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        null
                     }
-                    cleaned
-                } else {
-                    throw Exception("Failed to load Juz details: Invalid response structure.")
+
+                    val quranComTafsirResponse = getCombinedJuzTafsirs(juzNumber, tafsirIdsStr)
+
+                    if (arabicResponse.code == 200 && bengaliResponse.code == 200) {
+                        val arabicAyahs = arabicResponse.data.ayahs
+                        val bengaliAyahs = bengaliResponse.data.ayahs
+                        val audioAyahs = audioResponse.data.ayahs
+                        
+                        val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
+                            val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
+                            val verseKey = "${arabicAyah.surah?.number ?: 0}:${arabicAyah.numberInSurah}"
+                            val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
+                            val cachedWords = cachedList?.getOrNull(index)?.words ?: emptyList()
+                            CombinedAyah(
+                                number = arabicAyah.number,
+                                numberInSurah = arabicAyah.numberInSurah,
+                                page = arabicAyah.page,
+                                juz = arabicAyah.juz,
+                                surahNumber = arabicAyah.surah?.number ?: 0,
+                                arabicText = processArabicText(arabicAyah),
+                                bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
+                                tafsirText = tafsir,
+                                audioUrl = audioAyahs.getOrNull(index)?.audio,
+                                words = if (quranComVerse != null && quranComVerse.words.isNotEmpty()) quranComVerse.words else cachedWords,
+                                textUthmaniTajweed = quranComVerse?.textUthmaniTajweed ?: cachedList?.getOrNull(index)?.textUthmaniTajweed
+                            )
+                        }
+                        val cleaned = cleanCombinedAyahList(combined)
+                        cachedJuzDetails[cacheKey] = cleaned
+                        
+                        try {
+                            cacheFile.parentFile?.mkdirs()
+                            cacheFile.writeText(Gson().toJson(cleaned))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        cleaned
+                    } else {
+                        null
+                    }
                 }
-            } catch (e: retrofit2.HttpException) {
-                val errorBody = e.response()?.errorBody()?.string()
-                throw Exception("HTTP Error ${e.code()}: $errorBody")
+
+                if (result != null) {
+                    result
+                } else {
+                    cachedList?.let { return@withContext it }
+                    throw Exception("Failed to load Juz details: Timeout or invalid response.")
+                }
             } catch (e: Exception) {
-                throw Exception(e.toString())
+                cachedList?.let { return@withContext it }
+                throw e
             }
         }
     }
@@ -490,6 +709,20 @@ class QuranRepository(
             } else {
                 throw Exception("Search failed: ${response.status}")
             }
+        }
+    }
+
+    private var cachedTafsirs: List<com.example.data.model.TafsirResourceDto>? = null
+
+    suspend fun getAvailableTafsirs(language: String = "bn"): List<com.example.data.model.TafsirResourceDto> {
+        if (cachedTafsirs != null) return cachedTafsirs!!
+        return try {
+            val response = quranComApi.getAvailableTafsirs(language)
+            cachedTafsirs = response.tafsirs
+            cachedTafsirs!!
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
         }
     }
 }

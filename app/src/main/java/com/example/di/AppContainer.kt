@@ -19,7 +19,7 @@ import com.example.BuildConfig
  */
 class AppContainer(private val context: Context) {
     private val BASE_URL = "https://api.alquran.cloud/v1/"
-    private val QURAN_COM_BASE_URL = "https://apis-prelive.quran.foundation/content/api/v4/"
+    private val QURAN_COM_BASE_URL = "https://api.quran.com/api/v4/"
 
     private val qfTokenManager = QfTokenManager()
 
@@ -29,7 +29,7 @@ class AppContainer(private val context: Context) {
             val urlString = originalRequest.url.toString()
             
             // Check if this request is to the Quran Foundation Content API
-            if (urlString.contains("apis-prelive.quran.foundation") || urlString.contains("apis.quran.foundation")) {
+            if (urlString.contains("apis.quran.foundation")) {
                 val token = qfTokenManager.getAccessToken() ?: ""
                 val clientId = BuildConfig.QURAN_FOUNDATION_CLIENT_ID
                 
@@ -94,7 +94,7 @@ class AppContainer(private val context: Context) {
     }
 
     val quranRepository: QuranRepository by lazy {
-        QuranRepository(quranApi, quranComApi, context)
+        QuranRepository(quranApi, quranComApi, settingsRepository, context)
     }
 
     val settingsRepository: SettingsRepository by lazy {

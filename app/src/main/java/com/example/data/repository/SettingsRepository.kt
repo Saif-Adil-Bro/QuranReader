@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,8 @@ private val Context.dataStore by preferencesDataStore(name = "settings")
 class SettingsRepository(val context: Context) {
 
     private val SHOW_TRANSLATION_KEY = booleanPreferencesKey("show_translation")
+    private val SHOW_TRANSLITERATION_KEY = booleanPreferencesKey("show_transliteration")
+    private val SHOW_TAJWEED_KEY = booleanPreferencesKey("show_tajweed")
     private val LAST_READ_SURAH_KEY = intPreferencesKey("last_read_surah")
     private val LAST_READ_PAGE_KEY = intPreferencesKey("last_read_page")
     private val LAST_READ_MUSHAF_ID_KEY = stringPreferencesKey("last_read_mushaf_id")
@@ -36,9 +39,22 @@ class SettingsRepository(val context: Context) {
     private val REPEAT_COUNT_KEY = intPreferencesKey("repeat_count")
     private val SHOW_WAQF_SIGNS_KEY = booleanPreferencesKey("show_waqf_signs")
     private val HAS_ASKED_DOWNLOAD_PROMPT_KEY = booleanPreferencesKey("has_asked_download_prompt")
+    
+    // Tafsir Settings
+    private val SELECTED_TAFSIR_IDS_KEY = stringSetPreferencesKey("selected_tafsir_ids")
+    
+    // Qari Settings
+    private val SELECTED_QARI_ID_KEY = stringPreferencesKey("selected_qari_id")
+    private val MUSHAF_SCROLL_DIRECTION_KEY = stringPreferencesKey("mushaf_scroll_direction")
+    private val DEFAULT_MUSHAF_ID_KEY = stringPreferencesKey("default_mushaf_id")
 
     val showTranslationFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[SHOW_TRANSLATION_KEY] ?: true }
+
+    val showTransliterationFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[SHOW_TRANSLITERATION_KEY] ?: false }
+    val showTajweedFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[SHOW_TAJWEED_KEY] ?: true }
 
     val lastReadSurahFlow: Flow<Int> = context.dataStore.data
         .map { preferences -> preferences[LAST_READ_SURAH_KEY] ?: 1 }
@@ -82,8 +98,27 @@ class SettingsRepository(val context: Context) {
     val hasAskedDownloadPromptFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[HAS_ASKED_DOWNLOAD_PROMPT_KEY] ?: false }
 
+    val selectedTafsirIdsFlow: Flow<Set<String>> = context.dataStore.data
+        .map { preferences -> preferences[SELECTED_TAFSIR_IDS_KEY] ?: setOf("164", "169") }
+
+    val selectedQariIdFlow: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[SELECTED_QARI_ID_KEY] ?: "ar.alafasy" }
+
+    val mushafScrollDirectionFlow: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[MUSHAF_SCROLL_DIRECTION_KEY] ?: "Horizontal" }
+
+    val defaultMushafIdFlow: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[DEFAULT_MUSHAF_ID_KEY] ?: "hafizi_15line" }
+
     suspend fun setShowTranslation(show: Boolean) {
         context.dataStore.edit { preferences -> preferences[SHOW_TRANSLATION_KEY] = show }
+    }
+
+    suspend fun setShowTransliteration(show: Boolean) {
+        context.dataStore.edit { preferences -> preferences[SHOW_TRANSLITERATION_KEY] = show }
+    }
+    suspend fun setShowTajweed(show: Boolean) {
+        context.dataStore.edit { preferences -> preferences[SHOW_TAJWEED_KEY] = show }
     }
 
     suspend fun setLastReadSurah(surahNumber: Int) {
@@ -139,6 +174,22 @@ class SettingsRepository(val context: Context) {
 
     suspend fun setHasAskedDownloadPrompt(hasAsked: Boolean) {
         context.dataStore.edit { preferences -> preferences[HAS_ASKED_DOWNLOAD_PROMPT_KEY] = hasAsked }
+    }
+
+    suspend fun setSelectedTafsirIds(tafsirIds: Set<String>) {
+        context.dataStore.edit { preferences -> preferences[SELECTED_TAFSIR_IDS_KEY] = tafsirIds }
+    }
+
+    suspend fun setSelectedQariId(qariId: String) {
+        context.dataStore.edit { preferences -> preferences[SELECTED_QARI_ID_KEY] = qariId }
+    }
+
+    suspend fun setMushafScrollDirection(direction: String) {
+        context.dataStore.edit { preferences -> preferences[MUSHAF_SCROLL_DIRECTION_KEY] = direction }
+    }
+
+    suspend fun setDefaultMushafId(mushafId: String) {
+        context.dataStore.edit { preferences -> preferences[DEFAULT_MUSHAF_ID_KEY] = mushafId }
     }
 
     fun getMushafOffset(mushafId: String): Flow<Int> {

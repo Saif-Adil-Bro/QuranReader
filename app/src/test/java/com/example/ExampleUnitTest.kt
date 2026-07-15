@@ -54,7 +54,7 @@ class ExampleUnitTest {
                     println("Ayah 2 has ${quranComVerse.words.size} words.")
                     assert(quranComVerse.words.isNotEmpty()) { "Ayah 2 word list should not be empty" }
                     quranComVerse.words.forEach { w ->
-                        println("  Word Position: ${w.position}, Arabic: ${w.textUthmani}, Bengali Translation: ${w.translation?.text ?: "N/A"}")
+                        println("  Word Position: ${w.position}, Arabic: ${w.textUthmani}, Bengali Translation: ${w.translation?.text ?: "N/A"}, Audio URL: ${w.audioUrl}")
                     }
                 } else {
                     println("DIAGNOSTIC: Could not find QuranComVerse for verseNumber = $targetAyahIndex")

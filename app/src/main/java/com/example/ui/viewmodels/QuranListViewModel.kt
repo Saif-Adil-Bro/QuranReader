@@ -50,7 +50,7 @@ class QuranListViewModel(
         } else {
             val filteredList = allSurahs.filter {
                 it.englishName.contains(query, ignoreCase = true) ||
-                it.name.contains(query) ||
+                (it.name ?: "").contains(query) ||
                 it.englishNameTranslation.contains(query, ignoreCase = true)
             }
             _uiState.value = UiState.Success(filteredList)

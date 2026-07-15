@@ -32,6 +32,16 @@ class SurahDetailViewModel(
     private val bookmarkDao: BookmarkDao
 ) : ViewModel() {
 
+    private var currentSelectedQariId = "ar.alafasy"
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.selectedQariIdFlow.collect { qariId ->
+                currentSelectedQariId = qariId
+            }
+        }
+    }
+
     private val _uiState = MutableStateFlow<UiState<List<CombinedAyah>>>(UiState.Loading)
     val uiState: StateFlow<UiState<List<CombinedAyah>>> = _uiState.asStateFlow()
 
@@ -59,6 +69,20 @@ class SurahDetailViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = true
+        )
+        
+    val showTransliteration: StateFlow<Boolean> = settingsRepository.showTransliterationFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    val showTajweed: StateFlow<Boolean> = settingsRepository.showTajweedFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
         )
 
     // Observe Font Sizes
@@ -144,7 +168,7 @@ class SurahDetailViewModel(
     }
 
     fun playAyah(ayah: CombinedAyah, surahNumber: Int) {
-        val audioUrl = ayah.audioUrl ?: "https://cdn.islamic.network/quran/audio/128/ar.alafasy/${ayah.number}.mp3"
+        val audioUrl = ayah.audioUrl ?: "https://cdn.islamic.network/quran/audio/128/$currentSelectedQariId/${ayah.number}.mp3"
         audioRepository.playAudio(audioUrl, ayah.numberInSurah)
         
         // Setup completion callback for continuous play

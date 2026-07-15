@@ -36,6 +36,7 @@ import com.example.data.model.appendStyledWaqfText
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.ReadingModeViewModel
+import androidx.activity.compose.BackHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +45,7 @@ fun ReadingModeScreen(
     viewModel: ReadingModeViewModel,
     onNavigateBack: () -> Unit
 ) {
+    BackHandler(onBack = onNavigateBack)
     val uiState by viewModel.uiState.collectAsState()
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val arabicFontName by viewModel.arabicFontName.collectAsState()

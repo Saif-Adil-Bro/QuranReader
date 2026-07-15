@@ -61,6 +61,10 @@ val arabicFontsList = listOf(
 )
 
 fun getArabicFont(name: String): FontFamily {
+    // Temporarily using FontFamily.Default for emulator compatibility.
+    // We can easily revert this to return the respective custom fonts when ready.
+    return FontFamily.Default
+    /*
     return when (name) {
         "Uthman Taha" -> uthmanTahaFont
         "Amiri" -> amiriFont
@@ -71,6 +75,7 @@ fun getArabicFont(name: String): FontFamily {
         "Amiri Quran" -> amiriQuranFont
         else -> uthmanTahaFont
     }
+    */
 }
 
 // Set of Material typography styles to start with

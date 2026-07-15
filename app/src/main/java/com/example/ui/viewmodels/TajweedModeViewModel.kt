@@ -16,11 +16,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class HafeziModeViewModel(
+class TajweedModeViewModel(
     private val getPageDetailsUseCase: GetPageDetailsUseCase,
     private val audioRepository: AudioRepository,
     private val settingsRepository: SettingsRepository,
@@ -47,7 +46,7 @@ class HafeziModeViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
 
     val showTajweed: StateFlow<Boolean> = settingsRepository.showTajweedFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true) // Force true or use settings
 
     val arabicFontSize: StateFlow<Float> = settingsRepository.arabicFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 24f)
@@ -64,10 +63,10 @@ class HafeziModeViewModel(
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 2.0f)
 
-    private var currentRepeatIteration = 0
     private var playlist: List<CombinedAyah> = emptyList()
+
+    private var currentRepeatIteration = 0
     private var currentPlaylistIndex = 0
-    private var playbackJob: Job? = null
 
     fun loadPage(pageNumber: Int) {
         if (pageNumber !in 1..604) return
@@ -75,12 +74,12 @@ class HafeziModeViewModel(
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
+                // Ensure Tajweed mode is enabled in setting data store
+                settingsRepository.setShowTajweed(true)
+
                 val ayahs = getPageDetailsUseCase(pageNumber)
                 playlist = ayahs
                 _uiState.value = UiState.Success(ayahs)
-                
-                // Save last read page
-                settingsRepository.setLastReadPage(pageNumber)
                 
                 // Check if memorized
                 val memorizedEntity = memorizedPageDao.getMemorizedPage(pageNumber)
@@ -96,45 +95,45 @@ class HafeziModeViewModel(
         }
     }
 
-    fun setRepeatCount(count: Int) {
+    fun togglePageMemorized() {
+        val page = _currentPage.value
         viewModelScope.launch {
-            settingsRepository.setRepeatCount(count)
+            val currentlyMemorized = _isPageMemorized.value
+            if (currentlyMemorized) {
+                memorizedPageDao.deleteMemorizedPage(page)
+                _isPageMemorized.value = false
+            } else {
+                memorizedPageDao.insertMemorizedPage(MemorizedPageEntity(page))
+                _isPageMemorized.value = true
+            }
         }
     }
 
-    fun setArabicFontSize(size: Float) {
+    fun toggleBookmark() {
+        val page = _currentPage.value
         viewModelScope.launch {
-            settingsRepository.setArabicFontSize(size)
+            val currentlyBookmarked = _isBookmarked.value
+            if (currentlyBookmarked) {
+                bookmarkDao.deleteBookmarkByReference("PAGE", page)
+                _isBookmarked.value = false
+            } else {
+                bookmarkDao.insertBookmark(BookmarkEntity(type = "PAGE", referenceId = page, name = "Page $page"))
+                _isBookmarked.value = true
+            }
         }
     }
 
-    fun setArabicFontName(fontName: String) {
-        viewModelScope.launch {
-            settingsRepository.setArabicFontName(fontName)
+    fun nextPage() {
+        if (_currentPage.value < 604) {
+            stopAudio()
+            loadPage(_currentPage.value + 1)
         }
     }
 
-    fun setTheme(theme: String) {
-        viewModelScope.launch {
-            settingsRepository.setTheme(theme)
-        }
-    }
-
-    fun setShowWaqfSigns(show: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setShowWaqfSigns(show)
-        }
-    }
-
-    fun setShowTajweed(show: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setShowTajweed(show)
-        }
-    }
-
-    fun setArabicLineSpacing(spacing: Float) {
-        viewModelScope.launch {
-            settingsRepository.setArabicLineSpacing(spacing)
+    fun previousPage() {
+        if (_currentPage.value > 1) {
+            stopAudio()
+            loadPage(_currentPage.value - 1)
         }
     }
 
@@ -178,7 +177,6 @@ class HafeziModeViewModel(
         currentPlaylistIndex++
         
         if (currentPlaylistIndex >= playlist.size) {
-            // Reached end of page, check repeat
             currentRepeatIteration++
             val targetRepeat = repeatCount.value
             
@@ -202,56 +200,55 @@ class HafeziModeViewModel(
                 }
                 audioRepository.playAudio(ayah.audioUrl, ayah.number)
             } else {
-                // Skip if no audio
                 playNextAyah()
             }
-        }
-    }
-
-    fun toggleMemorized() {
-        viewModelScope.launch {
-            val page = _currentPage.value
-            val current = _isPageMemorized.value
-            if (current) {
-                memorizedPageDao.deleteMemorizedPage(page)
-                _isPageMemorized.value = false
-            } else {
-                memorizedPageDao.insertMemorizedPage(MemorizedPageEntity(page))
-                _isPageMemorized.value = true
-            }
-        }
-    }
-
-    fun toggleBookmark() {
-        viewModelScope.launch {
-            val page = _currentPage.value
-            val current = _isBookmarked.value
-            if (current) {
-                bookmarkDao.deleteBookmarkByReference("PAGE", page)
-                _isBookmarked.value = false
-            } else {
-                bookmarkDao.insertBookmark(BookmarkEntity(type = "PAGE", referenceId = page, name = "Page $page"))
-                _isBookmarked.value = true
-            }
-        }
-    }
-
-    fun nextPage() {
-        if (_currentPage.value < 604) {
-            stopAudio()
-            loadPage(_currentPage.value + 1)
-        }
-    }
-
-    fun previousPage() {
-        if (_currentPage.value > 1) {
-            stopAudio()
-            loadPage(_currentPage.value - 1)
         }
     }
 
     override fun onCleared() {
         super.onCleared()
         audioRepository.releasePlayer()
+    }
+
+    fun setArabicFontSize(size: Float) {
+        viewModelScope.launch {
+            settingsRepository.setArabicFontSize(size)
+        }
+    }
+
+    fun setArabicLineSpacing(spacing: Float) {
+        viewModelScope.launch {
+            settingsRepository.setArabicLineSpacing(spacing)
+        }
+    }
+
+    fun setArabicFontName(name: String) {
+        viewModelScope.launch {
+            settingsRepository.setArabicFontName(name)
+        }
+    }
+
+    fun setShowWaqfSigns(show: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShowWaqfSigns(show)
+        }
+    }
+
+    fun setTheme(themeName: String) {
+        viewModelScope.launch {
+            settingsRepository.setTheme(themeName)
+        }
+    }
+
+    fun setRepeatCount(count: Int) {
+        viewModelScope.launch {
+            settingsRepository.setRepeatCount(count)
+        }
+    }
+
+    fun setShowTajweed(show: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShowTajweed(show)
+        }
     }
 }

@@ -40,8 +40,8 @@ interface QuranApi {
     @GET("page/{pageNumber}/quran-uthmani")
     suspend fun getPageArabic(@Path("pageNumber") pageNumber: Int): ApiResponse<com.example.data.model.PageResponse>
 
-    @GET("page/{pageNumber}/ar.alafasy")
-    suspend fun getPageAudio(@Path("pageNumber") pageNumber: Int): ApiResponse<com.example.data.model.PageResponse>
+    @GET("page/{pageNumber}/{edition}")
+    suspend fun getPageEdition(@Path("pageNumber") pageNumber: Int, @Path("edition") edition: String): ApiResponse<com.example.data.model.PageResponse>
 
     /**
      * Fetches a specific Juz of the Quran (Arabic)
@@ -59,9 +59,10 @@ interface QuranApi {
         @Path("juzNumber") juzNumber: Int
     ): ApiResponse<com.example.data.model.JuzResponse>
 
-    @GET("juz/{juzNumber}/ar.alafasy")
-    suspend fun getJuzAudio(
-        @Path("juzNumber") juzNumber: Int
+    @GET("juz/{juzNumber}/{edition}")
+    suspend fun getJuzEdition(
+        @Path("juzNumber") juzNumber: Int,
+        @Path("edition") edition: String
     ): ApiResponse<com.example.data.model.JuzResponse>
 
     /**
