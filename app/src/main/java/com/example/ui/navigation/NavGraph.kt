@@ -141,6 +141,9 @@ fun AppNavGraph(
                 onNavigateToTajweedIndex = {
                     navController.navigate("tajweed/index")
                 },
+                onNavigateToTajweedMode = { page ->
+                    navController.navigate("tajweed/$page")
+                },
                 onNavigateToPlayer = {
                     if (viewModel.currentPlayingSurah.value != null) {
                         navController.navigate("recitation/player")

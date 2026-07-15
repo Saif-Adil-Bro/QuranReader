@@ -19,13 +19,13 @@ class MushafViewerViewModel(
 
     val theme: StateFlow<String> = settingsRepository.themeFlow.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
+        started = SharingStarted.Lazily,
         initialValue = "Light"
     )
 
     val scrollDirection: StateFlow<String> = settingsRepository.mushafScrollDirectionFlow.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
+        started = SharingStarted.Lazily,
         initialValue = "Horizontal"
     )
 
@@ -81,6 +81,7 @@ class MushafViewerViewModel(
             viewModelScope.launch {
                 if (currentMushafId.isNotEmpty()) {
                     settingsRepository.setLastReadMushaf(currentMushafId, pageNumber)
+                    settingsRepository.setLastReadMode("MUSHAF")
                 }
             }
         }

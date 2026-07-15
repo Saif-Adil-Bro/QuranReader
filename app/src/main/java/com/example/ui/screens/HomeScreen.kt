@@ -136,11 +136,15 @@ fun HomeScreen(
     onNavigateToMushafPage: (String, Int, Boolean) -> Unit,
     onNavigateToSurahWithAyah: (Int, String, Int) -> Unit,
     onNavigateToTajweedIndex: () -> Unit,
+    onNavigateToTajweedMode: (Int) -> Unit,
     onNavigateToPlayer: () -> Unit
 ) {
     val context = LocalContext.current
     val lastReadSurah by viewModel.lastReadSurah.collectAsState()
     val lastReadPage by viewModel.lastReadPage.collectAsState()
+    val lastReadMode by viewModel.lastReadMode.collectAsState()
+    val lastReadMushafId by viewModel.lastReadMushafId.collectAsState()
+    val lastReadMushafPage by viewModel.lastReadMushafPage.collectAsState()
     val defaultMushafId by viewModel.defaultMushafId.collectAsState()
     val surahList by viewModel.surahs.collectAsState()
     val currentTheme by viewModel.theme.collectAsState()
@@ -202,8 +206,10 @@ fun HomeScreen(
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { viewModel.setHasAskedDownloadPrompt() }
+                OutlinedButton(
+                    onClick = { viewModel.setHasAskedDownloadPrompt() },
+                    border = BorderStroke(1.dp, GrayText.copy(alpha = 0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = GrayText)
                 ) {
                     Text("না, পরে করব", color = GrayText)
                 }
@@ -257,7 +263,17 @@ fun HomeScreen(
                     )
                 }
             },
-            confirmButton = {},
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.stopQuranDownload() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("ডাউনলোড বন্ধ করুন", color = Color.White)
+                }
+            },
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp)
         )
@@ -314,8 +330,10 @@ fun HomeScreen(
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showMushafDownloadRequestDialog = false }
+                OutlinedButton(
+                    onClick = { showMushafDownloadRequestDialog = false },
+                    border = BorderStroke(1.dp, (if (isDark) Color.White else Color.Black).copy(alpha = 0.4f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isDark) Color.White else Color.Black)
                 ) {
                     Text("বাতিল", color = if (isDark) Color.White else Color.Black)
                 }
@@ -507,9 +525,15 @@ fun HomeScreen(
                     BookmarksAndLastReadSection(
                         lastReadSurah = lastReadSurah,
                         lastReadPage = lastReadPage,
+                        lastReadMode = lastReadMode,
+                        lastReadMushafId = lastReadMushafId,
+                        lastReadMushafPage = lastReadMushafPage,
                         bookmarks = bookmarks,
                         onSurahClick = onNavigateToSurah,
-                        onPageClick = onNavigateToHafeziMode,
+                        onNavigateToHafeziMode = onNavigateToHafeziMode,
+                        onNavigateToReadingMode = onNavigateToReadingMode,
+                        onNavigateToTajweedMode = onNavigateToTajweedMode,
+                        onNavigateToMushafPage = onNavigateToMushafPage,
                         onNavigateToSurahWithAyah = onNavigateToSurahWithAyah,
                         onDeleteBookmark = { viewModel.deleteBookmark(it) }
                     )
@@ -607,8 +631,16 @@ fun SearchSection(onClick: () -> Unit) {
 fun QuickAccessSection(
     selectedTab: Int,
     lastReadSurah: Int,
+    lastReadPage: Int,
+    lastReadMode: String,
+    lastReadMushafId: String?,
+    lastReadMushafPage: Int,
     onTabSelected: (Int) -> Unit,
-    onSurahClick: (Int) -> Unit
+    onSurahClick: (Int) -> Unit,
+    onNavigateToHafeziMode: (Int) -> Unit,
+    onNavigateToReadingMode: (Int) -> Unit,
+    onNavigateToTajweedMode: (Int) -> Unit,
+    onNavigateToMushafPage: (String, Int, Boolean) -> Unit
 ) {
     val lastReadSurahName = QuranData.surahNames.find { it.first == lastReadSurah }?.second?.first ?: "আল ফাতিহা"
 
@@ -625,7 +657,21 @@ fun QuickAccessSection(
                 .weight(1.1f)
                 .shadow(2.dp, RoundedCornerShape(100.dp))
                 .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
-                .clickable { onSurahClick(lastReadSurah) }
+                .clickable {
+                    when (lastReadMode) {
+                        "HAFEZI" -> onNavigateToHafeziMode(lastReadPage)
+                        "READING" -> onNavigateToReadingMode(lastReadSurah)
+                        "TAJWEED" -> onNavigateToTajweedMode(lastReadPage)
+                        "MUSHAF" -> {
+                            if (lastReadMushafId != null) {
+                                onNavigateToMushafPage(lastReadMushafId, lastReadMushafPage, false)
+                            } else {
+                                onNavigateToHafeziMode(lastReadPage)
+                            }
+                        }
+                        else -> onSurahClick(lastReadSurah)
+                    }
+                }
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -639,8 +685,15 @@ fun QuickAccessSection(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                    val subtitleText = when (lastReadMode) {
+                        "HAFEZI" -> "হাফেজী: ${lastReadPage.toBengaliNumerals()}"
+                        "TAJWEED" -> "তাজবীদ: ${lastReadPage.toBengaliNumerals()}"
+                        "MUSHAF" -> "মুসহাফ: ${lastReadMushafPage.toBengaliNumerals()}"
+                        "READING" -> "রিডিং: $lastReadSurahName"
+                        else -> "বিস্তারিত: $lastReadSurahName"
+                    }
                     Text("সর্বশেষ পঠিত", color = GrayText, fontSize = 9.sp, lineHeight = 10.sp, maxLines = 1)
-                    Text(lastReadSurahName, color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, lineHeight = 12.sp)
+                    Text(subtitleText, color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, lineHeight = 12.sp)
                 }
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GrayText, modifier = Modifier.size(16.dp))
             }
@@ -1277,9 +1330,15 @@ private fun getJuzStartSurah(juz: Int): Int {
 fun BookmarksAndLastReadSection(
     lastReadSurah: Int,
     lastReadPage: Int,
+    lastReadMode: String,
+    lastReadMushafId: String?,
+    lastReadMushafPage: Int,
     bookmarks: List<com.example.data.local.entity.BookmarkEntity>,
     onSurahClick: (Int) -> Unit,
-    onPageClick: (Int) -> Unit,
+    onNavigateToHafeziMode: (Int) -> Unit,
+    onNavigateToReadingMode: (Int) -> Unit,
+    onNavigateToTajweedMode: (Int) -> Unit,
+    onNavigateToMushafPage: (String, Int, Boolean) -> Unit,
     onNavigateToSurahWithAyah: (Int, String, Int) -> Unit,
     onDeleteBookmark: (com.example.data.local.entity.BookmarkEntity) -> Unit
 ) {
@@ -1302,7 +1361,21 @@ fun BookmarksAndLastReadSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onSurahClick(lastReadSurah) }
+                    .clickable {
+                        when (lastReadMode) {
+                            "HAFEZI" -> onNavigateToHafeziMode(lastReadPage)
+                            "READING" -> onNavigateToReadingMode(lastReadSurah)
+                            "TAJWEED" -> onNavigateToTajweedMode(lastReadPage)
+                            "MUSHAF" -> {
+                                if (lastReadMushafId != null) {
+                                    onNavigateToMushafPage(lastReadMushafId, lastReadMushafPage, false)
+                                } else {
+                                    onNavigateToHafeziMode(lastReadPage) // Fallback
+                                }
+                            }
+                            else -> onSurahClick(lastReadSurah) // DETAIL mode or default
+                        }
+                    }
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1333,14 +1406,19 @@ fun BookmarksAndLastReadSection(
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
-                    if (lastReadPage > 0) {
-                        Text(
-                            text = "সর্বশেষ হাফেজী পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()}",
-                            fontSize = 11.sp,
-                            color = PrimaryGreen,
-                            fontWeight = FontWeight.Medium
-                        )
+                    val subtitleText = when (lastReadMode) {
+                        "HAFEZI" -> "সর্বশেষ হাফেজী পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()}"
+                        "TAJWEED" -> "সর্বশেষ তাজবীদ পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()}"
+                        "MUSHAF" -> "সর্বশেষ মুসহাফ পৃষ্ঠা: ${lastReadMushafPage.toBengaliNumerals()}"
+                        "READING" -> "সর্বশেষ রিডিং মোড: $lastReadSurahName"
+                        else -> "সর্বশেষ বিস্তারিত: $lastReadSurahName"
                     }
+                    Text(
+                        text = subtitleText,
+                        fontSize = 11.sp,
+                        color = PrimaryGreen,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
@@ -1371,10 +1449,10 @@ fun BookmarksAndLastReadSection(
                         modifier = Modifier.clickable {
                             when (bookmark.type) {
                                 "SURAH" -> onSurahClick(bookmark.referenceId)
-                                "PAGE" -> onPageClick(bookmark.referenceId)
+                                "PAGE" -> onNavigateToHafeziMode(bookmark.referenceId)
                                 "JUZ" -> {
                                     val startPage = getJuzStartPage(bookmark.referenceId)
-                                    onPageClick(startPage)
+                                    onNavigateToHafeziMode(startPage)
                                 }
                                 "AYAH" -> {
                                     val (surahNum, ayahNum) = com.example.data.QuranData.getSurahAndAyahFromGlobal(bookmark.referenceId)

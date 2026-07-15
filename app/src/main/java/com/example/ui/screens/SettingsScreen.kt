@@ -1882,28 +1882,40 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    if (!isDownloading && downloadedCount < 114) {
+                    if (isDownloading) {
                         Button(
-                            onClick = { viewModel.downloadAllQuranData() },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                            onClick = { viewModel.stopQuranDownload() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("ডাউনলোড শুরু করুন", color = Color.White, fontSize = 12.sp)
+                            Text("ডাউনলোড বন্ধ করুন", color = Color.White, fontSize = 12.sp)
                         }
-                    }
+                    } else {
+                        if (downloadedCount < 114) {
+                            Button(
+                                onClick = { viewModel.downloadAllQuranData() },
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("ডাউনলোড শুরু করুন", color = Color.White, fontSize = 12.sp)
+                            }
+                        }
 
-                    if (!isDownloading && downloadedCount > 0) {
-                        OutlinedButton(
-                            onClick = { viewModel.deleteDownloadedQuranData() },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                            border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f)),
-                            modifier = Modifier.weight(0.8f)
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("মুছে ফেলুন", fontSize = 12.sp, color = Color.Red)
+                        if (downloadedCount > 0) {
+                            OutlinedButton(
+                                onClick = { viewModel.deleteDownloadedQuranData() },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                                border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f)),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("মুছে ফেলুন", fontSize = 12.sp, color = Color.Red)
+                            }
                         }
                     }
                 }

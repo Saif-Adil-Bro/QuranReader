@@ -44,25 +44,25 @@ class HafeziModeViewModel(
     val currentPlayingAyahNumber: StateFlow<Int?> = audioRepository.currentPlayingAyahNumber
 
     val repeatCount: StateFlow<Int> = settingsRepository.repeatCountFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 1)
 
     val showTajweed: StateFlow<Boolean> = settingsRepository.showTajweedFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
 
     val arabicFontSize: StateFlow<Float> = settingsRepository.arabicFontSizeFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 24f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 24f)
 
     val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Amiri Quran")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Amiri Quran")
 
     val theme: StateFlow<String> = settingsRepository.themeFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Light")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Light")
 
     val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        .stateIn(viewModelScope, SharingStarted.Lazily, true)
 
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 2.0f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 2.0f)
 
     private var currentRepeatIteration = 0
     private var playlist: List<CombinedAyah> = emptyList()
@@ -81,6 +81,7 @@ class HafeziModeViewModel(
                 
                 // Save last read page
                 settingsRepository.setLastReadPage(pageNumber)
+                settingsRepository.setLastReadMode("HAFEZI")
                 
                 // Check if memorized
                 val memorizedEntity = memorizedPageDao.getMemorizedPage(pageNumber)

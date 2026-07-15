@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.CancellationException
 import java.net.URL
 
 import com.example.data.repository.QuranRepository
@@ -194,7 +196,12 @@ class SettingsViewModel(
     }
 
     fun updateDownloadedSurahsCount() {
-        _downloadedSurahsCount.value = quranRepository.getDownloadedSurahsCount()
+        viewModelScope.launch {
+            val count = withContext(Dispatchers.IO) {
+                quranRepository.getDownloadedSurahsCount()
+            }
+            _downloadedSurahsCount.value = count
+        }
     }
 
     fun updateAudioCacheSize() {
@@ -217,8 +224,16 @@ class SettingsViewModel(
         return length
     }
 
+    private var downloadJob: Job? = null
+
+    fun stopQuranDownload() {
+        downloadJob?.cancel()
+        _isDownloadingQuran.value = false
+    }
+
     fun downloadAllQuranData() {
-        viewModelScope.launch {
+        downloadJob?.cancel()
+        downloadJob = viewModelScope.launch(Dispatchers.IO) {
             _isDownloadingQuran.value = true
             _quranDownloadProgress.value = 0
             _quranDownloadError.value = null
@@ -228,17 +243,22 @@ class SettingsViewModel(
                 
                 // Then download each of the 114 Surahs
                 for (i in 1..114) {
+                    ensureActive()
                     if (!quranRepository.isSurahDownloaded(i)) {
                         try {
                             val edition = tanzilTextStyle.value
                             quranRepository.getSurahDetailsCombined(i, edition)
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
                     }
                     _quranDownloadProgress.value = i
-                    _downloadedSurahsCount.value = quranRepository.getDownloadedSurahsCount()
+                    _downloadedSurahsCount.value = i
                 }
+            } catch (e: CancellationException) {
+                // Ignored - job was cancelled
             } catch (e: Exception) {
                 _quranDownloadError.value = e.localizedMessage ?: "ডাউনলোড ব্যর্থ হয়েছে"
             } finally {
@@ -268,21 +288,21 @@ class SettingsViewModel(
     val showTranslation: StateFlow<Boolean> = repository.showTranslationFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = true
         )
 
     val showTransliteration: StateFlow<Boolean> = repository.showTransliterationFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = false
         )
 
     val showTajweed: StateFlow<Boolean> = repository.showTajweedFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = false
         )
         
@@ -299,7 +319,7 @@ class SettingsViewModel(
     val selectedTafsirIds: StateFlow<Set<String>> = repository.selectedTafsirIdsFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = setOf("164", "169")
         )
 
@@ -310,7 +330,7 @@ class SettingsViewModel(
     val selectedQariId: StateFlow<String> = repository.selectedQariIdFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = "ar.alafasy"
         )
 
@@ -336,7 +356,7 @@ class SettingsViewModel(
     val tanzilTextStyle: StateFlow<String> = repository.tanzilTextStyleFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = "quran-simple"
         )
 

@@ -23,28 +23,28 @@ class ReadingModeViewModel(
     val uiState: StateFlow<UiState<List<CombinedAyah>>> = _uiState.asStateFlow()
 
     val arabicFontSize: StateFlow<Float> = settingsRepository.arabicFontSizeFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 24f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 24f)
 
     val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Amiri Quran")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Amiri Quran")
 
     val bengaliFontSize: StateFlow<Float> = settingsRepository.bengaliFontSizeFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 16f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 16f)
 
     val tanzilTextStyle: StateFlow<String> = settingsRepository.tanzilTextStyleFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "quran-simple")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "quran-simple")
 
     val theme: StateFlow<String> = settingsRepository.themeFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Light")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Light")
 
     val autoScrollSpeed: StateFlow<Float> = settingsRepository.autoScrollSpeedFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 1f)
 
     val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        .stateIn(viewModelScope, SharingStarted.Lazily, true)
 
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 2.0f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 2.0f)
 
     fun loadSurah(surahNumber: Int) {
         viewModelScope.launch {
@@ -54,6 +54,7 @@ class ReadingModeViewModel(
                 val ayahs = getSurahDetailsUseCase(surahNumber, style)
                 _uiState.value = UiState.Success(ayahs)
                 settingsRepository.setLastReadSurah(surahNumber)
+                settingsRepository.setLastReadMode("READING")
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to load Surah details")
             }

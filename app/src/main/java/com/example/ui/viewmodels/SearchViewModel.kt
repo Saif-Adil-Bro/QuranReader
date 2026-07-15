@@ -48,14 +48,14 @@ class SearchViewModel(
     val theme: StateFlow<String> = settingsRepository.themeFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = "Light"
         )
 
     val arabicFont: StateFlow<String> = settingsRepository.arabicFontNameFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = "Amiri Quran"
         )
 

@@ -45,6 +45,7 @@ fun RecitationPlayerScreen(
     val isPlaying by viewModel.isPlaying.collectAsState()
     val selectedQariId by viewModel.selectedQariId.collectAsState()
     val isRepeatAyahEnabled by viewModel.isRepeatAyahEnabled.collectAsState()
+    val arabicFontName by viewModel.arabicFontName.collectAsState()
     val isRepeatSurahEnabled by viewModel.isRepeatSurahEnabled.collectAsState()
     val playbackSpeed by viewModel.playbackSpeed.collectAsState()
 
@@ -67,9 +68,14 @@ fun RecitationPlayerScreen(
 
     val qariName = when (selectedQariId) {
         "ar.alafasy" -> "মিশারি রশিদ আলাফাসি"
-        "ar.abdulbasit" -> "আব্দুল বাসিদ"
-        "ar.minshawi" -> "মুহাম্মাদ আল-মিনশাবি"
+        "ar.abdulbasitmurattal" -> "আব্দুল বাসিদ"
+        "ar.abdullahbasfar" -> "আব্দুল্লাহ বাসফার"
+        "ar.abdurrahmaansudais" -> "আব্দুর রহমান আস-সুদাইস"
         "ar.hudhaify" -> "আলী আল-হুদাইফি"
+        "ar.husary" -> "মাহমুদ খলিল আল-হুসারি"
+        "ar.mahermuaiqly" -> "মাহের আল-মুআইকিলী"
+        "ar.minshawi" -> "মুহাম্মাদ সিদ্দিক আল-মিনশাবি"
+        "ar.muhammadayyoub" -> "মুহাম্মাদ আইয়ুব"
         else -> "মিশারি রশিদ আলাফাসি"
     }
 
@@ -383,6 +389,7 @@ fun RecitationPlayerScreen(
                                     text = currentAyahObj.arabicText,
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold,
+                                    fontFamily = com.example.ui.theme.getArabicFont(arabicFontName),
                                     color = PrimaryGreen,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.fillMaxWidth(),

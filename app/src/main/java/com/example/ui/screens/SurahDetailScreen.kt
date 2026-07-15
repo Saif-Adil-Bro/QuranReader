@@ -120,6 +120,17 @@ fun SurahDetailScreen(
         else -> ViewMode.LIST
     }
     var viewMode by remember { mutableStateOf(parsedViewMode) }
+    var isTafsirSwitching by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewMode) {
+        if (viewMode == ViewMode.TAFSIR) {
+            kotlinx.coroutines.delay(120)
+            isTafsirSwitching = false
+        } else {
+            isTafsirSwitching = false
+        }
+    }
+
     var showPlayerBottomSheet by remember { mutableStateOf(false) }
     var showSettingsBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -348,7 +359,14 @@ fun SurahDetailScreen(
                                 info2 = info2,
                                 info3 = info3,
                                 viewMode = viewMode, 
-                                onModeChange = { viewMode = it },
+                                onModeChange = { mode ->
+                                     if (mode == ViewMode.TAFSIR && viewMode != ViewMode.TAFSIR) {
+                                         isTafsirSwitching = true
+                                     } else {
+                                         isTafsirSwitching = false
+                                     }
+                                     viewMode = mode
+                                 },
                                 searchQuery = searchQuery,
                                 onSearchQueryChange = { searchQuery = it },
                                 onSearch = {
@@ -373,7 +391,52 @@ fun SurahDetailScreen(
                                 BismillahSection(arabicFontName = arabicFontName)
                             }
                         }
-                        if (viewMode == ViewMode.MUSHAF) {
+                        if (viewMode == ViewMode.TAFSIR && isTafsirSwitching) {
+                            items(3) { index ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = White),
+                                    shape = RoundedCornerShape(20.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(20.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(0.3f)
+                                                .height(16.dp)
+                                                .background(Color(0xFFE5E7EB), RoundedCornerShape(4.dp))
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(24.dp)
+                                                .background(Color(0xFFF3F4F6), RoundedCornerShape(4.dp))
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(0.8f)
+                                                .height(20.dp)
+                                                .background(Color(0xFFF3F4F6), RoundedCornerShape(4.dp))
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(48.dp)
+                                                .background(Color(0xFFF9FAFB), RoundedCornerShape(8.dp))
+                                        )
+                                    }
+                                }
+                            }
+                        } else if (viewMode == ViewMode.MUSHAF) {
                             val ayahsByPage = displayedData.groupBy { it.page }
                             ayahsByPage.forEach { (page, ayahs) ->
                                 item {
@@ -688,6 +751,9 @@ fun AyahCard(
 ) {
     var showTafsirDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    val parsedTafsir = remember(ayah.tafsirText) {
+        ayah.tafsirText?.parseHtmlToAnnotatedString(PrimaryGreen)
+    }
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     
@@ -715,9 +781,9 @@ fun AyahCard(
             },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    if (ayah.tafsirText != null) {
+                    if (parsedTafsir != null) {
                         Text(
-                            text = ayah.tafsirText.parseHtmlToAnnotatedString(PrimaryGreen),
+                            text = parsedTafsir,
                             fontSize = 16.sp,
                             lineHeight = 24.sp,
                             color = DarkText,
@@ -881,17 +947,7 @@ fun AyahCard(
                         }
                     }
                 }
-                if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
-                    com.example.ui.components.TajweedText(
-                        rawTajweedText = ayah.textUthmaniTajweed ?: "",
-                        modifier = Modifier.fillMaxWidth(),
-                        color = DarkText,
-                        fontSize = arabicFontSize.sp,
-                        lineHeight = (arabicFontSize * arabicLineSpacing).sp,
-                        fontFamily = arabicFont,
-                        textAlign = TextAlign.Right
-                    )
-                } else if (ayah.words.isNotEmpty()) {
+                if (ayah.words.isNotEmpty()) {
                     WordByWordText(
                         words = ayah.words,
                         ayahNumber = ayah.numberInSurah,
@@ -903,6 +959,16 @@ fun AyahCard(
                         surahNumber = surahNumber,
                         ayahNumberInSurah = ayah.numberInSurah,
                         modifier = Modifier.fillMaxWidth()
+                    )
+                } else if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
+                    com.example.ui.components.TajweedText(
+                        rawTajweedText = ayah.textUthmaniTajweed ?: "",
+                        modifier = Modifier.fillMaxWidth(),
+                        color = DarkText,
+                        fontSize = arabicFontSize.sp,
+                        lineHeight = (arabicFontSize * arabicLineSpacing).sp,
+                        fontFamily = arabicFont,
+                        textAlign = TextAlign.Right
                     )
                 } else {
                     AyahInlineText(
@@ -958,10 +1024,10 @@ fun AyahCard(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                if (ayah.tafsirText != null) {
+                if (parsedTafsir != null) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = ayah.tafsirText.parseHtmlToAnnotatedString(PrimaryGreen),
+                        text = parsedTafsir,
                         fontSize = 15.sp,
                         color = DarkText,
                         lineHeight = 24.sp,

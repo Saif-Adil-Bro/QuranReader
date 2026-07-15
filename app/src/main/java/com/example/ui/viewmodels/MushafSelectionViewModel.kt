@@ -20,13 +20,13 @@ class MushafSelectionViewModel(
 ) : ViewModel() {
 
     val lastReadMushafId: StateFlow<String?> = settingsRepository.lastReadMushafIdFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     val lastReadMushafPage: StateFlow<Int> = settingsRepository.lastReadMushafPageFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 1)
 
     val defaultMushafId: StateFlow<String> = settingsRepository.defaultMushafIdFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "hafizi_15line")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "hafizi_15line")
 
     fun setDefaultMushafId(mushafId: String) {
         viewModelScope.launch {

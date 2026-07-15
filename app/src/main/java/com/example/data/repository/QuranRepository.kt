@@ -26,6 +26,7 @@ class QuranRepository(
     private val settingsRepository: SettingsRepository,
     val context: Context
 ) {
+    private val downloadedSurahsCache = java.util.concurrent.ConcurrentHashMap<Int, Boolean>()
     fun isTafsirDownloaded(tafsirId: String): Boolean {
         val dir = File(context.filesDir, "tafsir_cache/$tafsirId")
         if (!dir.exists()) return false
@@ -258,6 +259,7 @@ class QuranRepository(
     }
 
     fun isSurahDownloaded(surahNumber: Int): Boolean {
+        downloadedSurahsCache[surahNumber]?.let { return it }
         val cacheDir = File(context.filesDir, "quran_text_cache")
         if (!cacheDir.exists()) return false
         val cacheFiles = cacheDir.listFiles { _, name ->
@@ -266,21 +268,9 @@ class QuranRepository(
         if (cacheFiles.isNullOrEmpty()) return false
         
         for (cacheFile in cacheFiles) {
-            if (cacheFile.length() == 0L) continue
-            try {
-                val json = cacheFile.readText()
-                val type = object : com.google.gson.reflect.TypeToken<List<com.example.data.model.CombinedAyah>>() {}.type
-                val list = com.google.gson.Gson().fromJson<List<com.example.data.model.CombinedAyah>>(json, type)
-                if (!list.isNullOrEmpty()) {
-                    val hasWords = list.any { it.words.isNotEmpty() }
-                    val hasBengaliWords = hasWords && list.any { ayah ->
-                        ayah.words.any { word ->
-                            word.translation?.text?.any { it in 'ঀ'..'৿' } == true
-                        }
-                    }
-                    if (hasBengaliWords) return true
-                }
-            } catch (e: Exception) {
+            if (cacheFile.length() > 1000L) {
+                downloadedSurahsCache[surahNumber] = true
+                return true
             }
         }
         return false
@@ -299,6 +289,7 @@ class QuranRepository(
         cachedSurahDetails.clear()
         cachedPageDetails.clear()
         cachedJuzDetails.clear()
+        downloadedSurahsCache.clear()
     }
 
     /**
@@ -393,7 +384,7 @@ class QuranRepository(
             }
 
             try {
-                val result = withTimeoutOrNull(5000) {
+                val result = withTimeoutOrNull(25000) {
                     val response = if (arabicEdition == "quran-uthmani") {
                         api.getSurahWithEditions(surahNumber, "quran-uthmani,bn.bengali,$audioEdition")
                     } else {
@@ -414,7 +405,7 @@ class QuranRepository(
                         val arabicEditionObj = response.data.find { it.edition.identifier == arabicEdition }
                             ?: response.data.find { it.edition.language == "ar" && it.edition.format == "text" }
                         val bengaliEdition = response.data.find { it.edition.identifier == "bn.bengali" }
-                        val audioEdition = response.data.find { it.edition.identifier == "ar.alafasy" }
+                        val audioEditionObj = response.data.find { it.edition.identifier == audioEdition }
 
                         if (arabicEditionObj == null || bengaliEdition == null) {
                             throw Exception("Missing Arabic or Bengali editions in the response.")
@@ -422,7 +413,7 @@ class QuranRepository(
 
                         val arabicAyahs = arabicEditionObj.ayahs
                         val bengaliAyahs = bengaliEdition.ayahs
-                        val audioAyahs = audioEdition?.ayahs
+                        val audioAyahs = audioEditionObj?.ayahs
 
                         // Combine them
                         val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
@@ -450,6 +441,7 @@ class QuranRepository(
                         try {
                             cacheFile.parentFile?.mkdirs()
                             cacheFile.writeText(Gson().toJson(cleaned))
+                            downloadedSurahsCache[surahNumber] = true
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
@@ -513,7 +505,7 @@ class QuranRepository(
             }
 
             try {
-                val result = withTimeoutOrNull(5000) {
+                val result = withTimeoutOrNull(25000) {
                     val arabicResponse = api.getPageArabic(pageNumber)
                     val audioResponse = api.getPageEdition(pageNumber, audioEdition)
                     
@@ -632,7 +624,7 @@ class QuranRepository(
             }
 
             try {
-                val result = withTimeoutOrNull(5000) {
+                val result = withTimeoutOrNull(25000) {
                     val arabicResponse = api.getJuzArabic(juzNumber)
                     val bengaliResponse = api.getJuzBengali(juzNumber)
                     val audioResponse = api.getJuzEdition(juzNumber, audioEdition)

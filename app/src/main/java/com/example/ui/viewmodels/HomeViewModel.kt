@@ -17,6 +17,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.CancellationException
 
 class HomeViewModel(
     private val settingsRepository: SettingsRepository,
@@ -29,36 +33,64 @@ class HomeViewModel(
     val lastReadSurah: StateFlow<Int> = settingsRepository.lastReadSurahFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = 1
         )
 
     val defaultMushafId: StateFlow<String> = settingsRepository.defaultMushafIdFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = "hafizi_15line"
         )
 
     val lastReadPage: StateFlow<Int> = settingsRepository.lastReadPageFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
+            initialValue = 1
+        )
+
+    val lastReadMode: StateFlow<String> = settingsRepository.lastReadModeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = "DETAIL"
+        )
+
+    val lastReadMushafId: StateFlow<String?> = settingsRepository.lastReadMushafIdFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = null
+        )
+
+    val lastReadMushafPage: StateFlow<Int> = settingsRepository.lastReadMushafPageFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
             initialValue = 1
         )
 
     val theme: StateFlow<String> = settingsRepository.themeFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = "Light"
         )
 
     val hasAskedDownloadPrompt: StateFlow<Boolean> = settingsRepository.hasAskedDownloadPromptFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = true
+        )
+
+    val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = "Amiri Quran"
         )
 
     private val _isDownloading = MutableStateFlow(false)
@@ -107,8 +139,16 @@ class HomeViewModel(
         }
     }
 
+    private var downloadJob: Job? = null
+
+    fun stopQuranDownload() {
+        downloadJob?.cancel()
+        _isDownloading.value = false
+    }
+
     fun downloadAllQuranData() {
-        viewModelScope.launch {
+        downloadJob?.cancel()
+        downloadJob = viewModelScope.launch(Dispatchers.IO) {
             _isDownloading.value = true
             _downloadProgress.value = 0
             _downloadError.value = null
@@ -118,16 +158,21 @@ class HomeViewModel(
                 
                 // Then download each of the 114 Surahs
                 for (i in 1..114) {
+                    ensureActive()
                     if (!quranRepository.isSurahDownloaded(i)) {
                         try {
                             val edition = settingsRepository.tanzilTextStyleFlow.first()
                             quranRepository.getSurahDetailsCombined(i, edition)
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
                     }
                     _downloadProgress.value = i
                 }
+            } catch (e: CancellationException) {
+                // Ignored - job was cancelled
             } catch (e: Exception) {
                 _downloadError.value = e.localizedMessage ?: "ডাউনলোড ব্যর্থ হয়েছে"
             } finally {
@@ -168,7 +213,7 @@ class HomeViewModel(
     val bookmarks: StateFlow<List<BookmarkEntity>> = bookmarkDao.getAllBookmarks()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
 
@@ -192,7 +237,7 @@ class HomeViewModel(
     val currentPlayingAyahNumber: StateFlow<Int?> = audioRepository.currentPlayingAyahNumber
 
     val selectedQariId: StateFlow<String> = settingsRepository.selectedQariIdFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "ar.alafasy")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "ar.alafasy")
 
     private val _isRepeatAyahEnabled = MutableStateFlow(false)
     val isRepeatAyahEnabled: StateFlow<Boolean> = _isRepeatAyahEnabled.asStateFlow()
@@ -223,6 +268,23 @@ class HomeViewModel(
     fun setSelectedQariId(qariId: String) {
         viewModelScope.launch {
             settingsRepository.setSelectedQariId(qariId)
+            
+            // If we are currently playing/viewing a surah, reload its details and restart at the current ayah index with the new Qari immediately
+            val surah = _currentPlayingSurah.value
+            if (surah != null) {
+                try {
+                    val edition = settingsRepository.tanzilTextStyleFlow.first()
+                    val ayahs = quranRepository.getSurahDetailsCombined(surah, edition)
+                    _currentPlayingAyahs.value = ayahs
+                    
+                    val currentIndex = _currentPlayingAyahIndex.value
+                    if (currentIndex >= 0 && currentIndex < ayahs.size) {
+                        playAyahAtIndex(currentIndex)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
 

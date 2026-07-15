@@ -67,21 +67,21 @@ class SurahDetailViewModel(
     val showTranslation: StateFlow<Boolean> = settingsRepository.showTranslationFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = true
         )
         
     val showTransliteration: StateFlow<Boolean> = settingsRepository.showTransliterationFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = false
         )
 
     val showTajweed: StateFlow<Boolean> = settingsRepository.showTajweedFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = false
         )
 
@@ -89,42 +89,42 @@ class SurahDetailViewModel(
     val arabicFontSize: StateFlow<Float> = settingsRepository.arabicFontSizeFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = 24f
         )
 
     val bengaliFontSize: StateFlow<Float> = settingsRepository.bengaliFontSizeFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = 16f
         )
 
     val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = "Amiri Quran"
         )
 
     val tanzilTextStyle: StateFlow<String> = settingsRepository.tanzilTextStyleFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = "quran-simple"
         )
 
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = 2.0f
         )
 
     val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = true
         )
 
@@ -138,7 +138,7 @@ class SurahDetailViewModel(
     val bookmarks: StateFlow<List<BookmarkEntity>> = bookmarkDao.getAllBookmarks()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
 
@@ -284,6 +284,8 @@ class SurahDetailViewModel(
             try {
                 val combinedAyahs = repository.getSurahDetailsCombined(surahNumber, tanzilTextStyle.value)
                 _uiState.value = UiState.Success(combinedAyahs)
+                settingsRepository.setLastReadSurah(surahNumber)
+                settingsRepository.setLastReadMode("DETAIL")
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to load Surah details")
             }
