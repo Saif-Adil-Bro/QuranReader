@@ -35,6 +35,12 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import com.example.ui.viewmodels.HomeViewModel
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.roundToInt
 import androidx.compose.foundation.BorderStroke
 import com.example.data.model.CombinedAyah
 import java.util.Calendar
@@ -129,7 +135,8 @@ fun HomeScreen(
     onNavigateToMushaf: () -> Unit,
     onNavigateToMushafPage: (String, Int, Boolean) -> Unit,
     onNavigateToSurahWithAyah: (Int, String, Int) -> Unit,
-    onNavigateToTajweedIndex: () -> Unit
+    onNavigateToTajweedIndex: () -> Unit,
+    onNavigateToPlayer: () -> Unit
 ) {
     val context = LocalContext.current
     val lastReadSurah by viewModel.lastReadSurah.collectAsState()
@@ -138,25 +145,27 @@ fun HomeScreen(
     val surahList by viewModel.surahs.collectAsState()
     val currentTheme by viewModel.theme.collectAsState()
     val isDark = currentTheme == "Dark"
-    // New premium bookmarks & audio player states
+    // New premium bookmarks
     val bookmarks by viewModel.bookmarks.collectAsState(initial = emptyList())
-    val currentPlayingSurah by viewModel.currentPlayingSurah.collectAsState()
-    val currentPlayingAyahIndex by viewModel.currentPlayingAyahIndex.collectAsState()
-    val currentPlayingAyahs by viewModel.currentPlayingAyahs.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val selectedQariId by viewModel.selectedQariId.collectAsState()
-    val isRepeatAyahEnabled by viewModel.isRepeatAyahEnabled.collectAsState()
-    val isRepeatSurahEnabled by viewModel.isRepeatSurahEnabled.collectAsState()
-    val playbackSpeed by viewModel.playbackSpeed.collectAsState()
-
-    var showQariSelectorDialog by remember { mutableStateOf(false) }
-    var showSurahSelectorDialog by remember { mutableStateOf(false) }
 
     val hasAskedDownloadPrompt by viewModel.hasAskedDownloadPrompt.collectAsState()
     val isDownloading by viewModel.isDownloading.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
     val downloadError by viewModel.downloadError.collectAsState()
     var showTajweedLegend by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    val mushafDownloadStatus by viewModel.mushafDownloadStatus.collectAsState()
+    var showMushafDownloadRequestDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showMushafDownloadProgressDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(mushafDownloadStatus) {
+        val status = mushafDownloadStatus
+        if (status != null && status.state is com.example.data.model.DownloadState.Downloaded) {
+            showMushafDownloadProgressDialog = false
+            viewModel.clearMushafDownloadStatus()
+            onNavigateToMushafPage(defaultMushafId, 1, true)
+        }
+    }
 
     // Show first-time download prompt dialog
     if (showTajweedLegend) {
@@ -261,6 +270,163 @@ fun HomeScreen(
         }
     }
 
+    if (showMushafDownloadRequestDialog) {
+        val currentMushaf = viewModel.getMushafStyle(defaultMushafId) ?: com.example.data.model.MushafStyle(
+            id = "hafizi_15line",
+            name = "Hafizi 15-Line Quran",
+            nameBengali = "হাফেজী ১৫-লাইন কুরআন",
+            description = "Standard 15-Line Hafizi Quran PDF",
+            descriptionBengali = "স্ট্যান্ডার্ড ১৫-লাইন হাফেজী কুরআন (একক ফাইল, সম্পূর্ণ অফলাইন)",
+            totalPages = 611,
+            fileSizeMB = 45,
+            thumbnailUrl = "",
+            baseUrl = ""
+        )
+        AlertDialog(
+            onDismissRequest = { showMushafDownloadRequestDialog = false },
+            title = {
+                Text(
+                    text = "মুসহাফ ডাউনলোড প্রয়োজন",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF10B981)
+                )
+            },
+            text = {
+                Text(
+                    text = "আপনার নির্বাচিত মুসহাফটি (${currentMushaf.nameBengali}) এখনো ডাউনলোড করা হয়নি। পড়ার জন্য ফাইলটি ডাউনলোড করা প্রয়োজন।\n\nফাইল সাইজ: ~${currentMushaf.fileSizeMB} মেগাবাইট\n\nআপনি কি এখনই ডাউনলোড করতে চান?",
+                    fontSize = 15.sp,
+                    color = if (isDark) Color.LightGray else Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showMushafDownloadRequestDialog = false
+                        showMushafDownloadProgressDialog = true
+                        viewModel.downloadDefaultMushaf(defaultMushafId)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF10B981)
+                    )
+                ) {
+                    Text("ডাউনলোড করুন", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showMushafDownloadRequestDialog = false }
+                ) {
+                    Text("বাতিল", color = if (isDark) Color.White else Color.Black)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    if (showMushafDownloadProgressDialog) {
+        val status = mushafDownloadStatus
+        val currentMushaf = viewModel.getMushafStyle(defaultMushafId)
+        val mushafName = currentMushaf?.nameBengali ?: "পিডিএফ মুসহাফ"
+        AlertDialog(
+            onDismissRequest = { /* Prevent dismiss by clicking outside */ },
+            title = {
+                Text(
+                    text = if (status?.state is com.example.data.model.DownloadState.Failed) "ডাউনলোড ব্যর্থ হয়েছে" else "ডাউনলোড হচ্ছে...",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = if (status?.state is com.example.data.model.DownloadState.Failed) Color.Red else Color(0xFF10B981)
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (status?.state is com.example.data.model.DownloadState.Failed) {
+                            "দুঃখিত, ডাউনলোড করার সময় সমস্যা হয়েছে। আপনার ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন।"
+                        } else {
+                            "$mushafName ফাইলটি ডাউনলোড করা হচ্ছে। অনুগ্রহ করে অপেক্ষা করুন।"
+                        },
+                        fontSize = 14.sp,
+                        color = if (isDark) Color.LightGray else Color.DarkGray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    
+                    if (status?.state !is com.example.data.model.DownloadState.Failed) {
+                        val progress = status?.progress ?: 0
+                        val downloaded = status?.downloadedPages ?: 0
+                        val total = status?.totalPages ?: 604
+                        
+                        LinearProgressIndicator(
+                            progress = { progress / 100f },
+                            color = Color(0xFF10B981),
+                            trackColor = if (isDark) Color(0xFF2D2D2D) else Color(0xFFE5E7EB),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "অগ্রগতি: $progress%",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF10B981)
+                            )
+                            if (currentMushaf?.isPdf == true) {
+                                Text(
+                                    text = "ডাউনলোড হচ্ছে...",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
+                                )
+                            } else {
+                                Text(
+                                    text = "$downloaded / $total পৃষ্ঠা",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (status?.state is com.example.data.model.DownloadState.Failed) {
+                    Button(
+                        onClick = {
+                            viewModel.downloadDefaultMushaf(defaultMushafId)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF10B981)
+                        )
+                    ) {
+                        Text("আবার চেষ্টা করুন", color = Color.White)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.cancelMushafDownload(defaultMushafId)
+                        showMushafDownloadProgressDialog = false
+                    }
+                ) {
+                    Text(
+                        text = if (status?.state is com.example.data.model.DownloadState.Failed) "বন্ধ করুন" else "বাতিল করুন",
+                        color = if (isDark) Color.White else Color.Black
+                    )
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -301,6 +467,7 @@ fun HomeScreen(
                 )
             )
         },
+        floatingActionButton = {},
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         BoxWithConstraints(
@@ -350,65 +517,26 @@ fun HomeScreen(
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
                     ModesGridSection(
-                        onHafeziPdfClick = { onNavigateToMushafPage(defaultMushafId, 1, true) },
-                        onTajweedClick = onNavigateToTajweedIndex,
-                        onTranslationClick = onNavigateToNormalMode,
-                        onPlayerClick = { showSurahSelectorDialog = true }
-                    )
-                }
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    RecitationPlayerPanel(
-                        currentPlayingSurah = currentPlayingSurah,
-                        currentPlayingAyahIndex = currentPlayingAyahIndex,
-                        currentPlayingAyahs = currentPlayingAyahs,
-                        isPlaying = isPlaying,
-                        selectedQariId = selectedQariId,
-                        isRepeatAyahEnabled = isRepeatAyahEnabled,
-                        isRepeatSurahEnabled = isRepeatSurahEnabled,
-                        playbackSpeed = playbackSpeed,
-                        onQariClick = { showQariSelectorDialog = true },
-                        onSurahSelectorClick = { showSurahSelectorDialog = true },
-                        onPlayPauseClick = {
-                            if (isPlaying) {
-                                viewModel.pauseSurahAudio()
+                        onHafeziPdfClick = {
+                            if (viewModel.isMushafDownloaded(defaultMushafId)) {
+                                onNavigateToMushafPage(defaultMushafId, 1, true)
                             } else {
-                                if (currentPlayingSurah != null) {
-                                    viewModel.resumeSurahAudio()
-                                }
+                                showMushafDownloadRequestDialog = true
                             }
                         },
-                        onStopClick = { viewModel.stopSurahAudio() },
-                        onNextClick = { viewModel.nextAyah() },
-                        onPrevClick = { viewModel.previousAyah() },
-                        onToggleRepeatAyah = { viewModel.toggleRepeatAyah() },
-                        onToggleRepeatSurah = { viewModel.toggleRepeatSurah() },
-                        onSpeedClick = { speed -> viewModel.setPlaybackSpeed(speed) }
+                        onTajweedClick = onNavigateToTajweedIndex,
+                        onTranslationClick = onNavigateToNormalMode,
+                        onPlayerClick = onNavigateToPlayer
                     )
                 }
             }
+
+            FloatingPlayerShortcut(
+                viewModel = viewModel,
+                onClick = onNavigateToPlayer,
+                modifier = Modifier.align(Alignment.BottomEnd)
+            )
         }
-    }
-
-    if (showQariSelectorDialog) {
-        QariSelectorDialog(
-            selectedQariId = selectedQariId,
-            onDismiss = { showQariSelectorDialog = false },
-            onSelectQari = { qariId ->
-                viewModel.setSelectedQariId(qariId)
-                showQariSelectorDialog = false
-            }
-        )
-    }
-
-    if (showSurahSelectorDialog) {
-        SurahSelectorDialog(
-            onDismiss = { showSurahSelectorDialog = false },
-            onSelectSurah = { surahId ->
-                viewModel.playSurahAudio(surahId)
-                showSurahSelectorDialog = false
-            }
-        )
     }
 }
 
@@ -1718,6 +1846,7 @@ fun RecitationPlayerPanel(
                             Text(
                                 text = currentAyahObj.bengaliText,
                                 fontSize = 11.sp,
+                                fontFamily = com.example.ui.theme.solaimanLipiFont,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                                 textAlign = TextAlign.Left,
                                 modifier = Modifier.fillMaxWidth()
@@ -1897,6 +2026,158 @@ fun RecitationPlayerPanel(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FloatingPlayerShortcut(
+    viewModel: HomeViewModel,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val currentPlayingSurah by viewModel.currentPlayingSurah.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
+
+    if (currentPlayingSurah != null) {
+        val surahNamePair = QuranData.surahNames.find { it.first == currentPlayingSurah }
+        val bengaliName = surahNamePair?.second?.first ?: "সূরা"
+
+        var offsetX by remember { mutableStateOf(0f) }
+        var offsetY by remember { mutableStateOf(0f) }
+
+        var parentWidth by remember { mutableStateOf(0) }
+        var parentHeight by remember { mutableStateOf(0) }
+        var cardWidth by remember { mutableStateOf(0) }
+        var cardHeight by remember { mutableStateOf(0) }
+
+        val density = LocalDensity.current
+        val paddingPx = with(density) { 16.dp.toPx() }
+
+        val minX = if (parentWidth > 0) -(parentWidth - cardWidth - paddingPx) else -Float.MAX_VALUE
+        val maxX = if (parentWidth > 0) paddingPx else Float.MAX_VALUE
+        val minY = if (parentHeight > 0) -(parentHeight - cardHeight - paddingPx) else -Float.MAX_VALUE
+        val maxY = if (parentHeight > 0) paddingPx else Float.MAX_VALUE
+
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "scale"
+        )
+
+        Card(
+            modifier = modifier
+                .padding(end = 16.dp, bottom = 16.dp)
+                .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        offsetX = (offsetX + dragAmount.x).coerceIn(minX, maxX)
+                        offsetY = (offsetY + dragAmount.y).coerceIn(minY, maxY)
+                    }
+                }
+                .onGloballyPositioned { coordinates ->
+                    cardWidth = coordinates.size.width
+                    cardHeight = coordinates.size.height
+                    coordinates.parentLayoutCoordinates?.let { parentCoordinates ->
+                        parentWidth = parentCoordinates.size.width
+                        parentHeight = parentCoordinates.size.height
+                    }
+                }
+                .size(width = 215.dp, height = 62.dp)
+                .shadow(12.dp, RoundedCornerShape(30.dp))
+                .clickable { onClick() },
+            shape = RoundedCornerShape(30.dp),
+            colors = CardDefaults.cardColors(containerColor = PrimaryGreen),
+            border = BorderStroke(1.5.dp, White.copy(alpha = 0.5f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = "Player Shortcut",
+                        tint = White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "সূরা $bengaliName",
+                        color = White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = if (isPlaying) "চলছে..." else "বন্ধ আছে",
+                        color = White.copy(alpha = 0.8f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(White)
+                        .clickable {
+                            if (isPlaying) {
+                                viewModel.pauseSurahAudio()
+                            } else {
+                                viewModel.resumeSurahAudio()
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = "Play/Pause",
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(White.copy(alpha = 0.2f))
+                        .clickable {
+                            viewModel.stopSurahAudio()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close Player",
+                        tint = White,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }

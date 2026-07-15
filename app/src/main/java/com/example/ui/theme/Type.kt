@@ -50,6 +50,11 @@ val tajawalFont = FontFamily(
     GoogleFontFile(googleFont = GoogleFont("Tajawal"), fontProvider = provider)
 )
 
+val solaimanLipiFont = FontFamily(
+    ResourceFont(R.font.solaimanlipi, FontWeight.Normal),
+    ResourceFont(R.font.solaimanlipi_bold, FontWeight.Bold)
+)
+
 val arabicFontsList = listOf(
     "Uthman Taha",
     "Amiri Quran",
@@ -61,10 +66,6 @@ val arabicFontsList = listOf(
 )
 
 fun getArabicFont(name: String): FontFamily {
-    // Temporarily using FontFamily.Default for emulator compatibility.
-    // We can easily revert this to return the respective custom fonts when ready.
-    return FontFamily.Default
-    /*
     return when (name) {
         "Uthman Taha" -> uthmanTahaFont
         "Amiri" -> amiriFont
@@ -75,7 +76,6 @@ fun getArabicFont(name: String): FontFamily {
         "Amiri Quran" -> amiriQuranFont
         else -> uthmanTahaFont
     }
-    */
 }
 
 // Set of Material typography styles to start with

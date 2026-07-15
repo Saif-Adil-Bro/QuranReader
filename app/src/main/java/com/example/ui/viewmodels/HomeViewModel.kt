@@ -64,6 +64,31 @@ class HomeViewModel(
     private val _isDownloading = MutableStateFlow(false)
     val isDownloading: StateFlow<Boolean> = _isDownloading
 
+    private val _mushafDownloadStatus = MutableStateFlow<com.example.data.model.DownloadStatus?>(null)
+    val mushafDownloadStatus: StateFlow<com.example.data.model.DownloadStatus?> = _mushafDownloadStatus.asStateFlow()
+
+    fun getMushafStyle(mushafId: String): com.example.data.model.MushafStyle? {
+        return mushafRepository.getAvailableMushafs().find { it.id == mushafId }
+    }
+
+    fun downloadDefaultMushaf(mushafId: String) {
+        val style = getMushafStyle(mushafId) ?: return
+        viewModelScope.launch {
+            mushafRepository.downloadMushaf(style, viewModelScope) { status ->
+                _mushafDownloadStatus.value = status
+            }
+        }
+    }
+
+    fun cancelMushafDownload(mushafId: String) {
+        mushafRepository.cancelDownload(mushafId)
+        _mushafDownloadStatus.value = null
+    }
+
+    fun clearMushafDownloadStatus() {
+        _mushafDownloadStatus.value = null
+    }
+
     private val _downloadProgress = MutableStateFlow(0)
     val downloadProgress: StateFlow<Int> = _downloadProgress
 

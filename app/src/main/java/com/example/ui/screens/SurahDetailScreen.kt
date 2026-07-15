@@ -920,6 +920,7 @@ fun AyahCard(
                     Text(
                         text = ayah.bengaliText,
                         fontSize = bengaliFontSize.sp,
+                        fontFamily = com.example.ui.theme.solaimanLipiFont,
                         color = GrayText,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -951,6 +952,7 @@ fun AyahCard(
                     Text(
                         text = ayah.bengaliText,
                         fontSize = bengaliFontSize.sp,
+                        fontFamily = com.example.ui.theme.solaimanLipiFont,
                         color = PrimaryGreen,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth()
@@ -982,6 +984,7 @@ fun AyahCard(
                     Text(
                         text = ayah.bengaliText,
                         fontSize = bengaliFontSize.sp,
+                        fontFamily = com.example.ui.theme.solaimanLipiFont,
                         color = GrayText,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1150,6 +1153,7 @@ fun PlayerBottomSheetContent(
             Text(
                 text = currentAyah.bengaliText,
                 fontSize = 14.sp,
+                fontFamily = com.example.ui.theme.solaimanLipiFont,
                 textAlign = TextAlign.Center,
                 color = GrayText,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
