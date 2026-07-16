@@ -298,10 +298,14 @@ class HomeViewModel(
     fun playSurahAudio(surahNumber: Int, startAyahIndex: Int = 0) {
         viewModelScope.launch {
             try {
+                _currentPlayingSurah.value = surahNumber
+                _currentPlayingAyahs.value = emptyList() // Clear previous ayahs to show loading state
+                _currentPlayingAyahIndex.value = 0
+
                 val qari = selectedQariId.value
                 val edition = settingsRepository.tanzilTextStyleFlow.first()
                 val ayahs = quranRepository.getSurahDetailsCombined(surahNumber, edition)
-                _currentPlayingSurah.value = surahNumber
+                
                 _currentPlayingAyahs.value = ayahs
                 _currentPlayingAyahIndex.value = startAyahIndex
                 
@@ -311,6 +315,12 @@ class HomeViewModel(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    fun updateHijriOffset(offset: Int) {
+        viewModelScope.launch {
+            settingsRepository.setHijriOffset(offset)
         }
     }
 

@@ -352,7 +352,7 @@ fun RecitationPlayerScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "আয়াত: ${(currentPlayingAyahIndex + 1).toBengaliNumerals()} / ${totalAyahs.toBengaliNumerals()}",
+                            text = if (totalAyahs > 0) "আয়াত: ${(currentPlayingAyahIndex + 1).toBengaliNumerals()} / ${totalAyahs.toBengaliNumerals()}" else "লোড হচ্ছে...",
                             fontSize = 11.sp,
                             color = GrayText,
                             fontWeight = FontWeight.Bold
@@ -411,7 +411,17 @@ fun RecitationPlayerScreen(
                         }
                     }
                 } else {
-                    Spacer(modifier = Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = PrimaryGreen,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
                 }
             }
         }

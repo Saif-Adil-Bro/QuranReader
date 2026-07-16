@@ -346,6 +346,9 @@ fun AppNavGraph(
                 },
                 onNavigateToAyah = { surahNumber, ayahNumber ->
                     navController.navigate("detail/$surahNumber?viewMode=LIST&initialAyah=$ayahNumber")
+                },
+                onNavigateToPlayer = {
+                    navController.navigate("player")
                 }
             )
         }

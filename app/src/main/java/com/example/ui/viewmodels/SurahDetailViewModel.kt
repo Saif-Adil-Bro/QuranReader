@@ -298,6 +298,10 @@ class SurahDetailViewModel(
             try {
                 val combinedAyahs = repository.getJuzCombined(juzNumber)
                 _uiState.value = UiState.Success(combinedAyahs)
+                combinedAyahs.firstOrNull()?.let {
+                    settingsRepository.setLastReadSurah(it.surahNumber)
+                    settingsRepository.setLastReadMode("DETAIL")
+                }
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to load Juz details")
             }

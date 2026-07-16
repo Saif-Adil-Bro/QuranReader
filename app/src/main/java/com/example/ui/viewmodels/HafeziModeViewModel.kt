@@ -79,8 +79,11 @@ class HafeziModeViewModel(
                 playlist = ayahs
                 _uiState.value = UiState.Success(ayahs)
                 
-                // Save last read page
+                // Save last read page, surah and mode
                 settingsRepository.setLastReadPage(pageNumber)
+                ayahs.firstOrNull()?.let {
+                    settingsRepository.setLastReadSurah(it.surahNumber)
+                }
                 settingsRepository.setLastReadMode("HAFEZI")
                 
                 // Check if memorized

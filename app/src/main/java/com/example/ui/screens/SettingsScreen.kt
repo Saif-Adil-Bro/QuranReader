@@ -53,7 +53,8 @@ fun SettingsScreen(
     onNavigateToSurah: (Int) -> Unit = {},
     onNavigateToPage: (Int) -> Unit = {},
     onNavigateToJuz: (Int) -> Unit = {},
-    onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> }
+    onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> },
+    onNavigateToPlayer: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -248,7 +249,13 @@ fun SettingsScreen(
                                 .shadow(2.dp, RoundedCornerShape(16.dp))
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(MaterialTheme.colorScheme.surface)
-                                .clickable { activeDialog = item.id }
+                                .clickable {
+                                    if (item.id == "player") {
+                                        onNavigateToPlayer()
+                                    } else {
+                                        activeDialog = item.id
+                                    }
+                                }
                                 .padding(12.dp),
                             contentAlignment = Alignment.Center
                         ) {

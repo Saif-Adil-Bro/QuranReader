@@ -167,6 +167,7 @@ fun HomeScreen(
     val mushafDownloadStatus by viewModel.mushafDownloadStatus.collectAsState()
     var showMushafDownloadRequestDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var showMushafDownloadProgressDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showHijriAdjustDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(mushafDownloadStatus) {
         val status = mushafDownloadStatus
@@ -511,16 +512,16 @@ fun HomeScreen(
                         val lastReadSurahNameForHero = QuranData.surahNames.find { it.first == lastReadSurah }?.second?.first ?: "আল ফাতিহা"
                         
                         val actionTextForHero = when (lastReadMode) {
-                            "SURA" -> "সর্বশেষ সূরা"
                             "HAFEZI" -> "সর্বশেষ হাফেজী পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)}"
-                            "MUSHAF" -> "মুসহাফ পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadMushafPage)}"
-                            else -> "সর্বশেষ পঠিত"
+                            "TAJWEED" -> "সর্বশেষ তাজবীদ পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)}"
+                            "MUSHAF" -> "সর্বশেষ মুসহাফ পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadMushafPage)}"
+                            "READING" -> "সর্বশেষ রিডিং মোড"
+                            else -> "সর্বশেষ বিস্তারিত"
                         }
                         val subTextForHero = when (lastReadMode) {
-                            "SURA" -> lastReadSurahNameForHero
-                            "HAFEZI" -> lastReadSurahNameForHero
+                            "HAFEZI", "TAJWEED", "READING", "DETAIL", "SURA" -> lastReadSurahNameForHero
                             "MUSHAF" -> viewModel.getMushafStyle(lastReadMushafId ?: defaultMushafId)?.nameBengali ?: (lastReadMushafId ?: defaultMushafId)
-                            else -> ""
+                            else -> lastReadSurahNameForHero
                         }
                         
                         HeroSection(
@@ -529,12 +530,15 @@ fun HomeScreen(
                             hijriOffset = hijriOffset,
                             onResumeClick = {
                                 when (lastReadMode) {
-                                    "SURA" -> onNavigateToSurah(lastReadSurah)
                                     "HAFEZI" -> onNavigateToHafeziMode(lastReadPage)
-                                    "MUSHAF" -> onNavigateToMushafPage(lastReadMushafId ?: defaultMushafId, lastReadMushafPage, true)
+                                    "TAJWEED" -> onNavigateToTajweedMode(lastReadPage)
+                                    "READING" -> onNavigateToReadingMode(lastReadSurah)
+                                    "MUSHAF" -> onNavigateToMushafPage(lastReadMushafId ?: defaultMushafId, lastReadMushafPage, false)
+                                    "DETAIL" -> onNavigateToSurah(lastReadSurah)
                                     else -> onNavigateToSurah(lastReadSurah)
                                 }
-                            }
+                            },
+                            onHijriDateClick = { showHijriAdjustDialog = true }
                         )
                         Box(
                             modifier = Modifier
@@ -589,6 +593,47 @@ fun HomeScreen(
             }
         }
     }
+
+    if (showHijriAdjustDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showHijriAdjustDialog = false },
+            title = { Text("হিজরি তারিখ সমন্বয়", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("হিজরি তারিখ একদিন বা কয়েকদিন আগে-পিছে করতে পারেন।")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.IconButton(
+                            onClick = { if (hijriOffset > -3) viewModel.updateHijriOffset(hijriOffset - 1) },
+                            enabled = hijriOffset > -3
+                        ) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Remove, contentDescription = "Decrease")
+                        }
+                        Text(
+                            text = "${if (hijriOffset > 0) "+" else ""}${com.example.utils.DateUtil.toBengaliNumerals(hijriOffset)} দিন",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        androidx.compose.material3.IconButton(
+                            onClick = { if (hijriOffset < 5) viewModel.updateHijriOffset(hijriOffset + 1) },
+                            enabled = hijriOffset < 5
+                        ) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = "Increase")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showHijriAdjustDialog = false }) {
+                    Text("বন্ধ করুন", color = PrimaryGreen)
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -596,7 +641,8 @@ fun HeroSection(
     lastReadTitle: String,
     lastReadSubtitle: String,
     hijriOffset: Int,
-    onResumeClick: () -> Unit
+    onResumeClick: () -> Unit,
+    onHijriDateClick: () -> Unit = {}
 ) {
     val pagerState = rememberPagerState(pageCount = { 4 })
     LaunchedEffect(pagerState) {
@@ -744,7 +790,8 @@ fun HeroSection(
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    .clickable { onHijriDateClick() }
+                                    .padding(horizontal = 8.dp, vertical = 8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
@@ -796,7 +843,7 @@ fun HeroSection(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                repeat(3) { iteration ->
+                repeat(4) { iteration ->
                     val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.4f)
                     val width = if (pagerState.currentPage == iteration) 16.dp else 6.dp
                     Box(
@@ -826,7 +873,7 @@ fun SearchSection(onClick: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Search, contentDescription = "Search", tint = GrayText)
             Spacer(modifier = Modifier.width(12.dp))
-            Text("সূরা খুঁজুন...", color = GrayText, fontSize = 16.sp)
+            Text("সূরা, পারা বা আয়াত খুঁজুন...", color = GrayText, fontSize = 16.sp)
         }
     }
 }

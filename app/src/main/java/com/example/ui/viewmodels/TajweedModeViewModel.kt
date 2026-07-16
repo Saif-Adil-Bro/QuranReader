@@ -81,8 +81,11 @@ class TajweedModeViewModel(
                 playlist = ayahs
                 _uiState.value = UiState.Success(ayahs)
                 
-                // Save last read page and mode
+                // Save last read page, surah and mode
                 settingsRepository.setLastReadPage(pageNumber)
+                ayahs.firstOrNull()?.let {
+                    settingsRepository.setLastReadSurah(it.surahNumber)
+                }
                 settingsRepository.setLastReadMode("TAJWEED")
                 
                 // Check if memorized
