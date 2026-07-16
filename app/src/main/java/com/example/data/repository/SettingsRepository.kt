@@ -48,6 +48,7 @@ class SettingsRepository(val context: Context) {
     private val SELECTED_QARI_ID_KEY = stringPreferencesKey("selected_qari_id")
     private val MUSHAF_SCROLL_DIRECTION_KEY = stringPreferencesKey("mushaf_scroll_direction")
     private val DEFAULT_MUSHAF_ID_KEY = stringPreferencesKey("default_mushaf_id")
+    private val HIJRI_OFFSET_KEY = intPreferencesKey("hijri_offset")
 
     val showTranslationFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[SHOW_TRANSLATION_KEY] ?: true }
@@ -112,7 +113,10 @@ class SettingsRepository(val context: Context) {
         .map { preferences -> preferences[MUSHAF_SCROLL_DIRECTION_KEY] ?: "Horizontal" }
 
     val defaultMushafIdFlow: Flow<String> = context.dataStore.data
-        .map { preferences -> preferences[DEFAULT_MUSHAF_ID_KEY] ?: "hafizi_15line" }
+        .map { preferences -> preferences[DEFAULT_MUSHAF_ID_KEY] ?: "imdadia_hafezi" }
+
+    val hijriOffsetFlow: Flow<Int> = context.dataStore.data
+        .map { preferences -> preferences[HIJRI_OFFSET_KEY] ?: 0 }
 
     suspend fun setShowTranslation(show: Boolean) {
         context.dataStore.edit { preferences -> preferences[SHOW_TRANSLATION_KEY] = show }
@@ -200,6 +204,10 @@ class SettingsRepository(val context: Context) {
 
     suspend fun setDefaultMushafId(mushafId: String) {
         context.dataStore.edit { preferences -> preferences[DEFAULT_MUSHAF_ID_KEY] = mushafId }
+    }
+
+    suspend fun setHijriOffset(offset: Int) {
+        context.dataStore.edit { preferences -> preferences[HIJRI_OFFSET_KEY] = offset }
     }
 
     fun getMushafOffset(mushafId: String): Flow<Int> {

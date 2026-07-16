@@ -26,7 +26,7 @@ class MushafSelectionViewModel(
         .stateIn(viewModelScope, SharingStarted.Lazily, 1)
 
     val defaultMushafId: StateFlow<String> = settingsRepository.defaultMushafIdFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "hafizi_15line")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "imdadia_hafezi")
 
     fun setDefaultMushafId(mushafId: String) {
         viewModelScope.launch {

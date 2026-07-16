@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MushafViewerViewModel(
     private val repository: MushafRepository,
@@ -41,6 +43,9 @@ class MushafViewerViewModel(
     private val _isPdf = MutableStateFlow(false)
     val isPdf: StateFlow<Boolean> = _isPdf.asStateFlow()
 
+    private val _isReady = MutableStateFlow(false)
+    val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
+
     private val _totalPages = MutableStateFlow(604)
     val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
 
@@ -53,11 +58,13 @@ class MushafViewerViewModel(
         _totalPages.value = defaultStyle?.totalPages ?: 604
         val defaultOffset = defaultStyle?.pdfPageOffset ?: 0
         _currentPageNumber.value = initialPage
+        _isReady.value = false
         
         viewModelScope.launch {
             val savedOffset = settingsRepository.getMushafOffset(mushafId).first()
             val activeOffset = if (savedOffset != -1) savedOffset else defaultOffset
             _pdfPageOffset.value = activeOffset
+            _isReady.value = true
             jumpToPage(initialPage)
         }
     }
@@ -77,8 +84,11 @@ class MushafViewerViewModel(
     fun jumpToPage(pageNumber: Int) {
         if (pageNumber in 1.._totalPages.value) {
             _currentPageNumber.value = pageNumber
-            _currentPagePath.value = repository.getMushafPagePath(currentMushafId, pageNumber, _pdfPageOffset.value)
             viewModelScope.launch {
+                val path = withContext(Dispatchers.IO) {
+                    repository.getMushafPagePath(currentMushafId, pageNumber, _pdfPageOffset.value)
+                }
+                _currentPagePath.value = path
                 if (currentMushafId.isNotEmpty()) {
                     settingsRepository.setLastReadMushaf(currentMushafId, pageNumber)
                     settingsRepository.setLastReadMode("MUSHAF")
@@ -87,8 +97,8 @@ class MushafViewerViewModel(
         }
     }
     
-    fun getPagePath(mushafId: String, pageNumber: Int): String? {
-        return repository.getMushafPagePath(mushafId, pageNumber, _pdfPageOffset.value)
+    suspend fun getPagePath(mushafId: String, pageNumber: Int): String? = withContext(Dispatchers.IO) {
+        repository.getMushafPagePath(mushafId, pageNumber, _pdfPageOffset.value)
     }
 
     suspend fun downloadPageOnDemand(mushafId: String, pageNumber: Int): Boolean {
@@ -97,10 +107,12 @@ class MushafViewerViewModel(
 
     fun adjustOffset(increment: Int) {
         val newOffset = _pdfPageOffset.value + increment
-        _pdfPageOffset.value = newOffset
         viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repository.clearRenderedPages(currentMushafId)
+            }
+            _pdfPageOffset.value = newOffset
             settingsRepository.setMushafOffset(currentMushafId, newOffset)
-            repository.clearRenderedPages(currentMushafId)
             jumpToPage(_currentPageNumber.value)
         }
     }

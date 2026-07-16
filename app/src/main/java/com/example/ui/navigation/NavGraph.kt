@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 fun AppNavGraph(
     navController: NavHostController,
     viewModelFactory: AppViewModelFactory,
+    homeViewModel: HomeViewModel,
     modifier: Modifier = Modifier
 ) {
     NavHost(navController = navController, startDestination = "splash", modifier = modifier) {
@@ -121,9 +122,8 @@ fun AppNavGraph(
         }
 
         composable("home") {
-            val viewModel: HomeViewModel = viewModel(factory = viewModelFactory)
             HomeScreen(
-                viewModel = viewModel,
+                viewModel = homeViewModel,
                 onNavigateToSurah = { surahNumber -> navController.navigate("detail/$surahNumber") },
                 onNavigateToJuz = { juzNumber -> navController.navigate("juz/$juzNumber") },
                 onNavigateToNormalMode = { navController.navigate("list/normal") },
@@ -145,7 +145,7 @@ fun AppNavGraph(
                     navController.navigate("tajweed/$page")
                 },
                 onNavigateToPlayer = {
-                    if (viewModel.currentPlayingSurah.value != null) {
+                    if (homeViewModel.currentPlayingSurah.value != null) {
                         navController.navigate("recitation/player")
                     } else {
                         navController.navigate("recitation/index")
@@ -155,10 +155,6 @@ fun AppNavGraph(
         }
 
         composable("recitation/index") { backStackEntry ->
-            val homeBackStackEntry = remember(backStackEntry) {
-                navController.getBackStackEntry("home")
-            }
-            val homeViewModel: HomeViewModel = viewModel(homeBackStackEntry, factory = viewModelFactory)
             RecitationIndexScreen(
                 viewModel = homeViewModel,
                 onBackClick = { navController.popBackStack() },
@@ -167,10 +163,6 @@ fun AppNavGraph(
         }
 
         composable("recitation/player") { backStackEntry ->
-            val homeBackStackEntry = remember(backStackEntry) {
-                navController.getBackStackEntry("home")
-            }
-            val homeViewModel: HomeViewModel = viewModel(homeBackStackEntry, factory = viewModelFactory)
             RecitationPlayerScreen(
                 viewModel = homeViewModel,
                 onBackClick = { navController.popBackStack() }

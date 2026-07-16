@@ -61,6 +61,7 @@ fun SettingsScreen(
     val showTranslation by viewModel.showTranslation.collectAsState()
     val showTransliteration by viewModel.showTransliteration.collectAsState()
     val showTajweed by viewModel.showTajweed.collectAsState()
+    val hijriOffset by viewModel.hijriOffset.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     val username by viewModel.username.collectAsState()
     val readingTime by viewModel.readingTimeMinutes.collectAsState()
@@ -305,6 +306,67 @@ fun SettingsScreen(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             
+            // Hijri Date Adjustment
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Border)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "হিজরি তারিখ সমন্বয়",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "বর্তমান আরবি তারিখ: ${com.example.utils.DateUtil.getTodayHijriDateStr(hijriOffset)}",
+                            fontSize = 12.sp,
+                            color = GrayText
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        IconButton(
+                            onClick = { viewModel.setHijriOffset(hijriOffset - 1) },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(MaterialTheme.colorScheme.background, CircleShape)
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = PrimaryGreen, modifier = Modifier.size(16.dp))
+                        }
+                        Text(
+                            text = if (hijriOffset > 0) "+${com.example.utils.DateUtil.toBengaliNumerals(hijriOffset)}" 
+                                   else if (hijriOffset < 0) "-${com.example.utils.DateUtil.toBengaliNumerals(-hijriOffset)}" 
+                                   else "০",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        IconButton(
+                            onClick = { viewModel.setHijriOffset(hijriOffset + 1) },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(MaterialTheme.colorScheme.background, CircleShape)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase", tint = PrimaryGreen, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1257,12 +1319,7 @@ fun SubjectwiseDialogContent() {
 // --- 6. DUA DIALOG ---
 @Composable
 fun DuaDialogContent() {
-    val duas = listOf(
-        Pair("১. দুনিয়া ও পরকালের কল্যাণের দুআ", "রব্বানা আতিনা ফিদ্দুনিয়া হাসানাতাওঁ ওয়া ফিল আখিরতি হাসানাতাওঁ ওয়াক্বিনা আযাবান্নার। (সুরা বাকারা: ২০১) • অর্থ: হে আমাদের রব! আমাদের দুনিয়া ও আখেরাতের কল্যাণ দান করুন এবং জাহান্নামের শাস্তি থেকে আমাদের বাঁচান।"),
-        Pair("২. ঈমানের ওপর অবিচল থাকার দুআ", "রব্বানা লা তুযিগ ক্বুলুবানা বা'দা ইয হাদাইতানা ওয়াহাব লানা মিল্লাদুনকা রহমাহ, ইন্নাকা আনতাল ওয়াহহাব। (সুরা আল ইমরান: ৮) • অর্থ: হে আমাদের রব! আমাদের সরল পথ প্রদর্শনের পর আপনি আমাদের অন্তরকে সত্যলংঘনপ্রবণ করবেন না এবং আপনার পক্ষ থেকে অনুগ্রহ দান করুন।"),
-        Pair("৩. জ্ঞান ও বক্ষ প্রশস্ত করার দুআ", "রব্বিশ রাহলি সদরি ওয়া ইয়াসসির লি আমরি ওয়াহলুল উকদাতাম মিল লিসানি ইয়াফক্বাহু ক্বওলি। (সুরা তাহা: ২৫-২৮) • অর্থ: হে আমার রব! আমার বক্ষ প্রশস্ত করে দিন এবং আমার কাজ সহজ করুন এবং আমার জিহ্বার জড়তা দূর করুন যেন তারা আমার কথা বুঝতে পারে।"),
-        Pair("৪. সৎ স্ত্রী ও সন্তান লাভের দুআ", "রব্বানা হাবলানা মিন আযওয়াজিনা ওয়া যুররিয়্যাতিনা কুররতা আ'ইয়ুনিওঁ ওয়াজআলনা লিল মুত্তাক্বিনা ইমামা। (সুরা ফুরকান: ৭৪) • অর্থ: হে আমাদের রব! আমাদের জন্য এমন স্ত্রী ও সন্তান দান করুন যারা আমাদের চক্ষু শীতল করবে এবং আমাদের মুত্তাকীদের ইমাম করে দিন।")
-    )
+    val duas = com.example.data.DuaData.dailyDuas
     
     LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
         items(duas) { (title, desc) ->
@@ -1274,7 +1331,7 @@ fun DuaDialogContent() {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = PrimaryGreen)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(desc, fontSize = 12.sp, color = DarkText, lineHeight = 18.sp)
+                    Text(desc.replace("\n", " • "), fontSize = 12.sp, color = DarkText, lineHeight = 18.sp)
                 }
             }
         }
@@ -1886,22 +1943,28 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                         Button(
                             onClick = { viewModel.stopQuranDownload() },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("ডাউনলোড বন্ধ করুন", color = Color.White, fontSize = 12.sp)
+                            Text("ডাউনলোড বন্ধ করুন", color = Color.White, fontSize = 12.sp, maxLines = 1)
                         }
                     } else {
                         if (downloadedCount < 114) {
                             Button(
                                 onClick = { viewModel.downloadAllQuranData() },
                                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                             ) {
                                 Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("ডাউনলোড শুরু করুন", color = Color.White, fontSize = 12.sp)
+                                Text("ডাউনলোড শুরু করুন", color = Color.White, fontSize = 12.sp, maxLines = 1)
                             }
                         }
 
@@ -1910,11 +1973,14 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                                 onClick = { viewModel.deleteDownloadedQuranData() },
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
                                 border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f)),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("মুছে ফেলুন", fontSize = 12.sp, color = Color.Red)
+                                Text("মুছে ফেলুন", fontSize = 12.sp, color = Color.Red, maxLines = 1)
                             }
                         }
                     }

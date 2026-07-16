@@ -43,12 +43,17 @@ import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.roundToInt
 import androidx.compose.foundation.BorderStroke
 import com.example.data.model.CombinedAyah
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import java.util.Calendar
 import kotlinx.coroutines.delay
+import com.example.utils.DateUtil
 import androidx.compose.foundation.border
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 
 fun String.toArabicNumerals(): String {
     val englishNumerals = "0123456789"
@@ -146,6 +151,7 @@ fun HomeScreen(
     val lastReadMushafId by viewModel.lastReadMushafId.collectAsState()
     val lastReadMushafPage by viewModel.lastReadMushafPage.collectAsState()
     val defaultMushafId by viewModel.defaultMushafId.collectAsState()
+    val hijriOffset by viewModel.hijriOffset.collectAsState()
     val surahList by viewModel.surahs.collectAsState()
     val currentTheme by viewModel.theme.collectAsState()
     val isDark = currentTheme == "Dark"
@@ -288,13 +294,13 @@ fun HomeScreen(
 
     if (showMushafDownloadRequestDialog) {
         val currentMushaf = viewModel.getMushafStyle(defaultMushafId) ?: com.example.data.model.MushafStyle(
-            id = "hafizi_15line",
-            name = "Hafizi 15-Line Quran",
-            nameBengali = "হাফেজী ১৫-লাইন কুরআন",
-            description = "Standard 15-Line Hafizi Quran PDF",
-            descriptionBengali = "স্ট্যান্ডার্ড ১৫-লাইন হাফেজী কুরআন (একক ফাইল, সম্পূর্ণ অফলাইন)",
+            id = "imdadia_hafezi",
+            name = "Imdadia Hafezi Quran",
+            nameBengali = "ইমদাদিয়া হাফেজী কুরআন",
+            description = "Imdadia 15-Line Hafezi Quran PDF",
+            descriptionBengali = "ইমদাদিয়া ১৫-লাইন হাফেজী কুরআন (একক ফাইল, সম্পূর্ণ অফলাইন)",
             totalPages = 611,
-            fileSizeMB = 45,
+            fileSizeMB = 30,
             thumbnailUrl = "",
             baseUrl = ""
         )
@@ -502,7 +508,34 @@ fun HomeScreen(
             ) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth()) {
-                        HeroSection()
+                        val lastReadSurahNameForHero = QuranData.surahNames.find { it.first == lastReadSurah }?.second?.first ?: "আল ফাতিহা"
+                        
+                        val actionTextForHero = when (lastReadMode) {
+                            "SURA" -> "সর্বশেষ সূরা"
+                            "HAFEZI" -> "সর্বশেষ হাফেজী পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)}"
+                            "MUSHAF" -> "মুসহাফ পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadMushafPage)}"
+                            else -> "সর্বশেষ পঠিত"
+                        }
+                        val subTextForHero = when (lastReadMode) {
+                            "SURA" -> lastReadSurahNameForHero
+                            "HAFEZI" -> lastReadSurahNameForHero
+                            "MUSHAF" -> viewModel.getMushafStyle(lastReadMushafId ?: defaultMushafId)?.nameBengali ?: (lastReadMushafId ?: defaultMushafId)
+                            else -> ""
+                        }
+                        
+                        HeroSection(
+                            lastReadTitle = actionTextForHero,
+                            lastReadSubtitle = subTextForHero,
+                            hijriOffset = hijriOffset,
+                            onResumeClick = {
+                                when (lastReadMode) {
+                                    "SURA" -> onNavigateToSurah(lastReadSurah)
+                                    "HAFEZI" -> onNavigateToHafeziMode(lastReadPage)
+                                    "MUSHAF" -> onNavigateToMushafPage(lastReadMushafId ?: defaultMushafId, lastReadMushafPage, true)
+                                    else -> onNavigateToSurah(lastReadSurah)
+                                }
+                            }
+                        )
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -554,56 +587,227 @@ fun HomeScreen(
                     )
                 }
             }
-
-            FloatingPlayerShortcut(
-                viewModel = viewModel,
-                onClick = onNavigateToPlayer,
-                modifier = Modifier.align(Alignment.BottomEnd)
-            )
         }
     }
 }
 
 @Composable
-fun HeroSection() {
+fun HeroSection(
+    lastReadTitle: String,
+    lastReadSubtitle: String,
+    hijriOffset: Int,
+    onResumeClick: () -> Unit
+) {
+    val pagerState = rememberPagerState(pageCount = { 4 })
+    LaunchedEffect(pagerState) {
+        while (true) {
+            delay(6000)
+            val nextPage = (pagerState.currentPage + 1) % 4
+            pagerState.animateScrollToPage(nextPage)
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
             .background(Brush.verticalGradient(listOf(PrimaryGreen, DarkGreen)))
-            .padding(32.dp),
+            .padding(top = 32.dp, bottom = 48.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.MenuBook, contentDescription = null, tint = White, modifier = Modifier.size(24.dp))
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 24.dp)
+            ) { page ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                        .height(130.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    when (page) {
+                        0 -> {
+                            // Slide 1: Resume
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = onResumeClick
+                                    ),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(100.dp))
+                                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = White, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = lastReadTitle,
+                                        color = White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = lastReadSubtitle,
+                                    color = White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("পড়ুন", color = White.copy(alpha = 0.9f), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = White.copy(alpha = 0.9f), modifier = Modifier.size(14.dp))
+                                }
+                            }
+                        }
+                        1 -> {
+                            // Slide 2: Dua of the day
+                            val dua = com.example.data.DuaData.getDuaOfTheDay()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = White, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "আজকের দুআ: ${dua.first}",
+                                        color = White.copy(alpha = 0.9f),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = dua.second.replace("\n", " • "),
+                                    color = White,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        2 -> {
+                            // Slide 3: Ayah of the day
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(100.dp))
+                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "আজকের আয়াত",
+                                        color = White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = com.example.data.AyahData.getAyahOfTheDay(),
+                                    color = White,
+                                    fontSize = 14.sp,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Medium,
+                                    lineHeight = 20.sp
+                                )
+                            }
+                        }
+                        3 -> {
+                            // Slide 3: Quick Info (Date)
+                            val bengaliDate = com.example.utils.DateUtil.getTodayBengaliDateStr()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = White, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = com.example.utils.DateUtil.getTodayEnglishDateStr(),
+                                        color = White,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.2f), thickness = 1.dp)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                                        Text("🌾 বাংলা ক্যালেন্ডার", color = White.copy(alpha = 0.8f), fontSize = 10.sp)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(bengaliDate.first, color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(bengaliDate.second, color = White.copy(alpha = 0.8f), fontSize = 10.sp)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .width(1.dp)
+                                            .height(30.dp)
+                                            .background(Color.White.copy(alpha = 0.2f))
+                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                                        Text("🌙 হিজরি ক্যালেন্ডার", color = White.copy(alpha = 0.8f), fontSize = 10.sp)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(com.example.utils.DateUtil.getTodayHijriDateStr(hijriOffset), color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(com.example.utils.DateUtil.getHijriNoteStr(hijriOffset), color = White.copy(alpha = 0.8f), fontSize = 10.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            Text(
-                text = "আল-কুরআন",
-                color = White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 28.sp
-            )
-            Box(
-                modifier = Modifier
-                    .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(100.dp))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "\" ... আমি কোরআনকে বুঝার জন্য সহজ করে দিয়েছি... \" (৫৪:১৭)",
-                    color = White,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center
-                )
+                repeat(3) { iteration ->
+                    val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.4f)
+                    val width = if (pagerState.currentPage == iteration) 16.dp else 6.dp
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(color)
+                            .size(width = width, height = 4.dp)
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -1579,7 +1783,7 @@ fun ModeItemCard(
 ) {
     Card(
         modifier = modifier
-            .shadow(2.dp, RoundedCornerShape(16.dp))
+            .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = iconColor.copy(alpha = 0.5f))
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1588,29 +1792,34 @@ fun ModeItemCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(vertical = 20.dp, horizontal = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .background(containerColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
+                maxLines = 1,
+                textAlign = TextAlign.Center
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = subtitle,
                 fontSize = 11.sp,
                 color = GrayText,
-                maxLines = 1
+                maxLines = 1,
+                textAlign = TextAlign.Center
             )
         }
     }

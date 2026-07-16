@@ -20,14 +20,15 @@ class MushafRepository(
     fun getAvailableMushafs(): List<MushafStyle> {
         val list = mutableListOf(
             MushafStyle(
-                id = "pdf_tajweed",
-                name = "Tajweed PDF Quran",
-                nameBengali = "তাজবীদ পিডিএফ কুরআন",
-                description = "Color-coded Tajweed PDF Quran (Single File, Fast)",
-                descriptionBengali = "সম্পূর্ণ রঙিন তাজবীদ পিডিএফ কুরআন (একক ফাইল, দ্রুত ডাউনলোড)",
-                fileSizeMB = 54,
-                thumbnailUrl = "https://raw.githubusercontent.com/QuranHub/quran-pages-images/main/easyquran.com/hafs-tajweed/1.jpg",
-                baseUrl = "https://raw.githubusercontent.com/gimran/quran-pdf/master/quran.pdf",
+                id = "imdadia_hafezi",
+                name = "Imdadia Hafezi Quran",
+                nameBengali = "ইমদাদিয়া হাফেজী কুরআন",
+                description = "Imdadia 15-Line Hafezi Quran PDF",
+                descriptionBengali = "ইমদাদিয়া ১৫-লাইন হাফেজী কুরআন (একক ফাইল, সম্পূর্ণ অফলাইন)",
+                totalPages = 611,
+                fileSizeMB = 30,
+                thumbnailUrl = "https://pub-26d400c878304ce889b8454325e14661.r2.dev/imdadia/Screenshot_2026-07-16-05-42-42-398_com.google.android.apps.docs-edit.jpg",
+                baseUrl = "https://pub-26d400c878304ce889b8454325e14661.r2.dev/imdadia/imdadia-hafezi-quran3_text_copy.pdf",
                 isPdf = true,
                 pdfPageOffset = 1
             ),
@@ -179,7 +180,7 @@ class MushafRepository(
             
             val page = pdfRenderer.openPage(pdfPageNumber)
             
-            val scale = 3.0f
+            val scale = 2.0f
             val width = (page.width * scale).toInt()
             val height = (page.height * scale).toInt()
             

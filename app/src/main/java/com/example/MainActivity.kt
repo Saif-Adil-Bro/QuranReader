@@ -24,6 +24,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.remember
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ui.viewmodels.HomeViewModel
+import com.example.ui.screens.FloatingPlayerShortcut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
+
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     installSplashScreen()
@@ -38,7 +44,6 @@ class MainActivity : ComponentActivity() {
           "Light" -> false
           else -> isSystemDark
       }
-
       MyApplicationTheme(darkTheme = darkTheme) {
         Surface(
           modifier = Modifier.fillMaxSize(),
@@ -53,12 +58,14 @@ class MainActivity : ComponentActivity() {
             memorizedPageDao = appContainer.memorizedPageDao,
             mushafRepository = appContainer.mushafRepository
           )
+          
+          val homeViewModel: HomeViewModel = viewModel(factory = viewModelFactory)
           val navController = rememberNavController()
           val navBackStackEntry by navController.currentBackStackEntryAsState()
           val currentRoute = navBackStackEntry?.destination?.route
           val visibleEntries by navController.visibleEntries.collectAsState()
           val isSplashVisible = visibleEntries.any { it.destination.route == "splash" }
-
+          
           Scaffold(
             bottomBar = {
               BottomNavBar(
@@ -68,11 +75,22 @@ class MainActivity : ComponentActivity() {
               )
             }
           ) { innerPadding ->
-            AppNavGraph(
-              navController = navController,
-              viewModelFactory = viewModelFactory,
-              modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
-            )
+            Box(modifier = Modifier.fillMaxSize().padding(bottom = innerPadding.calculateBottomPadding())) {
+              AppNavGraph(
+                navController = navController,
+                viewModelFactory = viewModelFactory,
+                homeViewModel = homeViewModel,
+                modifier = Modifier.fillMaxSize()
+              )
+              
+              if (currentRoute != "splash" && currentRoute != "recitation/player") {
+                FloatingPlayerShortcut(
+                  viewModel = homeViewModel,
+                  onClick = { navController.navigate("recitation/player") },
+                  modifier = Modifier.align(Alignment.BottomEnd)
+                )
+              }
+            }
           }
         }
       }

@@ -285,6 +285,19 @@ class SettingsViewModel(
         }
     }
 
+    val hijriOffset: StateFlow<Int> = repository.hijriOffsetFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = 0
+        )
+
+    fun setHijriOffset(offset: Int) {
+        viewModelScope.launch {
+            repository.setHijriOffset(offset)
+        }
+    }
+
     val showTranslation: StateFlow<Boolean> = repository.showTranslationFlow
         .stateIn(
             scope = viewModelScope,

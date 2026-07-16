@@ -41,7 +41,7 @@ class HomeViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = "hafizi_15line"
+            initialValue = "imdadia_hafezi"
         )
 
     val lastReadPage: StateFlow<Int> = settingsRepository.lastReadPageFlow
@@ -70,6 +70,13 @@ class HomeViewModel(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             initialValue = 1
+        )
+
+    val hijriOffset: StateFlow<Int> = settingsRepository.hijriOffsetFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = 0
         )
 
     val theme: StateFlow<String> = settingsRepository.themeFlow

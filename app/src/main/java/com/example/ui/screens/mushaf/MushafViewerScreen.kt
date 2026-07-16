@@ -51,6 +51,7 @@ fun MushafViewerScreen(
     val isPdf by viewModel.isPdf.collectAsState()
     val pdfPageOffset by viewModel.pdfPageOffset.collectAsState()
     val totalPages by viewModel.totalPages.collectAsState()
+    val isReady by viewModel.isReady.collectAsState()
     val currentTheme by viewModel.theme.collectAsState()
     val scrollDirection by viewModel.scrollDirection.collectAsState()
     val isDark = currentTheme == "Dark"
@@ -134,7 +135,11 @@ fun MushafViewerScreen(
                 .background(if (isDark) Color.Black else Color.White)
                 .padding(paddingValues)
         ) {
-            if (isVertical) {
+            if (!isReady) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF10B981))
+                }
+            } else if (isVertical) {
                 VerticalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize()
@@ -143,6 +148,7 @@ fun MushafViewerScreen(
                     OnDemandPageViewer(
                         mushafId = mushafId,
                         pageNumber = pageNum,
+                        pdfPageOffset = pdfPageOffset,
                         isDark = isDark,
                         viewModel = viewModel
                     )
@@ -157,6 +163,7 @@ fun MushafViewerScreen(
                     OnDemandPageViewer(
                         mushafId = mushafId,
                         pageNumber = pageNum,
+                        pdfPageOffset = pdfPageOffset,
                         isDark = isDark,
                         viewModel = viewModel
                     )
@@ -365,7 +372,7 @@ fun MushafViewerScreen(
                         items(filteredParas) { juz ->
                             val juzNum = juz.first
                             val name = juz.second
-                            val isHafezi = (mushafId == "hafizi_15line" || mushafId == "custom_pdf")
+                            val isHafezi = (mushafId == "hafizi_15line" || mushafId == "imdadia_hafezi" || mushafId == "custom_pdf")
                             val startPage = if (isHafezi) {
                                 com.example.data.HafeziQuranData.getParaStartPage(juzNum, 1)
                             } else {
@@ -550,14 +557,15 @@ fun MushafViewerScreen(
 fun OnDemandPageViewer(
     mushafId: String,
     pageNumber: Int,
+    pdfPageOffset: Int,
     isDark: Boolean,
     viewModel: MushafViewerViewModel
 ) {
-    var pagePath by remember(mushafId, pageNumber) { mutableStateOf<String?>(null) }
-    var isLoading by remember(mushafId, pageNumber) { mutableStateOf(true) }
-    var hasError by remember(mushafId, pageNumber) { mutableStateOf(false) }
+    var pagePath by remember(mushafId, pageNumber, pdfPageOffset) { mutableStateOf<String?>(null) }
+    var isLoading by remember(mushafId, pageNumber, pdfPageOffset) { mutableStateOf(true) }
+    var hasError by remember(mushafId, pageNumber, pdfPageOffset) { mutableStateOf(false) }
 
-    LaunchedEffect(mushafId, pageNumber) {
+    LaunchedEffect(mushafId, pageNumber, pdfPageOffset) {
         isLoading = true
         hasError = false
         val path = viewModel.getPagePath(mushafId, pageNumber)
