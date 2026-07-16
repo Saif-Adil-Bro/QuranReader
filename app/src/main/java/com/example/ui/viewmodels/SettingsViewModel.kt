@@ -333,7 +333,7 @@ class SettingsViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = setOf("164", "169")
+            initialValue = setOf("164")
         )
 
     fun setSelectedTafsirIds(ids: Set<String>) {
@@ -353,16 +353,27 @@ class SettingsViewModel(
     
     fun toggleTafsir(id: String) {
         val current = selectedTafsirIds.value.toMutableSet()
+        val isDownloaded = downloadedTafsirIds.value.contains(id)
+
         if (current.contains(id)) {
             if (current.size > 1) { // ensure at least one is selected
                 current.remove(id)
                 setSelectedTafsirIds(current)
             }
         } else {
-            if (current.size < 3) {
+            if (!isDownloaded) {
+                current.clear()
                 current.add(id)
-                setSelectedTafsirIds(current)
+            } else {
+                val nonDownloaded = current.filter { !downloadedTafsirIds.value.contains(it) }
+                current.removeAll(nonDownloaded.toSet())
+                
+                if (current.size >= 3) {
+                    current.remove(current.first())
+                }
+                current.add(id)
             }
+            setSelectedTafsirIds(current)
         }
     }
 

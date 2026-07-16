@@ -512,14 +512,15 @@ fun HomeScreen(
                         val lastReadSurahNameForHero = QuranData.surahNames.find { it.first == lastReadSurah }?.second?.first ?: "আল ফাতিহা"
                         
                         val actionTextForHero = when (lastReadMode) {
-                            "HAFEZI" -> "সর্বশেষ হাফেজী পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)}"
-                            "TAJWEED" -> "সর্বশেষ তাজবীদ পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)}"
-                            "MUSHAF" -> "সর্বশেষ মুসহাফ পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadMushafPage)}"
-                            "READING" -> "সর্বশেষ রিডিং মোড"
-                            else -> "সর্বশেষ বিস্তারিত"
+                            "HAFEZI" -> "সর্বশেষ পঠিত পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)} (সূরা $lastReadSurahNameForHero)"
+                            "TAJWEED" -> "সর্বশেষ পঠিত পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)} (সূরা $lastReadSurahNameForHero)"
+                            "MUSHAF" -> "সর্বশেষ পঠিত পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadMushafPage)} (সূরা $lastReadSurahNameForHero)"
+                            "READING" -> "সর্বশেষ পঠিত রিডিং মোড"
+                            else -> "সর্বশেষ পঠিত সূরা"
                         }
                         val subTextForHero = when (lastReadMode) {
-                            "HAFEZI", "TAJWEED", "READING", "DETAIL", "SURA" -> lastReadSurahNameForHero
+                            "HAFEZI" -> "হাফেজী কুরআন (১৫ লাইন)"
+                            "TAJWEED" -> "রঙিন তাজবীদ কুরআন"
                             "MUSHAF" -> viewModel.getMushafStyle(lastReadMushafId ?: defaultMushafId)?.nameBengali ?: (lastReadMushafId ?: defaultMushafId)
                             else -> lastReadSurahNameForHero
                         }
@@ -565,6 +566,7 @@ fun HomeScreen(
                         lastReadMode = lastReadMode,
                         lastReadMushafId = lastReadMushafId,
                         lastReadMushafPage = lastReadMushafPage,
+                        lastReadMushafName = viewModel.getMushafStyle(lastReadMushafId ?: defaultMushafId)?.nameBengali ?: (lastReadMushafId ?: defaultMushafId),
                         bookmarks = bookmarks,
                         onSurahClick = onNavigateToSurah,
                         onNavigateToHafeziMode = onNavigateToHafeziMode,
@@ -814,10 +816,9 @@ fun HeroSection(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                                        Text("🌾 বাংলা ক্যালেন্ডার", color = White.copy(alpha = 0.8f), fontSize = 10.sp)
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(bengaliDate.first, color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Text(bengaliDate.second, color = White.copy(alpha = 0.8f), fontSize = 10.sp)
+                                        Text("🌾 বাংলা ক্যালেন্ডার", color = White.copy(alpha = 0.8f), fontSize = 10.sp, lineHeight = 12.sp)
+                                        Text(bengaliDate.first, color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
+                                        Text(bengaliDate.second, color = White.copy(alpha = 0.8f), fontSize = 10.sp, lineHeight = 12.sp)
                                     }
                                     Box(
                                         modifier = Modifier
@@ -826,10 +827,9 @@ fun HeroSection(
                                             .background(Color.White.copy(alpha = 0.2f))
                                     )
                                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                                        Text("🌙 হিজরি ক্যালেন্ডার", color = White.copy(alpha = 0.8f), fontSize = 10.sp)
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(com.example.utils.DateUtil.getTodayHijriDateStr(hijriOffset), color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Text(com.example.utils.DateUtil.getHijriNoteStr(hijriOffset), color = White.copy(alpha = 0.8f), fontSize = 10.sp)
+                                        Text("🌙 হিজরি ক্যালেন্ডার", color = White.copy(alpha = 0.8f), fontSize = 10.sp, lineHeight = 12.sp)
+                                        Text(com.example.utils.DateUtil.getTodayHijriDateStr(hijriOffset), color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
+                                        Text(com.example.utils.DateUtil.getHijriNoteStr(hijriOffset), color = White.copy(alpha = 0.8f), fontSize = 10.sp, lineHeight = 12.sp)
                                     }
                                 }
                             }
@@ -1584,6 +1584,7 @@ fun BookmarksAndLastReadSection(
     lastReadMode: String,
     lastReadMushafId: String?,
     lastReadMushafPage: Int,
+    lastReadMushafName: String,
     bookmarks: List<com.example.data.local.entity.BookmarkEntity>,
     onSurahClick: (Int) -> Unit,
     onNavigateToHafeziMode: (Int) -> Unit,
@@ -1645,27 +1646,38 @@ fun BookmarksAndLastReadSection(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
+                    val cardTitleText = when (lastReadMode) {
+                        "HAFEZI", "TAJWEED", "MUSHAF" -> "সর্বশেষ পঠিত মুসহাফ"
+                        "READING" -> "সর্বশেষ পঠিত রিডিং মোড"
+                        else -> "সর্বশেষ পঠিত সূরা"
+                    }
+                    val cardMainText = when (lastReadMode) {
+                        "HAFEZI" -> "হাফেজী কুরআন (১৫ লাইন)"
+                        "TAJWEED" -> "রঙিন তাজবীদ কুরআন"
+                        "MUSHAF" -> lastReadMushafName
+                        else -> lastReadSurahName
+                    }
+                    val cardSubtitleText = when (lastReadMode) {
+                        "HAFEZI" -> "পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()} • সূরা: $lastReadSurahName"
+                        "TAJWEED" -> "পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()} • সূরা: $lastReadSurahName"
+                        "MUSHAF" -> "পৃষ্ঠা: ${lastReadMushafPage.toBengaliNumerals()} • সূরা: $lastReadSurahName"
+                        "READING" -> "সূরা: $lastReadSurahName"
+                        else -> "সর্বশেষ বিস্তারিত: $lastReadSurahName"
+                    }
                     Text(
-                        text = "সর্বশেষ পঠিত সূরা",
+                        text = cardTitleText,
                         fontSize = 11.sp,
                         color = GrayText,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = lastReadSurahName,
+                        text = cardMainText,
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
-                    val subtitleText = when (lastReadMode) {
-                        "HAFEZI" -> "সর্বশেষ হাফেজী পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()}"
-                        "TAJWEED" -> "সর্বশেষ তাজবীদ পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()}"
-                        "MUSHAF" -> "সর্বশেষ মুসহাফ পৃষ্ঠা: ${lastReadMushafPage.toBengaliNumerals()}"
-                        "READING" -> "সর্বশেষ রিডিং মোড: $lastReadSurahName"
-                        else -> "সর্বশেষ বিস্তারিত: $lastReadSurahName"
-                    }
                     Text(
-                        text = subtitleText,
+                        text = cardSubtitleText,
                         fontSize = 11.sp,
                         color = PrimaryGreen,
                         fontWeight = FontWeight.Medium

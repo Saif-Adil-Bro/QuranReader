@@ -610,7 +610,7 @@ fun SettingsScreen(
                         AlertDialog(
                             onDismissRequest = { showTafsirDialog = false },
                             title = {
-                                Text("তাফসীর নির্বাচন করুন (সর্বোচ্চ ৩টি)")
+                                Text("তাফসীর নির্বাচন করুন")
                             },
                             text = {
                                 LazyColumn {
@@ -624,7 +624,7 @@ fun SettingsScreen(
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clickable(enabled = isDownloaded) { viewModel.toggleTafsir(tafsirId) }
+                                                .clickable { viewModel.toggleTafsir(tafsirId) }
                                                 .padding(vertical = 8.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
@@ -634,28 +634,15 @@ fun SettingsScreen(
                                                     onCheckedChange = { viewModel.toggleTafsir(tafsirId) },
                                                     colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = PrimaryGreen)
                                                 )
-                                            } else if (isDownloading) {
-                                                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp).padding(2.dp)) {
-                                                    androidx.compose.material3.CircularProgressIndicator(
-                                                        progress = progress,
-                                                        color = PrimaryGreen,
-                                                        strokeWidth = 2.dp
-                                                    )
-                                                }
                                             } else {
-                                                IconButton(
-                                                    onClick = { viewModel.downloadTafsir(tafsirId) },
-                                                    modifier = Modifier.size(24.dp)
-                                                ) {
-                                                    Icon(
-                                                        androidx.compose.material.icons.Icons.Default.Download,
-                                                        contentDescription = "Download Tafsir",
-                                                        tint = PrimaryGreen
-                                                    )
-                                                }
+                                                androidx.compose.material3.RadioButton(
+                                                    selected = isSelected,
+                                                    onClick = { viewModel.toggleTafsir(tafsirId) },
+                                                    colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = PrimaryGreen)
+                                                )
                                             }
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
+                                            Column(modifier = Modifier.weight(1f)) {
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -665,7 +652,7 @@ fun SettingsScreen(
                                                         text = tafsir.name ?: "Unknown", 
                                                         fontWeight = FontWeight.Bold,
                                                         modifier = Modifier.weight(1f),
-                                                        color = if (isDownloaded) MaterialTheme.colorScheme.onSurface else GrayText
+                                                        color = MaterialTheme.colorScheme.onSurface
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
                                                     Box(
@@ -682,6 +669,36 @@ fun SettingsScreen(
                                                     }
                                                 }
                                                 Text(text = tafsir.authorName ?: "Unknown", fontSize = 12.sp, color = GrayText)
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            if (!isDownloaded) {
+                                                if (isDownloading) {
+                                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp).padding(2.dp)) {
+                                                        androidx.compose.material3.CircularProgressIndicator(
+                                                            progress = progress,
+                                                            color = PrimaryGreen,
+                                                            strokeWidth = 2.dp
+                                                        )
+                                                    }
+                                                } else {
+                                                    IconButton(
+                                                        onClick = { viewModel.downloadTafsir(tafsirId) },
+                                                        modifier = Modifier.size(24.dp)
+                                                    ) {
+                                                        Icon(
+                                                            androidx.compose.material.icons.Icons.Default.Download,
+                                                            contentDescription = "Download Tafsir",
+                                                            tint = PrimaryGreen
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                Icon(
+                                                    androidx.compose.material.icons.Icons.Default.CheckCircle,
+                                                    contentDescription = "Downloaded",
+                                                    tint = PrimaryGreen,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
                                             }
                                         }
                                     }

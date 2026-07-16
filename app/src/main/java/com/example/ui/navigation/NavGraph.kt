@@ -1,5 +1,8 @@
 package com.example.ui.navigation
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -348,7 +351,11 @@ fun AppNavGraph(
                     navController.navigate("detail/$surahNumber?viewMode=LIST&initialAyah=$ayahNumber")
                 },
                 onNavigateToPlayer = {
-                    navController.navigate("player")
+                    if (homeViewModel.currentPlayingSurah.value != null) {
+                        navController.navigate("recitation/player")
+                    } else {
+                        navController.navigate("recitation/index")
+                    }
                 }
             )
         }
@@ -382,7 +389,7 @@ fun SplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF051210)), // Deep elegant dark background
+            .background(Color(0xFF115E39)), // Deep elegant dark green background
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -405,14 +412,13 @@ fun SplashScreen(
                 modifier = Modifier
                     .scale(pulseScale)
                     .size(96.dp)
-                    .background(Color(0xFF10B981).copy(alpha = 0.15f), CircleShape),
+                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.MenuBook,
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher),
                     contentDescription = null,
-                    tint = Color(0xFF10B981),
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(64.dp)
                 )
             }
             

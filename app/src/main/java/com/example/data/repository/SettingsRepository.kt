@@ -104,7 +104,7 @@ class SettingsRepository(val context: Context) {
         .map { preferences -> preferences[HAS_ASKED_DOWNLOAD_PROMPT_KEY] ?: false }
 
     val selectedTafsirIdsFlow: Flow<Set<String>> = context.dataStore.data
-        .map { preferences -> preferences[SELECTED_TAFSIR_IDS_KEY] ?: setOf("164", "169") }
+        .map { preferences -> preferences[SELECTED_TAFSIR_IDS_KEY] ?: setOf("164") }
 
     val selectedQariIdFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[SELECTED_QARI_ID_KEY] ?: "ar.alafasy" }
