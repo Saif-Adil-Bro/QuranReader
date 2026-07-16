@@ -67,12 +67,12 @@ fun RecitationIndexScreen(
                             text = "তেলাওয়াত প্লেয়ার",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
-                            color = DarkText
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "কুরআন শুনুন এবং রিফ্রেশ করুন",
                             fontSize = 11.sp,
-                            color = GrayText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Normal
                         )
                     }
@@ -96,7 +96,7 @@ fun RecitationIndexScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = White,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = DarkText
                 ),
                 modifier = Modifier.shadow(2.dp)
@@ -136,8 +136,8 @@ fun RecitationIndexScreen(
                             .height(52.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = White,
-                            unfocusedContainerColor = White,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                             focusedBorderColor = PrimaryGreen,
                             unfocusedBorderColor = Border
                         ),
@@ -150,7 +150,7 @@ fun RecitationIndexScreen(
                         text = if (searchQuery.isEmpty()) "সকল সূরাসমূহ (${surahList.size.toBengaliNumerals()})" else "খোঁজা হয়েছে (${filteredSurahList.size.toBengaliNumerals()})",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = DarkText
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -172,7 +172,7 @@ fun RecitationIndexScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = "কোনো সূরা খুঁজে পাওয়া যায়নি!",
-                                color = GrayText,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 14.sp
                             )
                         }
@@ -206,7 +206,7 @@ fun RecitationIndexScreen(
                                     },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (isCurrent) BackgroundGreen.copy(alpha = 0.5f) else White
+                                    containerColor = if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
                                 ),
                                 border = BorderStroke(
                                     width = 1.dp,
@@ -224,7 +224,7 @@ fun RecitationIndexScreen(
                                         modifier = Modifier
                                             .size(40.dp)
                                             .background(
-                                                if (isCurrent) PrimaryGreen else BackgroundGreen,
+                                                if (isCurrent) PrimaryGreen else MaterialTheme.colorScheme.primaryContainer,
                                                 RoundedCornerShape(8.dp)
                                             ),
                                         contentAlignment = Alignment.Center
@@ -233,7 +233,7 @@ fun RecitationIndexScreen(
                                             text = surah.number.toBengaliNumerals(),
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp,
-                                            color = if (isCurrent) White else PrimaryGreen
+                                            color = if (isCurrent) MaterialTheme.colorScheme.surface else PrimaryGreen
                                         )
                                     }
 
@@ -256,14 +256,14 @@ fun RecitationIndexScreen(
                                             Text(
                                                 text = "(${surah.englishName})",
                                                 fontSize = 11.sp,
-                                                color = GrayText
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = "$bengaliMeaning • ${surah.numberOfAyahs.toBengaliNumerals()} আয়াত",
                                             fontSize = 11.sp,
-                                            color = GrayText,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -275,14 +275,14 @@ fun RecitationIndexScreen(
                                             .size(36.dp)
                                             .clip(CircleShape)
                                             .background(
-                                                if (isCurrent && isPlaying) PrimaryGreen else BackgroundGreen
+                                                if (isCurrent && isPlaying) PrimaryGreen else MaterialTheme.colorScheme.primaryContainer
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = if (isCurrent && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                             contentDescription = "Play/Pause",
-                                            tint = if (isCurrent && isPlaying) White else PrimaryGreen,
+                                            tint = if (isCurrent && isPlaying) MaterialTheme.colorScheme.surface else PrimaryGreen,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -317,20 +317,20 @@ fun RecitationIndexScreen(
                         Icon(
                             imageVector = Icons.Default.MusicNote,
                             contentDescription = null,
-                            tint = White,
+                            tint = MaterialTheme.colorScheme.surface,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "সূরা $bengaliName বাজছে",
-                                color = White,
+                                color = MaterialTheme.colorScheme.surface,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
                             Text(
                                 text = if (isPlaying) "ট্যাপ করে প্লেয়ার স্ক্রিনে যান" else "তেলাওয়াত বন্ধ রয়েছে",
-                                color = White.copy(alpha = 0.8f),
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                                 fontSize = 11.sp
                             )
                         }
@@ -346,7 +346,7 @@ fun RecitationIndexScreen(
                             Icon(
                                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = "Play/Pause",
-                                tint = White
+                                tint = MaterialTheme.colorScheme.surface
                             )
                         }
                     }

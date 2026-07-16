@@ -265,24 +265,12 @@ class SearchViewModel(
                             repository.searchQuran(query)
                         }
 
-                        // Optimize loading the translations/texts by grouping matches by surah
-                        val uniqueSurahNumbers = response.matches.map { it.surah.number }.distinct()
-                        val surahDetailsMap = mutableMapOf<Int, List<com.example.data.model.CombinedAyah>>()
-                        uniqueSurahNumbers.forEach { surahNum ->
-                            try {
-                                surahDetailsMap[surahNum] = repository.getSurahDetailsCombined(surahNum, tanzilStyle)
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                        }
-
+                        // For better performance, we don't load the full combined surah details for search results.
                         response.matches.forEach { match ->
-                            val details = surahDetailsMap[match.surah.number]
-                            val combinedAyah = details?.find { it.numberInSurah == match.numberInSurah }
                             results.add(SearchResultItemType.AyahItem(
                                 match = match,
-                                arabicText = combinedAyah?.arabicText,
-                                banglaText = combinedAyah?.bengaliText ?: if (isArabicQuery) "" else match.text
+                                arabicText = if (isArabicQuery) match.text else null,
+                                banglaText = if (!isArabicQuery) match.text else null
                             ))
                         }
                     } catch (e: Exception) {

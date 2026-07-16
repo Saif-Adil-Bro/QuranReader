@@ -161,7 +161,7 @@ fun SurahDetailScreen(
                             Icon(Icons.Default.MenuBook, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("কুরআন", fontWeight = FontWeight.Bold, color = DarkText, fontSize = 20.sp)
+                        Text("কুরআন", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
@@ -397,7 +397,7 @@ fun SurahDetailScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp),
-                                    colors = CardDefaults.cardColors(containerColor = White),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                     shape = RoundedCornerShape(20.dp),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
@@ -492,7 +492,7 @@ fun SurahDetailScreen(
             ModalBottomSheet(
                 onDismissRequest = { showPlayerBottomSheet = false },
                 sheetState = sheetState,
-                containerColor = White
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
                 PlayerBottomSheetContent(
                     currentPlayingAyahNum = currentPlayingAyahNumber,
@@ -509,7 +509,7 @@ fun SurahDetailScreen(
             ModalBottomSheet(
                 onDismissRequest = { showSettingsBottomSheet = false },
                 sheetState = settingsSheetState,
-                containerColor = White
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
                 ReaderSettingsBottomSheetContent(
                     showTranslation = showTranslation,
@@ -564,7 +564,7 @@ fun HeaderCard(
             .padding(24.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Text(title, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = DarkText)
+            Text(title, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             if (subtitle.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(subtitle, fontSize = 14.sp, color = PrimaryGreen)
@@ -584,7 +584,7 @@ fun HeaderCard(
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(info1, fontSize = 11.sp, color = GrayText, fontWeight = FontWeight.Medium)
+                    Text(info1, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                 }
                 
                 if (info2.isNotEmpty()) {
@@ -609,7 +609,7 @@ fun HeaderCard(
                             .padding(horizontal = 10.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(info3, fontSize = 11.sp, color = GrayText, fontWeight = FontWeight.Medium)
+                        Text(info3, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                     }
                 }
                 
@@ -634,13 +634,13 @@ fun HeaderCard(
                             .width(60.dp)
                             .background(OffWhite, RoundedCornerShape(4.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp),
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = DarkText),
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { onSearch() }),
                         singleLine = true,
                         decorationBox = { innerTextField ->
                             if (searchQuery.isEmpty()) {
-                                Text("আয়াত", color = GrayText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("আয়াত", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                             innerTextField()
                         }
@@ -687,7 +687,7 @@ fun InfoChip(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector
             Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = PrimaryGreen)
             Spacer(modifier = Modifier.width(4.dp))
         }
-        Text(text, fontSize = 12.sp, color = DarkText)
+        Text(text, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -722,7 +722,7 @@ fun BismillahSection(arabicFontName: String = "Amiri Quran") {
         Text(
             text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
             fontSize = 36.sp,
-            color = DarkText,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
             fontFamily = com.example.ui.theme.getArabicFont(arabicFontName)
         )
@@ -775,8 +775,8 @@ fun AyahCard(
             modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.9f),
             title = {
                 Column {
-                    Text(text = "তাফসীরে ইবনে কাসীর", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = DarkText)
-                    Text(text = "আয়াত ${ayah.numberInSurah}", fontSize = 14.sp, color = GrayText)
+                    Text(text = "তাফসীরে ইবনে কাসীর", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = "আয়াত ${ayah.numberInSurah}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             text = {
@@ -786,11 +786,11 @@ fun AyahCard(
                             text = parsedTafsir,
                             fontSize = 16.sp,
                             lineHeight = 24.sp,
-                            color = DarkText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Justify
                         )
                     } else {
-                        Text(text = "এই আয়াতের তাফসীর পাওয়া যায়নি।", fontSize = 16.sp, color = GrayText)
+                        Text(text = "এই আয়াতের তাফসীর পাওয়া যায়নি।", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             },
@@ -799,7 +799,7 @@ fun AyahCard(
                     Text("বন্ধ করুন", color = PrimaryGreen)
                 }
             },
-            containerColor = White,
+            containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = DarkText,
             textContentColor = DarkText
         )
@@ -821,7 +821,7 @@ fun AyahCard(
                             modifier = Modifier.size(36.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(ayah.numberInSurah.toString(), color = GrayText, fontSize = 14.sp)
+                            Text(ayah.numberInSurah.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("পারা ${ayah.juz} • পৃষ্ঠা ${ayah.page}", color = PrimaryGreen, fontSize = 10.sp)
@@ -853,7 +853,7 @@ fun AyahCard(
                                 onDismissRequest = { showMoreMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("কপি করুন", color = DarkText) },
+                                    text = { Text("কপি করুন", color = MaterialTheme.colorScheme.onSurface) },
                                     onClick = {
                                         showMoreMenu = false
                                         clipboardManager.setText(AnnotatedString(shareText))
@@ -862,7 +862,7 @@ fun AyahCard(
                                     leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = PrimaryGreen) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("শেয়ার করুন", color = DarkText) },
+                                    text = { Text("শেয়ার করুন", color = MaterialTheme.colorScheme.onSurface) },
                                     onClick = {
                                         showMoreMenu = false
                                         val sendIntent: Intent = Intent().apply {
@@ -889,7 +889,7 @@ fun AyahCard(
                             modifier = Modifier.size(36.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(ayah.numberInSurah.toString(), color = GrayText, fontSize = 14.sp)
+                            Text(ayah.numberInSurah.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("পারা ${ayah.juz} • পৃষ্ঠা ${ayah.page}", color = PrimaryGreen, fontSize = 10.sp)
@@ -921,7 +921,7 @@ fun AyahCard(
                                 onDismissRequest = { showMoreMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("কপি করুন", color = DarkText) },
+                                    text = { Text("কপি করুন", color = MaterialTheme.colorScheme.onSurface) },
                                     onClick = {
                                         showMoreMenu = false
                                         clipboardManager.setText(AnnotatedString(shareText))
@@ -930,7 +930,7 @@ fun AyahCard(
                                     leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = PrimaryGreen) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("শেয়ার করুন", color = DarkText) },
+                                    text = { Text("শেয়ার করুন", color = MaterialTheme.colorScheme.onSurface) },
                                     onClick = {
                                         showMoreMenu = false
                                         val sendIntent: Intent = Intent().apply {
@@ -964,7 +964,7 @@ fun AyahCard(
                     com.example.ui.components.TajweedText(
                         rawTajweedText = ayah.textUthmaniTajweed ?: "",
                         modifier = Modifier.fillMaxWidth(),
-                        color = DarkText,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = arabicFontSize.sp,
                         lineHeight = (arabicFontSize * arabicLineSpacing).sp,
                         fontFamily = arabicFont,
@@ -976,7 +976,7 @@ fun AyahCard(
                         ayahNumber = ayah.numberInSurah,
                         fontSize = arabicFontSize.toFloat(),
                         fontFamily = arabicFont,
-                        color = DarkText,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.fillMaxWidth(),
                         lineSpacing = arabicLineSpacing
                     )
@@ -987,7 +987,7 @@ fun AyahCard(
                         text = ayah.bengaliText,
                         fontSize = bengaliFontSize.sp,
                         fontFamily = com.example.ui.theme.solaimanLipiFont,
-                        color = GrayText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -996,7 +996,7 @@ fun AyahCard(
                     com.example.ui.components.TajweedText(
                         rawTajweedText = ayah.textUthmaniTajweed ?: "",
                         modifier = Modifier.fillMaxWidth(),
-                        color = DarkText,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = arabicFontSize.sp,
                         lineHeight = (arabicFontSize * arabicLineSpacing).sp,
                         fontFamily = arabicFont,
@@ -1008,7 +1008,7 @@ fun AyahCard(
                         ayahNumber = ayah.numberInSurah,
                         fontSize = arabicFontSize.toFloat(),
                         fontFamily = arabicFont,
-                        color = DarkText,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.fillMaxWidth(),
                         lineSpacing = arabicLineSpacing
                     )
@@ -1029,7 +1029,7 @@ fun AyahCard(
                     Text(
                         text = parsedTafsir,
                         fontSize = 15.sp,
-                        color = DarkText,
+                        color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 24.sp,
                         textAlign = TextAlign.Justify,
                         modifier = Modifier.fillMaxWidth()
@@ -1041,7 +1041,7 @@ fun AyahCard(
                     ayahNumber = ayah.numberInSurah,
                     fontSize = arabicFontSize.toFloat(),
                     fontFamily = arabicFont,
-                    color = DarkText,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth(),
                     lineSpacing = arabicLineSpacing
                 )
@@ -1051,7 +1051,7 @@ fun AyahCard(
                         text = ayah.bengaliText,
                         fontSize = bengaliFontSize.sp,
                         fontFamily = com.example.ui.theme.solaimanLipiFont,
-                        color = GrayText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -1197,7 +1197,7 @@ fun PlayerBottomSheetContent(
                 text = "কুরআন প্লেয়ার",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = DarkText
+                color = MaterialTheme.colorScheme.onSurface
             )
             IconButton(onClick = onClose) {
                 Icon(Icons.Default.Close, contentDescription = "Close", tint = GrayText)
@@ -1212,7 +1212,7 @@ fun PlayerBottomSheetContent(
                 fontSize = 24.sp,
                 fontFamily = arabicFont,
                 textAlign = TextAlign.Center,
-                color = DarkText,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -1221,14 +1221,14 @@ fun PlayerBottomSheetContent(
                 fontSize = 14.sp,
                 fontFamily = com.example.ui.theme.solaimanLipiFont,
                 textAlign = TextAlign.Center,
-                color = GrayText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             )
         } else {
             Text(
                 text = "কোনো আয়াত বাজানো হচ্ছে না",
                 fontSize = 16.sp,
-                color = GrayText
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -1319,7 +1319,7 @@ fun ReaderSettingsBottomSheetContent(
                 text = "রিডার সেটিংস",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = DarkText
+                color = MaterialTheme.colorScheme.onSurface
             )
             IconButton(onClick = onClose) {
                 Icon(Icons.Default.Close, contentDescription = "Close", tint = GrayText)
@@ -1337,7 +1337,7 @@ fun ReaderSettingsBottomSheetContent(
             Text(
                 text = "বাংলা অনুবাদ প্রদর্শন",
                 fontSize = 16.sp,
-                color = DarkText
+                color = MaterialTheme.colorScheme.onSurface
             )
             Switch(
                 checked = showTranslation,
@@ -1362,7 +1362,7 @@ fun ReaderSettingsBottomSheetContent(
             Text(
                 text = "থামার চিহ্ন প্রদর্শন (م، ج،صلے)",
                 fontSize = 16.sp,
-                color = DarkText
+                color = MaterialTheme.colorScheme.onSurface
             )
             Switch(
                 checked = showWaqfSigns,
@@ -1430,7 +1430,7 @@ fun ReaderSettingsBottomSheetContent(
         Text(
             text = "আরবি ফন্ট নির্বাচন করুন",
             fontSize = 14.sp,
-            color = GrayText
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(12.dp))
         LazyRow(
@@ -1471,7 +1471,7 @@ fun ReaderSettingsBottomSheetContent(
         Text(
             text = "কুরআন স্ক্রিপ্ট স্টাইল নির্বাচন করুন",
             fontSize = 14.sp,
-            color = GrayText
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(12.dp))
         val scriptOptions = listOf(
@@ -1511,7 +1511,7 @@ fun ReaderSettingsBottomSheetContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider(color = Border)
+        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
         Spacer(modifier = Modifier.height(16.dp))
 
         // Offline Download Section
@@ -1525,7 +1525,7 @@ fun ReaderSettingsBottomSheetContent(
                 text = "অফলাইন ডাউনলোড",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = DarkText
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -1542,7 +1542,7 @@ fun ReaderSettingsBottomSheetContent(
                     text = downloadStatus ?: "অডিও ও ডাটা ফাইল ডাউনলোড হচ্ছে...",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = DarkText
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -1553,7 +1553,7 @@ fun ReaderSettingsBottomSheetContent(
                     Text(
                         text = "ডাউনলোড অগ্রগতি:",
                         fontSize = 11.sp,
-                        color = GrayText
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = "$downloadProgress%",
@@ -1567,7 +1567,7 @@ fun ReaderSettingsBottomSheetContent(
                     progress = { downloadProgress / 100f },
                     modifier = Modifier.fillMaxWidth(),
                     color = Color(0xFF06B6D4),
-                    trackColor = Border
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedButton(
@@ -1789,7 +1789,7 @@ fun MushafPageView(
                 fontSize = arabicFontSize.sp,
                 lineHeight = (arabicFontSize * arabicLineSpacing).sp,
                 fontFamily = arabicFont,
-                color = DarkText,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1835,7 +1835,7 @@ fun MushafPageView(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            HorizontalDivider(color = Border, modifier = Modifier.fillMaxWidth())
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth())
             Box(
                 modifier = Modifier
                     .background(White)
@@ -1843,7 +1843,7 @@ fun MushafPageView(
             ) {
                 Text(
                     text = "পৃষ্ঠা $page",
-                    color = GrayText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp
                 )
             }

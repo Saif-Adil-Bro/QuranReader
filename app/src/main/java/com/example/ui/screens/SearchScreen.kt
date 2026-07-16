@@ -525,7 +525,7 @@ fun SearchResultItem(
             }
 
             // Bengali Translation Section with Keyword Highlighting!
-            val displayText = banglaText ?: match.text
+            val displayText = banglaText ?: if (arabicText.isNullOrBlank()) match.text else ""
             if (displayText.isNotBlank()) {
                 val highlightedText = highlightText(
                     text = displayText,

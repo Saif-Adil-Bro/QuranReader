@@ -87,7 +87,7 @@ fun RecitationPlayerScreen(
                         text = "অডিও প্লেয়ার",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
-                        color = DarkText
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -109,8 +109,8 @@ fun RecitationPlayerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = White,
-                    titleContentColor = DarkText
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 modifier = Modifier.shadow(1.dp)
             )
@@ -124,7 +124,7 @@ fun RecitationPlayerScreen(
                         .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp)
                         .shadow(3.dp, RoundedCornerShape(16.dp)),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.12f))
                 ) {
                     Column(
@@ -143,7 +143,7 @@ fun RecitationPlayerScreen(
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(100.dp)),
                                 color = PrimaryGreen,
-                                trackColor = Border
+                                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
@@ -153,12 +153,12 @@ fun RecitationPlayerScreen(
                                 Text(
                                     text = "আয়াত ${(currentPlayingAyahIndex + 1).toBengaliNumerals()}",
                                     fontSize = 11.sp,
-                                    color = GrayText
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "মোট ${totalAyahs.toBengaliNumerals()} আয়াত",
                                     fontSize = 11.sp,
-                                    color = GrayText
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -175,12 +175,12 @@ fun RecitationPlayerScreen(
                                 modifier = Modifier
                                     .size(44.dp)
                                     .clip(CircleShape)
-                                    .background(if (isRepeatAyahEnabled) PrimaryGreen else BackgroundGreen)
+                                    .background(if (isRepeatAyahEnabled) PrimaryGreen else MaterialTheme.colorScheme.primaryContainer)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.RepeatOne,
                                     contentDescription = "Ayah Repeat",
-                                    tint = if (isRepeatAyahEnabled) White else PrimaryGreen,
+                                    tint = if (isRepeatAyahEnabled) MaterialTheme.colorScheme.onPrimary else PrimaryGreen,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -193,7 +193,7 @@ fun RecitationPlayerScreen(
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(CircleShape)
-                                    .background(BackgroundGreen)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipPrevious,
@@ -224,7 +224,7 @@ fun RecitationPlayerScreen(
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = "Play/Pause",
-                                    tint = White,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(32.dp)
                                 )
                             }
@@ -237,7 +237,7 @@ fun RecitationPlayerScreen(
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(CircleShape)
-                                    .background(BackgroundGreen)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipNext,
@@ -255,12 +255,12 @@ fun RecitationPlayerScreen(
                                 modifier = Modifier
                                     .size(44.dp)
                                     .clip(CircleShape)
-                                    .background(if (isRepeatSurahEnabled) PrimaryGreen else BackgroundGreen)
+                                    .background(if (isRepeatSurahEnabled) PrimaryGreen else MaterialTheme.colorScheme.primaryContainer)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Repeat,
                                     contentDescription = "Surah Repeat",
-                                    tint = if (isRepeatSurahEnabled) White else PrimaryGreen,
+                                    tint = if (isRepeatSurahEnabled) MaterialTheme.colorScheme.onPrimary else PrimaryGreen,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -269,7 +269,7 @@ fun RecitationPlayerScreen(
                 }
             }
         },
-        containerColor = Color(0xFFF6F8F6)
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -303,13 +303,13 @@ fun RecitationPlayerScreen(
                             text = "কোনো সূরা চালু নেই",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = DarkText
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "সূরা তালিকা থেকে একটি সূরা নির্বাচন করে প্লে করুন।",
                             fontSize = 13.sp,
-                            color = GrayText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(24.dp))
@@ -317,7 +317,7 @@ fun RecitationPlayerScreen(
                             onClick = onBackClick,
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
                         ) {
-                            Text("সূরা তালিকা দেখুন", color = White)
+                            Text("সূরা তালিকা দেখুন", color = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
                 }
@@ -328,7 +328,7 @@ fun RecitationPlayerScreen(
                         .fillMaxWidth()
                         .shadow(3.dp, RoundedCornerShape(16.dp)),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.12f))
                 ) {
                     Column(
@@ -347,14 +347,14 @@ fun RecitationPlayerScreen(
                         Text(
                             text = "ক্বারী: $qariName",
                             fontSize = 13.sp,
-                            color = GrayText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = if (totalAyahs > 0) "আয়াত: ${(currentPlayingAyahIndex + 1).toBengaliNumerals()} / ${totalAyahs.toBengaliNumerals()}" else "লোড হচ্ছে...",
                             fontSize = 11.sp,
-                            color = GrayText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -369,7 +369,7 @@ fun RecitationPlayerScreen(
                             .weight(1f)
                             .shadow(4.dp, RoundedCornerShape(16.dp)),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.15f))
                     ) {
                         Box(
@@ -396,13 +396,13 @@ fun RecitationPlayerScreen(
                                     lineHeight = 38.sp
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
-                                Divider(color = Border.copy(alpha = 0.4f), thickness = 0.5.dp)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), thickness = 0.5.dp)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
                                     text = currentAyahObj.bengaliText,
                                     fontSize = 14.sp,
                                     fontFamily = com.example.ui.theme.solaimanLipiFont,
-                                    color = DarkText,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.fillMaxWidth(),
                                     lineHeight = 22.sp

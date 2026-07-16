@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.QuranData
 import com.example.ui.theme.PrimaryGreen
-import com.example.ui.theme.BackgroundGreen
+
 import com.example.ui.theme.Border
 import com.example.ui.theme.GrayText
 import com.example.ui.theme.White
@@ -165,7 +165,7 @@ fun TajweedIndexScreen(
                     ) {
                         Text(
                             text = "কোনো সূরা পাওয়া যায়নি!",
-                            color = GrayText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 16.sp
                         )
                     }
@@ -195,7 +195,7 @@ fun TajweedIndexScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(36.dp)
-                                            .background(BackgroundGreen, CircleShape),
+                                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
@@ -216,7 +216,7 @@ fun TajweedIndexScreen(
                                         Text(
                                             text = surahPair.second.second,
                                             fontSize = 12.sp,
-                                            color = GrayText
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -242,7 +242,7 @@ fun TajweedIndexScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onJuzClick(juzNum) },
-                            colors = CardDefaults.cardColors(containerColor = BackgroundGreen),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                             border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f))
                         ) {
                             Column(
@@ -261,7 +261,7 @@ fun TajweedIndexScreen(
                                 Text(
                                     text = juzName,
                                     fontSize = 12.sp,
-                                    color = DarkText,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontWeight = FontWeight.Medium,
                                     maxLines = 1
                                 )

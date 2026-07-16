@@ -218,7 +218,7 @@ fun HomeScreen(
                     border = BorderStroke(1.dp, GrayText.copy(alpha = 0.5f)),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = GrayText)
                 ) {
-                    Text("না, পরে করব", color = GrayText)
+                    Text("না, পরে করব", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface,
@@ -265,7 +265,7 @@ fun HomeScreen(
                     Text(
                         text = "অনুগ্রহ করে অপেক্ষা করুন, ডাটা ডাউনলোড সম্পন্ন হচ্ছে। ডাউনলোড শেষ হলে সব ফিচার অফলাইনে ব্যবহার করতে পারবেন।",
                         fontSize = 12.sp,
-                        color = GrayText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -873,7 +873,7 @@ fun SearchSection(onClick: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Search, contentDescription = "Search", tint = GrayText)
             Spacer(modifier = Modifier.width(12.dp))
-            Text("সূরা, পারা বা আয়াত খুঁজুন...", color = GrayText, fontSize = 16.sp)
+            Text("সূরা, পারা বা আয়াত খুঁজুন...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
         }
     }
 }
@@ -929,7 +929,7 @@ fun QuickAccessSection(
                 Box(
                     modifier = Modifier
                         .size(32.dp)
-                        .background(BackgroundGreen, RoundedCornerShape(100.dp)),
+                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(100.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
@@ -943,7 +943,7 @@ fun QuickAccessSection(
                         "READING" -> "রিডিং: $lastReadSurahName"
                         else -> "বিস্তারিত: $lastReadSurahName"
                     }
-                    Text("সর্বশেষ পঠিত", color = GrayText, fontSize = 9.sp, lineHeight = 10.sp, maxLines = 1)
+                    Text("সর্বশেষ পঠিত", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, lineHeight = 10.sp, maxLines = 1)
                     Text(subtitleText, color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, lineHeight = 12.sp)
                 }
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GrayText, modifier = Modifier.size(16.dp))
@@ -1485,7 +1485,7 @@ fun SurahCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(BackgroundGreen, RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp))
                     )
                     Text(number, color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
@@ -1501,7 +1501,7 @@ fun SurahCard(
                     )
                     Text(
                         translation, 
-                        color = GrayText, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, 
                         fontSize = 10.sp, 
                         maxLines = 1, 
                         lineHeight = 10.sp,
@@ -1511,16 +1511,16 @@ fun SurahCard(
             }
             if (ayahCount != null && revelationType != null) {
                 Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = Border)
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null, tint = GrayText, modifier = Modifier.size(10.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("${ayahCount.toBengaliNumerals()} আয়াত", color = GrayText, fontSize = 10.sp)
+                    Text("${ayahCount.toBengaliNumerals()} আয়াত", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(modifier = Modifier.size(3.dp).background(GrayText, RoundedCornerShape(50)))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(revelationType, color = GrayText, fontSize = 10.sp)
+                    Text(revelationType, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                 }
             }
         }
@@ -1608,7 +1608,7 @@ fun BookmarksAndLastReadSection(
                 .padding(vertical = 4.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, Border)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
         ) {
             Row(
                 modifier = Modifier
@@ -1634,7 +1634,7 @@ fun BookmarksAndLastReadSection(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(BackgroundGreen, CircleShape),
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -1667,7 +1667,7 @@ fun BookmarksAndLastReadSection(
                     Text(
                         text = cardTitleText,
                         fontSize = 11.sp,
-                        color = GrayText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
@@ -1707,7 +1707,7 @@ fun BookmarksAndLastReadSection(
                 items(bookmarks) { bookmark ->
                     Card(
                         shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = BackgroundGreen),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                         border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
                         modifier = Modifier.clickable {
                             when (bookmark.type) {
@@ -1846,7 +1846,7 @@ fun ModeItemCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, Border)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
     ) {
         Column(
             modifier = Modifier
@@ -1876,7 +1876,7 @@ fun ModeItemCard(
             Text(
                 text = subtitle,
                 fontSize = 11.sp,
-                color = GrayText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 textAlign = TextAlign.Center
             )
@@ -1924,7 +1924,7 @@ fun QariSelectorDialog(
                                 .fillMaxWidth()
                                 .clickable { onSelectQari(qari.first) },
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) BackgroundGreen else MaterialTheme.colorScheme.surface
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
                             ),
                             border = BorderStroke(1.dp, if (isSelected) PrimaryGreen else Border)
                         ) {
@@ -1955,7 +1955,7 @@ fun QariSelectorDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("বন্ধ করুন", color = GrayText)
+                Text("বন্ধ করুন", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,
@@ -1996,7 +1996,7 @@ fun SurahSelectorDialog(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryGreen,
-                        unfocusedBorderColor = Border
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                     ),
                     singleLine = true
                 )
@@ -2006,7 +2006,7 @@ fun SurahSelectorDialog(
             Box(modifier = Modifier.height(300.dp)) {
                 if (filteredSurahs.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("কোনো সূরা পাওয়া যায়নি!", color = GrayText, fontSize = 14.sp)
+                        Text("কোনো সূরা পাওয়া যায়নি!", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
                 } else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2017,7 +2017,7 @@ fun SurahSelectorDialog(
                                     .fillMaxWidth()
                                     .clickable { onSelectSurah(surahId) },
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                border = BorderStroke(1.dp, Border)
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -2028,7 +2028,7 @@ fun SurahSelectorDialog(
                                     Box(
                                         modifier = Modifier
                                             .size(32.dp)
-                                            .background(BackgroundGreen, CircleShape),
+                                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
@@ -2049,7 +2049,7 @@ fun SurahSelectorDialog(
                                         Text(
                                             text = surahPair.second.second,
                                             fontSize = 11.sp,
-                                            color = GrayText
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -2061,7 +2061,7 @@ fun SurahSelectorDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("বন্ধ করুন", color = GrayText)
+                Text("বন্ধ করুন", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,
@@ -2136,7 +2136,7 @@ fun RecitationPlayerPanel(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .background(BackgroundGreen, CircleShape),
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -2157,7 +2157,7 @@ fun RecitationPlayerPanel(
                             Text(
                                 text = "ক্বারী: $qariName",
                                 fontSize = 12.sp,
-                                color = GrayText
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = "আয়াত: ${(currentPlayingAyahIndex + 1).toBengaliNumerals()} / ${totalAyahs.toBengaliNumerals()}",
@@ -2176,7 +2176,7 @@ fun RecitationPlayerPanel(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(BackgroundGreen.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                                 .border(1.dp, PrimaryGreen.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                                 .padding(12.dp)
                         ) {
@@ -2209,7 +2209,7 @@ fun RecitationPlayerPanel(
                             .height(6.dp)
                             .clip(RoundedCornerShape(100.dp)),
                         color = PrimaryGreen,
-                        trackColor = Border
+                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -2265,7 +2265,7 @@ fun RecitationPlayerPanel(
                         }
                         Button(
                             onClick = { onSpeedClick(nextSpeed) },
-                            colors = ButtonDefaults.buttonColors(containerColor = BackgroundGreen),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                             border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.height(36.dp)
@@ -2284,7 +2284,7 @@ fun RecitationPlayerPanel(
                         Button(
                             onClick = onToggleRepeatAyah,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isRepeatAyahEnabled) PrimaryGreen else BackgroundGreen
+                                containerColor = if (isRepeatAyahEnabled) PrimaryGreen else MaterialTheme.colorScheme.primaryContainer
                             ),
                             border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -2304,7 +2304,7 @@ fun RecitationPlayerPanel(
                         Button(
                             onClick = onToggleRepeatSurah,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isRepeatSurahEnabled) PrimaryGreen else BackgroundGreen
+                                containerColor = if (isRepeatSurahEnabled) PrimaryGreen else MaterialTheme.colorScheme.primaryContainer
                             ),
                             border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -2335,7 +2335,7 @@ fun RecitationPlayerPanel(
                         Text(
                             text = "ক্বারী ও সূরা নির্বাচন করে তেলাওয়াত উপভোগ করুন",
                             fontSize = 11.sp,
-                            color = GrayText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -2346,7 +2346,7 @@ fun RecitationPlayerPanel(
                         ) {
                             Button(
                                 onClick = onQariClick,
-                                colors = ButtonDefaults.buttonColors(containerColor = BackgroundGreen),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                                 border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.2f)),
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(vertical = 12.dp)
