@@ -512,16 +512,16 @@ fun HomeScreen(
                         val lastReadSurahNameForHero = QuranData.surahNames.find { it.first == lastReadSurah }?.second?.first ?: "আল ফাতিহা"
                         
                         val actionTextForHero = when (lastReadMode) {
-                            "HAFEZI" -> "সর্বশেষ পঠিত পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)} (সূরা $lastReadSurahNameForHero)"
+                            "HAFEZI" -> "সর্বশেষ পঠিত পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)}"
                             "TAJWEED" -> "সর্বশেষ পঠিত পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)} (সূরা $lastReadSurahNameForHero)"
-                            "MUSHAF" -> "সর্বশেষ পঠিত পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadMushafPage)} (সূরা $lastReadSurahNameForHero)"
+                            "MUSHAF" -> "সর্বশেষ পঠিত পৃষ্ঠা: ${com.example.utils.DateUtil.toBengaliNumerals(lastReadMushafPage)}"
                             "READING" -> "সর্বশেষ পঠিত রিডিং মোড"
                             else -> "সর্বশেষ পঠিত সূরা"
                         }
                         val subTextForHero = when (lastReadMode) {
                             "HAFEZI" -> "হাফেজী কুরআন (১৫ লাইন)"
                             "TAJWEED" -> "রঙিন তাজবীদ কুরআন"
-                            "MUSHAF" -> viewModel.getMushafStyle(lastReadMushafId ?: defaultMushafId)?.nameBengali ?: (lastReadMushafId ?: defaultMushafId)
+                            "MUSHAF" -> viewModel.getMushafStyle(lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId)?.nameBengali ?: (lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId)
                             else -> lastReadSurahNameForHero
                         }
                         
@@ -534,7 +534,7 @@ fun HomeScreen(
                                     "HAFEZI" -> onNavigateToHafeziMode(lastReadPage)
                                     "TAJWEED" -> onNavigateToTajweedMode(lastReadPage)
                                     "READING" -> onNavigateToReadingMode(lastReadSurah)
-                                    "MUSHAF" -> onNavigateToMushafPage(lastReadMushafId ?: defaultMushafId, lastReadMushafPage, false)
+                                    "MUSHAF" -> onNavigateToMushafPage(lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId, lastReadMushafPage, false)
                                     "DETAIL" -> onNavigateToSurah(lastReadSurah)
                                     else -> onNavigateToSurah(lastReadSurah)
                                 }
@@ -566,7 +566,8 @@ fun HomeScreen(
                         lastReadMode = lastReadMode,
                         lastReadMushafId = lastReadMushafId,
                         lastReadMushafPage = lastReadMushafPage,
-                        lastReadMushafName = viewModel.getMushafStyle(lastReadMushafId ?: defaultMushafId)?.nameBengali ?: (lastReadMushafId ?: defaultMushafId),
+                        lastReadMushafName = viewModel.getMushafStyle(lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId)?.nameBengali ?: (lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId),
+                        defaultMushafId = defaultMushafId,
                         bookmarks = bookmarks,
                         onSurahClick = onNavigateToSurah,
                         onNavigateToHafeziMode = onNavigateToHafeziMode,
@@ -650,8 +651,14 @@ fun HeroSection(
     LaunchedEffect(pagerState) {
         while (true) {
             delay(6000)
-            val nextPage = (pagerState.currentPage + 1) % 4
-            pagerState.animateScrollToPage(nextPage)
+            try {
+                val nextPage = (pagerState.currentPage + 1) % 4
+                if (!pagerState.isScrollInProgress) {
+                    pagerState.animateScrollToPage(nextPage)
+                }
+            } catch (e: Exception) {
+                // Ignore layout/detachment crashes when navigating away
+            }
         }
     }
     Box(
@@ -886,6 +893,7 @@ fun QuickAccessSection(
     lastReadMode: String,
     lastReadMushafId: String?,
     lastReadMushafPage: Int,
+    defaultMushafId: String,
     onTabSelected: (Int) -> Unit,
     onSurahClick: (Int) -> Unit,
     onNavigateToHafeziMode: (Int) -> Unit,
@@ -914,11 +922,8 @@ fun QuickAccessSection(
                         "READING" -> onNavigateToReadingMode(lastReadSurah)
                         "TAJWEED" -> onNavigateToTajweedMode(lastReadPage)
                         "MUSHAF" -> {
-                            if (lastReadMushafId != null) {
-                                onNavigateToMushafPage(lastReadMushafId, lastReadMushafPage, false)
-                            } else {
-                                onNavigateToHafeziMode(lastReadPage)
-                            }
+                            val targetMushafId = lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId
+                            onNavigateToMushafPage(targetMushafId, lastReadMushafPage, false)
                         }
                         else -> onSurahClick(lastReadSurah)
                     }
@@ -938,7 +943,7 @@ fun QuickAccessSection(
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                     val subtitleText = when (lastReadMode) {
                         "HAFEZI" -> "হাফেজী: ${lastReadPage.toBengaliNumerals()}"
-                        "TAJWEED" -> "তাজবীদ: ${lastReadPage.toBengaliNumerals()}"
+                        "TAJWEED" -> "তাজবীদ: ${lastReadPage.toBengaliNumerals()} • সূরা: $lastReadSurahName"
                         "MUSHAF" -> "মুসহাফ: ${lastReadMushafPage.toBengaliNumerals()}"
                         "READING" -> "রিডিং: $lastReadSurahName"
                         else -> "বিস্তারিত: $lastReadSurahName"
@@ -1585,6 +1590,7 @@ fun BookmarksAndLastReadSection(
     lastReadMushafId: String?,
     lastReadMushafPage: Int,
     lastReadMushafName: String,
+    defaultMushafId: String,
     bookmarks: List<com.example.data.local.entity.BookmarkEntity>,
     onSurahClick: (Int) -> Unit,
     onNavigateToHafeziMode: (Int) -> Unit,
@@ -1619,11 +1625,8 @@ fun BookmarksAndLastReadSection(
                             "READING" -> onNavigateToReadingMode(lastReadSurah)
                             "TAJWEED" -> onNavigateToTajweedMode(lastReadPage)
                             "MUSHAF" -> {
-                                if (lastReadMushafId != null) {
-                                    onNavigateToMushafPage(lastReadMushafId, lastReadMushafPage, false)
-                                } else {
-                                    onNavigateToHafeziMode(lastReadPage) // Fallback
-                                }
+                                val targetMushafId = lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId
+                                onNavigateToMushafPage(targetMushafId, lastReadMushafPage, false)
                             }
                             else -> onSurahClick(lastReadSurah) // DETAIL mode or default
                         }
@@ -1658,9 +1661,9 @@ fun BookmarksAndLastReadSection(
                         else -> lastReadSurahName
                     }
                     val cardSubtitleText = when (lastReadMode) {
-                        "HAFEZI" -> "পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()} • সূরা: $lastReadSurahName"
+                        "HAFEZI" -> "পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()}"
                         "TAJWEED" -> "পৃষ্ঠা: ${lastReadPage.toBengaliNumerals()} • সূরা: $lastReadSurahName"
-                        "MUSHAF" -> "পৃষ্ঠা: ${lastReadMushafPage.toBengaliNumerals()} • সূরা: $lastReadSurahName"
+                        "MUSHAF" -> "পৃষ্ঠা: ${lastReadMushafPage.toBengaliNumerals()}"
                         "READING" -> "সূরা: $lastReadSurahName"
                         else -> "সর্বশেষ বিস্তারিত: $lastReadSurahName"
                     }

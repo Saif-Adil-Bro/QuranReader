@@ -120,14 +120,14 @@ class MushafRepository(
             return file.exists() && file.length() > 0
         }
         val count = storageManager.getDownloadedPagesCount(mushafId)
-        return count >= 604
+        return count >= (style?.totalPages ?: 604)
     }
 
     fun getDownloadedPagesCount(mushafId: String): Int {
         val style = getAvailableMushafs().find { it.id == mushafId }
         if (style?.isPdf == true) {
             val file = File(storageManager.getMushafDirectory(mushafId), "mushaf.pdf")
-            return if (file.exists() && file.length() > 0) 604 else 0
+            return if (file.exists() && file.length() > 0) style.totalPages else 0
         }
         return storageManager.getDownloadedPagesCount(mushafId)
     }

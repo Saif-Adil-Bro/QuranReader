@@ -70,6 +70,10 @@ class MushafViewerViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val path = repository.getMushafPagePath(currentMushafId, pageNumber, _pdfPageOffset.value)
             _currentPagePath.value = path
+            
+            // Save last read state
+            settingsRepository.setLastReadMushaf(currentMushafId, pageNumber)
+            settingsRepository.setLastReadMode("MUSHAF")
         }
     }
 

@@ -44,7 +44,8 @@ import com.example.ui.viewmodels.SearchResultItemType
 fun SearchScreen(
     viewModel: SearchViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToSurah: (Int) -> Unit
+    onNavigateToSurah: (Int) -> Unit,
+    onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> }
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -199,7 +200,7 @@ fun SearchScreen(
                                                     banglaText = item.banglaText,
                                                     arabicFontName = arabicFont,
                                                     onClick = {
-                                                        onNavigateToSurah(item.match.surah.number)
+                                                        onNavigateToAyah(item.match.surah.number, item.match.numberInSurah)
                                                     }
                                                 )
                                             }

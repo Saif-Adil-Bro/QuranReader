@@ -78,10 +78,10 @@ fun HafeziModeScreen(
     var showJumpToPageDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(initialPage) {
-        if (currentPage == 1 && initialPage != 1) {
+        if (currentPage != initialPage && uiState !is UiState.Success) {
             viewModel.loadPage(initialPage)
         } else if (uiState is UiState.Loading) {
-            viewModel.loadPage(currentPage)
+            viewModel.loadPage(initialPage)
         }
     }
 

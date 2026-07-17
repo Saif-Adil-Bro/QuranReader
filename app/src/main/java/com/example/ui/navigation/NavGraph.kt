@@ -367,6 +367,9 @@ fun AppNavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToSurah = { surahNumber ->
                     navController.navigate("detail/$surahNumber")
+                },
+                onNavigateToAyah = { surahNumber, ayahNumber ->
+                    navController.navigate("detail/$surahNumber?viewMode=LIST&initialAyah=$ayahNumber")
                 }
             )
         }

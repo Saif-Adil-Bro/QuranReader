@@ -196,7 +196,8 @@ class QuranRepository(
     private fun cleanCombinedAyahList(list: List<CombinedAyah>): List<CombinedAyah> {
         val tajweedRegex = Regex("[\u06E2\u06E5\u06E6]")
         return list.map { ayah ->
-            val sNum = ayah.surahNumber
+            val sNum = ayah.surahNumber.takeIf { it > 0 } ?: com.example.data.QuranData.getSurahAndAyahFromGlobal(ayah.number).first
+            
             val rawWords = ayah.words
             var cleanedArabicText = ayah.arabicText
             if (ayah.numberInSurah == 1 && sNum != 1 && sNum != 9) {
@@ -224,7 +225,7 @@ class QuranRepository(
                 }
             }
             
-            ayah.copy(words = formattedWords, arabicText = cleanedArabicText)
+            ayah.copy(words = formattedWords, arabicText = cleanedArabicText, surahNumber = sNum)
         }
     }
 
@@ -524,14 +525,16 @@ class QuranRepository(
                         
                         val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
                             val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
-                            val verseKey = "${arabicAyah.surah?.number ?: 0}:${arabicAyah.numberInSurah}"
+                            val computedSurahNumber = arabicAyah.surah?.number?.takeIf { it > 0 } 
+                                ?: com.example.data.QuranData.getSurahAndAyahFromGlobal(arabicAyah.number).first
+                            val verseKey = "$computedSurahNumber:${arabicAyah.numberInSurah}"
                             val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
                             CombinedAyah(
                                 number = arabicAyah.number,
                                 numberInSurah = arabicAyah.numberInSurah,
                                 page = arabicAyah.page,
                                 juz = arabicAyah.juz,
-                                surahNumber = arabicAyah.surah?.number ?: 0,
+                                surahNumber = computedSurahNumber,
                                 arabicText = processArabicText(arabicAyah),
                                 bengaliText = "", // Hafezi mode doesn't need translation
                                 tafsirText = tafsir,

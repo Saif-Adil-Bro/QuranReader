@@ -41,7 +41,7 @@ class MushafDownloader(
             
             val isPdf = baseUrl.endsWith(".pdf")
             if (isPdf) {
-                downloadPdfFile(mushafId, baseUrl, onProgress)
+                downloadPdfFile(mushafId, baseUrl, totalPages, onProgress)
                 return@launch
             }
 
@@ -103,6 +103,7 @@ class MushafDownloader(
     private suspend fun downloadPdfFile(
         mushafId: String,
         url: String,
+        totalPages: Int,
         onProgress: (DownloadStatus) -> Unit
     ) = withContext(Dispatchers.IO) {
         val destDir = storageManager.getMushafDirectory(mushafId)
@@ -117,7 +118,7 @@ class MushafDownloader(
                     val renderer = PdfRenderer(pfd)
                     renderer.close()
                     pfd.close()
-                    onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, 604, 604))
+                    onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, totalPages, totalPages))
                     return@withContext
                 } catch (e: Exception) {
                     // PDF file is corrupted or incomplete, delete and download again
@@ -129,7 +130,7 @@ class MushafDownloader(
                 tempFile.delete()
             }
             
-            onProgress(DownloadStatus(mushafId, DownloadState.Downloading, 0, 0, 604))
+            onProgress(DownloadStatus(mushafId, DownloadState.Downloading, 0, 0, totalPages))
             
             val request = Request.Builder().url(url).build()
             val response = client.newCall(request).execute()
@@ -160,8 +161,8 @@ class MushafDownloader(
                             val percent = ((totalBytesRead * 100) / contentLength).toInt()
                             if (percent > lastUpdatePercent) {
                                 lastUpdatePercent = percent
-                                val fakePageCount = (percent * 604) / 100
-                                onProgress(DownloadStatus(mushafId, DownloadState.Downloading, percent, fakePageCount, 604))
+                                val fakePageCount = (percent * totalPages) / 100
+                                onProgress(DownloadStatus(mushafId, DownloadState.Downloading, percent, fakePageCount, totalPages))
                             }
                         }
                     }
@@ -171,25 +172,25 @@ class MushafDownloader(
                     inputStream.close()
                     
                     if (tempFile.renameTo(file)) {
-                        onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, 604, 604))
+                        onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, totalPages, totalPages))
                     } else {
                         tempFile.delete()
-                        onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
+                        onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, totalPages))
                     }
                 } else {
                     tempFile.delete()
-                    onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
+                    onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, totalPages))
                 }
             } else {
                 tempFile.delete()
-                onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
+                onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, totalPages))
             }
         } catch (e: Exception) {
             e.printStackTrace()
             if (tempFile.exists()) {
                 tempFile.delete()
             }
-            onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, 604))
+            onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, totalPages))
         }
     }
 

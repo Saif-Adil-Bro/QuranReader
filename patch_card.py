@@ -1,33 +1,9 @@
-package com.example.ui.screens.mushaf.components
+import re
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import com.example.data.model.DownloadState
-import com.example.data.model.DownloadStatus
-import com.example.data.model.MushafStyle
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Check
+with open("app/src/main/java/com/example/ui/screens/mushaf/components/MushafCard.kt", "r") as f:
+    content = f.read()
 
+imports = """
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.MoreVert
@@ -41,8 +17,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+"""
+if "import androidx.compose.foundation.layout.aspectRatio" not in content:
+    content = content.replace("import androidx.compose.material.icons.filled.CheckCircle\n", "import androidx.compose.material.icons.filled.CheckCircle\n" + imports)
 
-@Composable
+new_mushaf_card = """@Composable
 fun MushafCard(
     mushaf: MushafStyle,
     downloadStatus: DownloadStatus?,
@@ -229,67 +208,13 @@ fun MushafCard(
         }
     }
 }
-@Composable
-fun MushafBookCoverPreview(
-    mushaf: MushafStyle,
-    isDownloaded: Boolean
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(240.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFFAF6EB)) // Soft cream page background color
-            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
-    ) {
-        AsyncImage(
-            model = mushaf.thumbnailUrl,
-            contentDescription = "Page Preview",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+"""
 
-        if (isDownloaded) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(12.dp)
-                    .shadow(4.dp, RoundedCornerShape(8.dp))
-                    .background(Color(0xFF10B981), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = "সংরক্ষিত",
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
+start_idx = content.find("@Composable\nfun MushafCard(")
+if start_idx != -1:
+    end_idx = content.find("@Composable\nfun MushafBookCoverPreview(")
+    if end_idx != -1:
+        content = content[:start_idx] + new_mushaf_card + content[end_idx:]
 
-@Composable
-fun IslamicEmblem(modifier: Modifier = Modifier, color: Color) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        // Outer rotated square (8-pointed star shape base)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .border(1.dp, color, RoundedCornerShape(6.dp))
-                .rotate(45f)
-                .border(1.dp, color, RoundedCornerShape(6.dp))
-        )
-        // Center text symbol
-        Text(
-            text = "القرآن",
-            color = color,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-    }
-}
+with open("app/src/main/java/com/example/ui/screens/mushaf/components/MushafCard.kt", "w") as f:
+    f.write(content)
