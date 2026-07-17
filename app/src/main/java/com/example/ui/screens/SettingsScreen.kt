@@ -1602,19 +1602,342 @@ fun SubjectwiseDialogContent() {
 // --- 6. DUA DIALOG ---
 @Composable
 fun DuaDialogContent() {
-    val duas = com.example.data.DuaData.dailyDuas
+    val allDuas = com.example.data.DuaData.richDuas
+    var selectedDua by remember { mutableStateOf<com.example.data.DuaItem?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
     
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
-        items(duas) { (title, desc) ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+    fun formatToBanglaNumber(num: Int): String {
+        val banglaDigits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
+        return num.toString().map { char ->
+            if (char.isDigit()) banglaDigits[char - '0'] else char
+        }.joinToString("")
+    }
+
+    val filteredDuas = remember(searchQuery, allDuas) {
+        if (searchQuery.isBlank()) {
+            allDuas
+        } else {
+            allDuas.filter { 
+                it.title.contains(searchQuery, ignoreCase = true) || 
+                it.segments.any { segment -> 
+                    segment.translation.contains(searchQuery, ignoreCase = true) ||
+                    segment.transliteration.contains(searchQuery, ignoreCase = true) ||
+                    segment.arabic.contains(searchQuery, ignoreCase = true)
+                }
+            }
+        }
+    }
+
+    Crossfade(targetState = selectedDua, label = "DuaNavigation") { currentDua ->
+        if (currentDua == null) {
+            // DUAS INDEX / SUCI LIST
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Beautiful Search Field
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("দুআ খুঁজুন...", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = PrimaryGreen
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryGreen,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        cursorColor = PrimaryGreen
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+
+                if (filteredDuas.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "কোনো দুআ পাওয়া যায়নি",
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                fontSize = 15.sp
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                    ) {
+                        items(filteredDuas) { dua ->
+                            val index = allDuas.indexOf(dua) + 1
+                            val banglaIndex = formatToBanglaNumber(index)
+                            
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedDua = dua }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Index Circle Icon - warm coral-red color matching the screenshot
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .background(
+                                                color = Color(0xFFE55353),
+                                                shape = CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = banglaIndex,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = dua.title,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 15.sp,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            lineHeight = 20.sp
+                                        )
+                                        if (dua.segments.isNotEmpty()) {
+                                            val firstTranslation = dua.segments.first().translation
+                                            if (firstTranslation.isNotEmpty()) {
+                                                Text(
+                                                    text = firstTranslation,
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.padding(top = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowRight,
+                                        contentDescription = "Open",
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                                    thickness = 0.8.dp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // DUA DETAILS PAGE
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = PrimaryGreen)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(desc.replace("\n", " • "), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, lineHeight = 18.sp)
+                // Header with Back Option (Clean customized design, NOT copying the screenshot's exact top/bottom bar layout)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { selectedDua = null },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to list",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "তালিকায় ফিরে যান",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+
+                // Main Details Area (Custom elegant container)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    val formattedIndex = formatToBanglaNumber(allDuas.indexOf(currentDua) + 1)
+                    
+                    // Title styled centered or structured beautifully like the screenshot
+                    Text(
+                        text = "[$formattedIndex] ${currentDua.title}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = 26.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    )
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    )
+                    
+                    currentDua.segments.forEachIndexed { index, segment ->
+                        if (index > 0) {
+                            Spacer(modifier = Modifier.height(20.dp))
+                        }
+                        
+                        // Arabic Text - large, centered, elegant high-contrast display exactly like the screenshot
+                        if (segment.arabic.isNotEmpty() && segment.arabic != "null") {
+                            Text(
+                                text = segment.arabic,
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                lineHeight = 44.sp
+                            )
+                        }
+                        
+                        // Translation with Left-Border Accent Bar exactly like the screenshot
+                        if (segment.translation.isNotEmpty() && segment.translation != "null") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min)
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .fillMaxHeight()
+                                        .background(Color(0xFF00B4D8), RoundedCornerShape(2.dp)) // Cyan/teal left border accent
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = segment.translation,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        lineHeight = 22.sp
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Transliteration with Left-Border Accent Bar exactly like the screenshot
+                        if (segment.transliteration.isNotEmpty() && segment.transliteration != "null") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min)
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .fillMaxHeight()
+                                        .background(Color(0xFF00B4D8).copy(alpha = 0.6f), RoundedCornerShape(2.dp)) // Accent left border
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = segment.transliteration,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                        lineHeight = 22.sp
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Prekkhapot (Dua's context) exactly like the screenshot:
+                        // "দোয়ার প্রেক্ষাপট: এটি দুনিয়া-আখিরাত উভয় জগতে সফলতার জন্য..."
+                        if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                val contextText = buildString {
+                                    append("দোয়ার প্রেক্ষাপট: ")
+                                    append(segment.bottom)
+                                }
+                                Text(
+                                    text = contextText,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                    lineHeight = 22.sp
+                                )
+                            }
+                        }
+                        
+                        // Reference - small, styled at the bottom
+                        if (segment.reference.isNotEmpty() && segment.reference != "null") {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = segment.reference,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Start
+                            )
+                        }
+                    }
                 }
             }
         }

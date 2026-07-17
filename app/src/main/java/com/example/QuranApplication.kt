@@ -10,5 +10,6 @@ class QuranApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        com.example.data.DuaData.initialize(this)
     }
 }
