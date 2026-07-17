@@ -40,6 +40,7 @@ class SettingsRepository(val context: Context) {
     private val REPEAT_COUNT_KEY = intPreferencesKey("repeat_count")
     private val SHOW_WAQF_SIGNS_KEY = booleanPreferencesKey("show_waqf_signs")
     private val HAS_ASKED_DOWNLOAD_PROMPT_KEY = booleanPreferencesKey("has_asked_download_prompt")
+    private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
     
     // Tafsir Settings
     private val SELECTED_TAFSIR_IDS_KEY = stringSetPreferencesKey("selected_tafsir_ids")
@@ -117,6 +118,9 @@ class SettingsRepository(val context: Context) {
 
     val hijriOffsetFlow: Flow<Int> = context.dataStore.data
         .map { preferences -> preferences[HIJRI_OFFSET_KEY] ?: 0 }
+
+    val keepScreenOnFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[KEEP_SCREEN_ON_KEY] ?: false }
 
     suspend fun setShowTranslation(show: Boolean) {
         context.dataStore.edit { preferences -> preferences[SHOW_TRANSLATION_KEY] = show }
@@ -210,9 +214,13 @@ class SettingsRepository(val context: Context) {
         context.dataStore.edit { preferences -> preferences[HIJRI_OFFSET_KEY] = offset }
     }
 
-    fun getMushafOffset(mushafId: String): Flow<Int> {
+    suspend fun setKeepScreenOn(keep: Boolean) {
+        context.dataStore.edit { preferences -> preferences[KEEP_SCREEN_ON_KEY] = keep }
+    }
+
+    fun getMushafOffset(mushafId: String): Flow<Int?> {
         return context.dataStore.data.map { preferences ->
-            preferences[intPreferencesKey("offset_$mushafId")] ?: -1
+            preferences[intPreferencesKey("offset_$mushafId")]
         }
     }
 

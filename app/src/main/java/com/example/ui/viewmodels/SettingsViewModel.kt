@@ -330,6 +330,19 @@ class SettingsViewModel(
             started = SharingStarted.Lazily,
             initialValue = false
         )
+
+    val keepScreenOnFlow: StateFlow<Boolean> = repository.keepScreenOnFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = false
+        )
+
+    fun setKeepScreenOn(keep: Boolean) {
+        viewModelScope.launch {
+            repository.setKeepScreenOn(keep)
+        }
+    }
         
     fun setShowTransliteration(show: Boolean) {
         viewModelScope.launch { repository.setShowTransliteration(show) }
@@ -500,6 +513,8 @@ class SettingsViewModel(
 
     private val _lastAnswerCorrect = MutableStateFlow<Boolean?>(null)
     val lastAnswerCorrect: StateFlow<Boolean?> = _lastAnswerCorrect.asStateFlow()
+    private val _selectedAnswer = MutableStateFlow<String?>(null)
+    val selectedAnswer: StateFlow<String?> = _selectedAnswer.asStateFlow()
 
     fun updateGameConfig(config: WordGameConfig) {
         _gameConfig.value = config
@@ -523,7 +538,7 @@ class SettingsViewModel(
                 val ayahs = quranRepository.getSurahDetailsCombined(surahToFetch)
                 val allWords = mutableListOf<com.example.data.model.QuranComWord>()
                 for (ayah in ayahs) {
-                    allWords.addAll(ayah.words.filter { it.translation?.text != null && it.textUthmani != null && it.translation.text.isNotBlank() && it.textUthmani.isNotBlank() })
+                    allWords.addAll(ayah.words.filter { it.charTypeName == "word" && it.translation?.text != null && it.textUthmani != null && it.translation.text.isNotBlank() && it.textUthmani.isNotBlank() })
                 }
                 
                 // If not enough words, fallback to Surah Al-Baqarah
@@ -531,7 +546,7 @@ class SettingsViewModel(
                     val fallbackAyahs = quranRepository.getSurahDetailsCombined(2)
                     allWords.clear()
                     for (ayah in fallbackAyahs) {
-                        allWords.addAll(ayah.words.filter { it.translation?.text != null && it.textUthmani != null && it.translation.text.isNotBlank() && it.textUthmani.isNotBlank() })
+                        allWords.addAll(ayah.words.filter { it.charTypeName == "word" && it.translation?.text != null && it.textUthmani != null && it.translation.text.isNotBlank() && it.textUthmani.isNotBlank() })
                     }
                     allWords
                 } else {
@@ -542,18 +557,26 @@ class SettingsViewModel(
                 
                 val generatedQuestions = selectedWords.map { word ->
                     val isArabicToBengali = config.type == GameType.ARABIC_TO_BENGALI
-                    val questionText = if (isArabicToBengali) "${word.textUthmani}" else "${word.translation?.text}"
-                    val correctAns = if (isArabicToBengali) "${word.translation?.text}" else "${word.textUthmani}"
+                    val numRegex = Regex("[0-9০-৯٠-٩]")
+                    val questionTextRaw = if (isArabicToBengali) "${word.textUthmani}" else "${word.translation?.text}"
+                    val correctAnsRaw = if (isArabicToBengali) "${word.translation?.text}" else "${word.textUthmani}"
+                    
+                    val questionText = questionTextRaw.replace(numRegex, "").trim()
+                    val correctAns = correctAnsRaw.replace(numRegex, "").trim()
                     
                     // Pick 3 random wrong answers
                     val wrongWords = finalWords.filter { it.id != word.id }.shuffled().take(3)
-                    val wrongAns = wrongWords.map { if (isArabicToBengali) "${it.translation?.text}" else "${it.textUthmani}" }.toMutableList()
+                    val wrongAns = wrongWords.map { 
+                        val raw = if (isArabicToBengali) "${it.translation?.text}" else "${it.textUthmani}"
+                        raw.replace(numRegex, "").trim()
+                    }.toMutableList()
                     
                     // Ensure unique options
                     var options = (wrongAns + correctAns).distinct()
                     while(options.size < 4 && finalWords.size > 4) {
                        val extraWord = finalWords.random()
-                       val extraOpt = if (isArabicToBengali) "${extraWord.translation?.text}" else "${extraWord.textUthmani}"
+                       val extraOptRaw = if (isArabicToBengali) "${extraWord.translation?.text}" else "${extraWord.textUthmani}"
+                       val extraOpt = extraOptRaw.replace(numRegex, "").trim()
                        if (!options.contains(extraOpt)) {
                            options = options + extraOpt
                        }
@@ -566,6 +589,7 @@ class SettingsViewModel(
                 _gameScore.value = 0
                 _currentQuestionIndex.value = 0
                 _lastAnswerCorrect.value = null
+                _selectedAnswer.value = null
                 _gamePhase.value = GamePhase.PLAYING
                 
             } catch (e: Exception) {
@@ -576,6 +600,7 @@ class SettingsViewModel(
     }
 
     fun submitAnswer(selectedAnswer: String) {
+        _selectedAnswer.value = selectedAnswer
         val currentQ = _dynamicQuestions.value[_currentQuestionIndex.value]
         val isCorrect = selectedAnswer == currentQ.correctAnswer
         _lastAnswerCorrect.value = isCorrect
@@ -586,6 +611,7 @@ class SettingsViewModel(
 
     fun nextQuestion() {
         _lastAnswerCorrect.value = null
+        _selectedAnswer.value = null
         val nextIdx = _currentQuestionIndex.value + 1
         if (nextIdx < _dynamicQuestions.value.size) {
             _currentQuestionIndex.value = nextIdx
@@ -599,6 +625,7 @@ class SettingsViewModel(
         _gameScore.value = 0
         _currentQuestionIndex.value = 0
         _lastAnswerCorrect.value = null
+        _selectedAnswer.value = null
         _dynamicQuestions.value = emptyList()
     }
 

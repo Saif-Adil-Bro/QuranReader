@@ -190,10 +190,12 @@ class MushafRepository(
             
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             
-            val out = FileOutputStream(outputFile)
+            val tempFile = File(outputFile.parent, outputFile.name + ".tmp")
+            val out = FileOutputStream(tempFile)
             bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
             out.flush()
             out.close()
+            tempFile.renameTo(outputFile)
             
             bitmap.recycle()
             page.close()

@@ -206,8 +206,9 @@ class MushafDownloader(
                     val body = response.body
                     if (body != null) {
                         val file = storageManager.getPageFile(mushafId, page)
-                        val inputStream: InputStream = body.byteStream()
-                        val outputStream = FileOutputStream(file)
+                        val tempFile = java.io.File(file.parent, file.name + ".tmp")
+                        val inputStream: java.io.InputStream = body.byteStream()
+                        val outputStream = java.io.FileOutputStream(tempFile)
                         
                         val buffer = ByteArray(4096)
                         var bytesRead: Int
@@ -218,6 +219,7 @@ class MushafDownloader(
                         outputStream.flush()
                         outputStream.close()
                         inputStream.close()
+                        tempFile.renameTo(file)
                         return@withContext true
                     }
                 }

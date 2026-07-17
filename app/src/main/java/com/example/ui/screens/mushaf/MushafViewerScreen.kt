@@ -65,6 +65,7 @@ fun MushafViewerScreen(
         val newPage = pagerState.currentPage + 1
         if (newPage != currentPage) {
             viewModel.jumpToPage(newPage)
+            viewModel.prefetchPages(mushafId, newPage)
         }
     }
     
@@ -157,7 +158,9 @@ fun MushafViewerScreen(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                    reverseLayout = true // Quran is read right-to-left
+                    reverseLayout = true,
+                    // Quran is read right-to-left
+                    
                 ) { page ->
                     val pageNum = page + 1
                     OnDemandPageViewer(

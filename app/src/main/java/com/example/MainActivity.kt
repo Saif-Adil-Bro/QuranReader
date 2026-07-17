@@ -1,6 +1,8 @@
 package com.example
 
 import android.os.Bundle
+import android.view.WindowManager
+import androidx.compose.runtime.LaunchedEffect
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -38,6 +40,15 @@ class MainActivity : ComponentActivity() {
     setContent {
       val appContainer = remember { (application as QuranApplication).container }
       val themeState by appContainer.settingsRepository.themeFlow.collectAsState(initial = "Light")
+      val keepScreenOn by appContainer.settingsRepository.keepScreenOnFlow.collectAsState(initial = false)
+      
+      LaunchedEffect(keepScreenOn) {
+          if (keepScreenOn) {
+              window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+          } else {
+              window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+          }
+      }
       val isSystemDark = isSystemInDarkTheme()
       val darkTheme = when (themeState) {
           "Dark" -> true

@@ -82,7 +82,7 @@ fun PageViewer(
             SubcomposeAsyncImage(
                 model = File(pagePath),
                 contentDescription = "Mushaf Page",
-                contentScale = ContentScale.Fit,
+                contentScale = ContentScale.FillWidth,
                 colorFilter = colorFilter,
                 modifier = Modifier
                     .fillMaxSize()

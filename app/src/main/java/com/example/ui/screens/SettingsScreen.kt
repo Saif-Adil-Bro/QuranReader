@@ -22,6 +22,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -72,6 +75,7 @@ fun SettingsScreen(
     val showTranslation by viewModel.showTranslation.collectAsState()
     val showTransliteration by viewModel.showTransliteration.collectAsState()
     val showTajweed by viewModel.showTajweed.collectAsState()
+    val keepScreenOn by viewModel.keepScreenOnFlow.collectAsState()
     val hijriOffset by viewModel.hijriOffset.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     val username by viewModel.username.collectAsState()
@@ -382,6 +386,74 @@ fun SettingsScreen(
                     }
                 }
             }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Hijri Date Information Notice
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9)),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFFC8E6C9))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Info",
+                            tint = Color(0xFF2E7D32),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "দ্রষ্টব্য",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color(0xFF2E7D32)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "অ্যাপ-এ হিজরি তারিখ গণনার ভিত্তিতে প্রদর্শিত হয়; চাঁদ দেখার পার্থক্যের কারণে কখনও ১ বা একাধিক দিনের অমিল দেখা দিতে পারে। প্রয়োজনে তারিখ সমন্বয় (-/+) ব্যবহার করুন।",
+                        fontSize = 13.sp,
+                        color = Color(0xFF424242),
+                        lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                    Text(
+                        text = "🌙 নতুন চাঁদ ও হিজরি মাসের নির্ভরযোগ্য আপডেট পেতে আমাদের টেলিগ্রাম চ্যানেলে যুক্ত থাকুন:",
+                        fontSize = 13.sp,
+                        color = Color(0xFF424242),
+                        lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { uriHandler.openUri("https://t.me/AlHaqChandDekhaCommittee") },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF229ED9)),
+                        border = BorderStroke(1.dp, Color(0xFF229ED9)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "https://t.me/AlHaqChandDekhaCommittee",
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+            
             Spacer(modifier = Modifier.height(16.dp))
 
             Card(
@@ -492,6 +564,43 @@ fun SettingsScreen(
                     Switch(
                         checked = showTajweed,
                         onCheckedChange = { viewModel.setShowTajweed(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = PrimaryGreen
+                        )
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Keep Screen On settings
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.setKeepScreenOn(!keepScreenOn) },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "সবসময় ডিসপ্লে অন রাখুন",
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "অ্যাপ ব্যবহার করার সময় স্ক্রিনের আলো নিভবে না",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = keepScreenOn,
+                        onCheckedChange = { viewModel.setKeepScreenOn(it) },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = PrimaryGreen
@@ -1657,8 +1766,13 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
     val score by viewModel.gameScore.collectAsState()
     val currentIndex by viewModel.currentQuestionIndex.collectAsState()
     val lastCorrect by viewModel.lastAnswerCorrect.collectAsState()
+    val selectedAnswer by viewModel.selectedAnswer.collectAsState()
     val questions by viewModel.dynamicQuestions.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     
+    val vibrator = androidx.compose.runtime.remember {
+        context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
+    }
     if (questions.isEmpty()) return
     
     val question = questions[currentIndex]
@@ -1704,15 +1818,17 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
         // Options List
         question.options.forEach { opt ->
             val isCorrectOpt = opt == question.correctAnswer
-            val isSelected = lastCorrect != null // once answered, show correct/wrong
+            val isAnswered = lastCorrect != null // once answered, show correct/wrong
+            val isThisSelectedOption = selectedAnswer == opt
             
             val borderCol = when {
-                isSelected && isCorrectOpt -> Color(0xFF10B981)
-                lastCorrect == false && !isCorrectOpt -> Border
+                isAnswered && isCorrectOpt -> Color(0xFF10B981)
+                isAnswered && isThisSelectedOption && !isCorrectOpt -> Color.Red
                 else -> Border
             }
             val bgCol = when {
-                isSelected && isCorrectOpt -> Color(0xFFD1FAF5)
+                isAnswered && isCorrectOpt -> Color(0xFFD1FAF5)
+                isAnswered && isThisSelectedOption && !isCorrectOpt -> Color(0xFFFFEBEE)
                 else -> Color.White
             }
             
@@ -1720,7 +1836,21 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
-                    .clickable(enabled = lastCorrect == null) { viewModel.submitAnswer(opt) },
+                    .clickable(enabled = lastCorrect == null) {
+                        viewModel.submitAnswer(opt)
+                        if (opt != question.correctAnswer) {
+                            try {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(200, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    vibrator.vibrate(200)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    },
                 colors = CardDefaults.cardColors(containerColor = bgCol),
                 border = BorderStroke(1.dp, borderCol)
             ) {
@@ -1731,9 +1861,11 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(opt, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
-                    if (isSelected && isCorrectOpt) {
+                    Text(opt, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = if (isAnswered && isThisSelectedOption && !isCorrectOpt) Color.Red else MaterialTheme.colorScheme.onSurface)
+                    if (isAnswered && isCorrectOpt) {
                         Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, tint = PrimaryGreen)
+                    } else if (isAnswered && isThisSelectedOption && !isCorrectOpt) {
+                        Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = null, tint = Color.Red)
                     }
                 }
             }
@@ -1752,11 +1884,53 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
     }
 }
 
+fun saveBitmapToGallery(context: android.content.Context, bitmap: android.graphics.Bitmap) {
+    val filename = "QuranGameResult_${System.currentTimeMillis()}.jpg"
+    var fos: java.io.OutputStream? = null
+    
+    try {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val resolver = context.contentResolver
+            val contentValues = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/QuranReader")
+            }
+            val imageUri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            fos = imageUri?.let { resolver.openOutputStream(it) }
+        } else {
+            val imagesDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES).toString() + "/QuranReader"
+            val file = java.io.File(imagesDir)
+            if (!file.exists()) {
+                file.mkdir()
+            }
+            val image = java.io.File(imagesDir, filename)
+            fos = java.io.FileOutputStream(image)
+            
+            // notify gallery
+            val mediaScanIntent = android.content.Intent(android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+            val contentUri = android.net.Uri.fromFile(image)
+            mediaScanIntent.data = contentUri
+            context.sendBroadcast(mediaScanIntent)
+        }
+        
+        fos?.use {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 100, it)
+            android.widget.Toast.makeText(context, "ফলাফল কার্ড সেভ হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: Exception) {
+        android.widget.Toast.makeText(context, "ফলাফল সেভ করতে সমস্যা হয়েছে", android.widget.Toast.LENGTH_SHORT).show()
+        e.printStackTrace()
+    }
+}
+
 @Composable
 fun GameResultScreen(viewModel: SettingsViewModel) {
     val score by viewModel.gameScore.collectAsState()
     val total = viewModel.dynamicQuestions.value.size
     val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val graphicsLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
     
     val comment = when {
         score == total -> "মাশাআল্লাহ! অসাধারণ!"
@@ -1770,7 +1944,12 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp).drawWithContent {
+                graphicsLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(graphicsLayer)
+            },
             colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
         ) {
@@ -1779,7 +1958,7 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("কুরআন শব্দ গেইম", fontWeight = FontWeight.Bold, fontSize = 24.sp, color = PrimaryGreen)
-                Text("quranbn.com", fontSize = 12.sp, color = PrimaryGreen.copy(alpha = 0.7f))
+                Text("কুরআন রিডার", fontSize = 12.sp, color = PrimaryGreen.copy(alpha = 0.7f))
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Card(
@@ -1805,7 +1984,7 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(32.dp)
                 ) {
-                    Text("আপনিও খেলুন: quranbn.com/game", fontSize = 12.sp, color = Color.White)
+                    Text("আপনিও খেলুন: ❝কুরআন রিডার❞ অ্যাপ-এ", fontSize = 12.sp, color = Color.White)
                 }
             }
         }
@@ -1813,7 +1992,16 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = { 
-                android.widget.Toast.makeText(context, "ফলাফল কার্ড ডাউনলোড শুরু হয়েছে", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, "ফলাফল কার্ড ডাউনলোড শুরু হয়েছে...", android.widget.Toast.LENGTH_SHORT).show()
+                coroutineScope.launch {
+                    try {
+                        val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
+                        saveBitmapToGallery(context, bitmap)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        android.widget.Toast.makeText(context, "ডাউনলোড ব্যর্থ হয়েছে", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
             },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)

@@ -39,64 +39,40 @@ class MushafViewerViewModel(
     
     private val _pdfPageOffset = MutableStateFlow(0)
     val pdfPageOffset: StateFlow<Int> = _pdfPageOffset.asStateFlow()
-    
+
     private val _isPdf = MutableStateFlow(false)
     val isPdf: StateFlow<Boolean> = _isPdf.asStateFlow()
-
-    private val _isReady = MutableStateFlow(false)
-    val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
 
     private val _totalPages = MutableStateFlow(604)
     val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
 
-    private var currentMushafId: String = ""
+    private val _isReady = MutableStateFlow(false)
+    val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
+    
+    var currentMushafId = ""
 
-    fun initMushaf(mushafId: String, initialPage: Int) {
+    fun initMushaf(mushafId: String, initialPage: Int = 1) {
         currentMushafId = mushafId
-        val defaultStyle = repository.getAvailableMushafs().find { it.id == mushafId }
-        _isPdf.value = defaultStyle?.isPdf == true
-        _totalPages.value = defaultStyle?.totalPages ?: 604
-        val defaultOffset = defaultStyle?.pdfPageOffset ?: 0
-        _currentPageNumber.value = initialPage
-        _isReady.value = false
-        
+        val style = repository.getAvailableMushafs().find { it.id == mushafId }
+        _isPdf.value = style?.isPdf == true
+        _totalPages.value = style?.totalPages ?: 604
+
         viewModelScope.launch {
-            val savedOffset = settingsRepository.getMushafOffset(mushafId).first()
-            val activeOffset = if (savedOffset != -1) savedOffset else defaultOffset
-            _pdfPageOffset.value = activeOffset
-            _isReady.value = true
+            val customOffset = settingsRepository.getMushafOffset(mushafId).first()
+            _pdfPageOffset.value = customOffset ?: style?.pdfPageOffset ?: 0
             jumpToPage(initialPage)
-        }
-    }
-
-    fun nextPage() {
-        if (_currentPageNumber.value < _totalPages.value) {
-            jumpToPage(_currentPageNumber.value + 1)
-        }
-    }
-
-    fun previousPage() {
-        if (_currentPageNumber.value > 1) {
-            jumpToPage(_currentPageNumber.value - 1)
+            _isReady.value = true
         }
     }
 
     fun jumpToPage(pageNumber: Int) {
-        if (pageNumber in 1.._totalPages.value) {
-            _currentPageNumber.value = pageNumber
-            viewModelScope.launch {
-                val path = withContext(Dispatchers.IO) {
-                    repository.getMushafPagePath(currentMushafId, pageNumber, _pdfPageOffset.value)
-                }
-                _currentPagePath.value = path
-                if (currentMushafId.isNotEmpty()) {
-                    settingsRepository.setLastReadMushaf(currentMushafId, pageNumber)
-                    settingsRepository.setLastReadMode("MUSHAF")
-                }
-            }
+        _currentPageNumber.value = pageNumber
+        viewModelScope.launch(Dispatchers.IO) {
+            val path = repository.getMushafPagePath(currentMushafId, pageNumber, _pdfPageOffset.value)
+            _currentPagePath.value = path
         }
     }
-    
+
     suspend fun getPagePath(mushafId: String, pageNumber: Int): String? = withContext(Dispatchers.IO) {
         repository.getMushafPagePath(mushafId, pageNumber, _pdfPageOffset.value)
     }
@@ -128,6 +104,19 @@ class MushafViewerViewModel(
     fun setScrollDirection(direction: String) {
         viewModelScope.launch {
             settingsRepository.setMushafScrollDirection(direction)
+        }
+    }
+
+    fun prefetchPages(mushafId: String, currentPage: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            for (i in 1..2) {
+                if (currentPage + i <= _totalPages.value) {
+                    repository.getMushafPagePath(mushafId, currentPage + i, _pdfPageOffset.value)
+                }
+                if (currentPage - i > 0) {
+                    repository.getMushafPagePath(mushafId, currentPage - i, _pdfPageOffset.value)
+                }
+            }
         }
     }
 }
