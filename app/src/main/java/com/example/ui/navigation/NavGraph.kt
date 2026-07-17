@@ -191,7 +191,8 @@ fun AppNavGraph(
             route = "tajweed/{page}",
             arguments = listOf(navArgument("page") { type = NavType.IntType })
         ) { backStackEntry ->
-            val page = backStackEntry.arguments?.getInt("page") ?: 1
+            val pageArg = backStackEntry.arguments?.getInt("page") ?: 1
+            val page = if (pageArg in 1..604) pageArg else 1
             val viewModel: TajweedModeViewModel = viewModel(factory = viewModelFactory)
             TajweedModeScreen(
                 viewModel = viewModel,
@@ -324,7 +325,8 @@ fun AppNavGraph(
             route = "hafezi/{page}",
             arguments = listOf(navArgument("page") { type = NavType.IntType })
         ) { backStackEntry ->
-            val page = backStackEntry.arguments?.getInt("page") ?: 1
+            val pageArg = backStackEntry.arguments?.getInt("page") ?: 1
+            val page = if (pageArg in 1..604) pageArg else 1
             val viewModel: HafeziModeViewModel = viewModel(factory = viewModelFactory)
             HafeziModeScreen(
                 viewModel = viewModel,

@@ -56,6 +56,12 @@ class MushafViewerViewModel(
         val style = repository.getAvailableMushafs().find { it.id == mushafId }
         _isPdf.value = style?.isPdf == true
         _totalPages.value = style?.totalPages ?: 604
+        // Set the page synchronously BEFORE the suspend call below.
+        // Without this, currentPage stays at its default (1) while pagerState
+        // is already created at the correct initialPage, causing the
+        // LaunchedEffect(currentPage) in MushafViewerScreen to force-scroll
+        // the pager back to page 1 before jumpToPage(initialPage) runs.
+        _currentPageNumber.value = initialPage
 
         viewModelScope.launch {
             val customOffset = settingsRepository.getMushafOffset(mushafId).first()

@@ -78,11 +78,7 @@ fun HafeziModeScreen(
     var showJumpToPageDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(initialPage) {
-        if (currentPage != initialPage && uiState !is UiState.Success) {
-            viewModel.loadPage(initialPage)
-        } else if (uiState is UiState.Loading) {
-            viewModel.loadPage(initialPage)
-        }
+        viewModel.loadPage(initialPage)
     }
 
     // Dynamic coloring based on user-selected reading theme
