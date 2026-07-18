@@ -57,6 +57,13 @@ class SettingsViewModel(
     val audioRepository: AudioRepository
 ) : ViewModel() {
 
+    val arabicFontName: StateFlow<String> = repository.arabicFontNameFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "Amiri Quran"
+        )
+
 
     private val _downloadingTafsirIds = MutableStateFlow<Set<String>>(emptySet())
     val downloadingTafsirIds: StateFlow<Set<String>> = _downloadingTafsirIds.asStateFlow()
@@ -645,6 +652,12 @@ class SettingsViewModel(
     private val _plannerReminderEnabled = MutableStateFlow(false)
     val plannerReminderEnabled: StateFlow<Boolean> = _plannerReminderEnabled.asStateFlow()
 
+    private val _plannerReminderHour = MutableStateFlow(20)
+    val plannerReminderHour: StateFlow<Int> = _plannerReminderHour.asStateFlow()
+
+    private val _plannerReminderMinute = MutableStateFlow(0)
+    val plannerReminderMinute: StateFlow<Int> = _plannerReminderMinute.asStateFlow()
+
     fun updatePlannerTarget(target: String) {
         _plannerTarget.value = target
         _plannerPagesRead.value = 0
@@ -674,6 +687,26 @@ class SettingsViewModel(
     fun togglePlannerReminder(enabled: Boolean) {
         _plannerReminderEnabled.value = enabled
         sharedPrefs.edit().putBoolean("planner_reminder", enabled).apply()
+        val context = repository.context
+        if (enabled) {
+            com.example.receiver.ReminderReceiver.scheduleNextAlarm(context)
+        } else {
+            com.example.receiver.ReminderReceiver.cancelAlarm(context)
+        }
+    }
+
+    fun updatePlannerReminderTime(hour: Int, minute: Int) {
+        _plannerReminderHour.value = hour
+        _plannerReminderMinute.value = minute
+        sharedPrefs.edit()
+            .putInt("planner_reminder_hour", hour)
+            .putInt("planner_reminder_minute", minute)
+            .apply()
+        
+        // Re-schedule alarm if enabled
+        if (_plannerReminderEnabled.value) {
+            com.example.receiver.ReminderReceiver.scheduleNextAlarm(repository.context)
+        }
     }
 
     // 5. Quran Hifz State
@@ -696,6 +729,8 @@ class SettingsViewModel(
         _plannerStartDate.value = sharedPrefs.getLong("planner_start_date", System.currentTimeMillis())
         _plannerStreak.value = sharedPrefs.getInt("planner_streak", 0)
         _plannerReminderEnabled.value = sharedPrefs.getBoolean("planner_reminder", false)
+        _plannerReminderHour.value = sharedPrefs.getInt("planner_reminder_hour", 20)
+        _plannerReminderMinute.value = sharedPrefs.getInt("planner_reminder_minute", 0)
         
         val hifzStr = sharedPrefs.getString("hifz_progress_map", "") ?: ""
         if (hifzStr.isNotEmpty()) {

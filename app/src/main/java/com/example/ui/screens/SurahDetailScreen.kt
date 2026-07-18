@@ -161,7 +161,7 @@ fun SurahDetailScreen(
                             Icon(Icons.Default.MenuBook, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("কুরআন", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp)
+                        Text("কুরআন রিডার", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
@@ -325,6 +325,30 @@ fun SurahDetailScreen(
                                         listState.animateScrollToItem(ayahIndex + headerCount)
                                     }
                                 }
+                            }
+                        }
+                    }
+                    
+                    val firstVisibleItemIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+                    LaunchedEffect(firstVisibleItemIndex, viewMode, displayedData) {
+                        val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) 2 else 1
+                        if (viewMode == ViewMode.MUSHAF) {
+                            val ayahsByPage = displayedData.groupBy { it.page }
+                            val pagesList = ayahsByPage.keys.toList()
+                            val visiblePageIndex = firstVisibleItemIndex - headerCount
+                            if (visiblePageIndex >= 0 && visiblePageIndex < pagesList.size) {
+                                val pageNum = pagesList[visiblePageIndex]
+                                val ayahsInPage = ayahsByPage[pageNum]
+                                val firstAyahInPage = ayahsInPage?.firstOrNull()
+                                if (firstAyahInPage != null) {
+                                    viewModel.updateLastReadAyah(firstAyahInPage.numberInSurah)
+                                }
+                            }
+                        } else {
+                            val visibleAyahIndex = firstVisibleItemIndex - headerCount
+                            if (visibleAyahIndex >= 0 && visibleAyahIndex < displayedData.size) {
+                                val currentAyah = displayedData[visibleAyahIndex]
+                                viewModel.updateLastReadAyah(currentAyah.numberInSurah)
                             }
                         }
                     }
@@ -767,6 +791,10 @@ fun AyahCard(
         }
     }
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
+    val surahData = remember(surahNumber) {
+        com.example.data.QuranData.surahNames.find { it.first == surahNumber }
+    }
+    val surahName = surahData?.second?.first ?: "সূরা $surahNumber"
 
     if (showTafsirDialog) {
         AlertDialog(
@@ -1035,6 +1063,11 @@ fun AyahCard(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+                AyahActionButtonsRow(
+                    ayah = ayah,
+                    surahName = surahName
+                )
             } else {
                 AyahInlineText(
                     arabicText = ayah.arabicText,
@@ -1907,5 +1940,154 @@ fun AyahInlineText(
             textAlign = TextAlign.Right,
             modifier = modifier
         )
+    }
+}
+
+@Composable
+private fun AyahActionButtonsRow(
+    ayah: CombinedAyah,
+    surahName: String,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var showShareMenu by remember { mutableStateOf(false) }
+    
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 12.dp),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 1. Copy Button
+            OutlinedButton(
+                onClick = { com.example.utils.AyahShareUtil.copyToClipboard(context, ayah, surahName) },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy",
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "কপি",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            
+            // 2. Share Button (With Dropdown Menu)
+            Box(
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedButton(
+                    onClick = { showShareMenu = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "শেয়ার",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                
+                // Dropdown Menu for Image & Text Share Options
+                DropdownMenu(
+                    expanded = showShareMenu,
+                    onDismissRequest = { showShareMenu = false },
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Text Share",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "টেক্সট শেয়ার",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        },
+                        onClick = {
+                            showShareMenu = false
+                            com.example.utils.AyahShareUtil.shareAsText(context, ayah, surahName)
+                        }
+                    )
+                    
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = "Image Share",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "ছবি শেয়ার",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        },
+                        onClick = {
+                            showShareMenu = false
+                            com.example.utils.AyahShareUtil.shareAsImage(context, ayah, surahName)
+                        }
+                    )
+                }
+            }
+        }
     }
 }

@@ -17,7 +17,7 @@ android {
   }
 
   defaultConfig {
-    applicationId = "com.aistudio.quranreader.bxwzla"
+    applicationId = "com.quranreader.mlibrary"
     minSdk = 24
     targetSdk = 36
     versionCode = 1

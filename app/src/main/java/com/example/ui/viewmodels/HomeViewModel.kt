@@ -58,6 +58,13 @@ class HomeViewModel(
             initialValue = "DETAIL"
         )
 
+    val lastReadAyah: StateFlow<Int> = settingsRepository.lastReadAyahFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = 1
+        )
+
     val lastReadMushafId: StateFlow<String?> = settingsRepository.lastReadMushafIdFlow
         .stateIn(
             scope = viewModelScope,

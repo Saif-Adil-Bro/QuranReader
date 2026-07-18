@@ -937,8 +937,19 @@ fun MenuDetailDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
+    // Hold selected dua state for back click handling
+    var selectedDuaForDuaTab by remember { mutableStateOf<com.example.data.DuaItem?>(null) }
+    
+    val handleBack = {
+        if (type == "dua" && selectedDuaForDuaTab != null) {
+            selectedDuaForDuaTab = null
+        } else {
+            onDismiss()
+        }
+    }
+
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = handleBack,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
@@ -975,7 +986,7 @@ fun MenuDetailDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onDismiss) {
+                    IconButton(onClick = handleBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
                     }
                     Text(
@@ -1016,7 +1027,11 @@ fun MenuDetailDialog(
                         "note" -> NotepadDialogContent(viewModel)
                         "planner" -> PlannerDialogContent(viewModel)
                         "subjectwise" -> SubjectwiseDialogContent()
-                        "dua" -> DuaDialogContent()
+                        "dua" -> DuaDialogContent(
+                            viewModel = viewModel,
+                            selectedDua = selectedDuaForDuaTab,
+                            onSelectedDuaChange = { selectedDuaForDuaTab = it }
+                        )
                         "game" -> GameDialogContent(viewModel)
                         "player" -> PlayerDialogContent()
                         "hifz" -> HifzDialogContent(viewModel)
@@ -1354,6 +1369,25 @@ fun PlannerDialogContent(viewModel: SettingsViewModel) {
     val streak by viewModel.plannerStreak.collectAsState()
     val reminderEnabled by viewModel.plannerReminderEnabled.collectAsState()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val permissionGranted = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.POST_NOTIFICATIONS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    } else {
+        true
+    }
+
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                viewModel.togglePlannerReminder(true)
+            }
+        }
+    )
+
     val khatamPlans = listOf(
         Pair("৩০ দিনে খতম", 30),
         Pair("৬০ দিনে খতম", 60),
@@ -1545,9 +1579,147 @@ fun PlannerDialogContent(viewModel: SettingsViewModel) {
             }
             Switch(
                 checked = reminderEnabled,
-                onCheckedChange = { viewModel.togglePlannerReminder(it) },
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && !permissionGranted) {
+                            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            viewModel.togglePlannerReminder(true)
+                        }
+                    } else {
+                        viewModel.togglePlannerReminder(false)
+                    }
+                },
                 colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = PrimaryGreen)
             )
+        }
+
+        if (reminderEnabled) {
+            Spacer(modifier = Modifier.height(16.dp))
+            val hour by viewModel.plannerReminderHour.collectAsState()
+            val minute by viewModel.plannerReminderMinute.collectAsState()
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "রিমাইন্ডারের সময় নির্ধারণ করুন:",
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val amPm = if (hour >= 12) "PM" else "AM"
+                        val displayHour = if (hour == 0) 12 else if (hour > 12) hour - 12 else hour
+                        val formattedDisplayTime = String.format("%02d:%02d %s", displayHour, minute, amPm)
+                        
+                        Text(
+                            text = "বর্তমান সময়: $formattedDisplayTime",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = PrimaryGreen
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Hour controls
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("ঘণ্টা", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                IconButton(
+                                    onClick = { 
+                                        val newHour = if (hour == 0) 23 else hour - 1
+                                        viewModel.updatePlannerReminderTime(newHour, minute)
+                                    },
+                                    modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Decrease hour", modifier = Modifier.size(16.dp))
+                                }
+                                
+                                Text(
+                                    text = String.format("%02d", hour),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    modifier = Modifier.widthIn(min = 24.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                IconButton(
+                                    onClick = { 
+                                        val newHour = if (hour == 23) 0 else hour + 1
+                                        viewModel.updatePlannerReminderTime(newHour, minute)
+                                    },
+                                    modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Increase hour", modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                        
+                        // Minute controls
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("মিনিট", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                IconButton(
+                                    onClick = { 
+                                        val newMin = if (minute == 0) 55 else ((minute - 5) / 5) * 5
+                                        viewModel.updatePlannerReminderTime(hour, newMin)
+                                    },
+                                    modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Decrease minute", modifier = Modifier.size(16.dp))
+                                }
+                                
+                                Text(
+                                    text = String.format("%02d", minute),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    modifier = Modifier.widthIn(min = 24.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                IconButton(
+                                    onClick = { 
+                                        val newMin = if (minute >= 55) 0 else ((minute + 5) / 5) * 5
+                                        viewModel.updatePlannerReminderTime(hour, newMin)
+                                    },
+                                    modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Increase minute", modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(32.dp))
@@ -1601,9 +1773,14 @@ fun SubjectwiseDialogContent() {
 
 // --- 6. DUA DIALOG ---
 @Composable
-fun DuaDialogContent() {
+fun DuaDialogContent(
+    viewModel: SettingsViewModel,
+    selectedDua: com.example.data.DuaItem?,
+    onSelectedDuaChange: (com.example.data.DuaItem?) -> Unit
+) {
+    val arabicFontName by viewModel.arabicFontName.collectAsState()
+    val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     val allDuas = com.example.data.DuaData.richDuas
-    var selectedDua by remember { mutableStateOf<com.example.data.DuaItem?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     
     fun formatToBanglaNumber(num: Int): String {
@@ -1703,7 +1880,7 @@ fun DuaDialogContent() {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { selectedDua = dua }
+                                    .clickable { onSelectedDuaChange(dua) }
                                     .padding(vertical = 12.dp, horizontal = 4.dp)
                             ) {
                                 Row(
@@ -1777,38 +1954,6 @@ fun DuaDialogContent() {
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // Header with Back Option (Clean customized design, NOT copying the screenshot's exact top/bottom bar layout)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { selectedDua = null },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                shape = CircleShape
-                            )
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to list",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "তালিকায় ফিরে যান",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
-
                 // Main Details Area (Custom elegant container)
                 Column(
                     modifier = Modifier
@@ -1845,6 +1990,7 @@ fun DuaDialogContent() {
                             Text(
                                 text = segment.arabic,
                                 fontSize = 26.sp,
+                                fontFamily = arabicFont,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center,
@@ -1912,9 +2058,10 @@ fun DuaDialogContent() {
                         if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
                             Spacer(modifier = Modifier.height(16.dp))
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                val contextText = buildString {
-                                    append("দোয়ার প্রেক্ষাপট: ")
-                                    append(segment.bottom)
+                                val contextText = if (segment.bottom.startsWith("দোয়ার প্রেক্ষাপট") || segment.bottom.startsWith("দোয়ার প্রেক্ষাপট:")) {
+                                    segment.bottom
+                                } else {
+                                    "দোয়ার প্রেক্ষাপট: ${segment.bottom}"
                                 }
                                 Text(
                                     text = contextText,
@@ -1938,8 +2085,183 @@ fun DuaDialogContent() {
                             )
                         }
                     }
+
+                    // Copy & Share Actions Row with App Credit
+                    DuaActionButtonsRow(dua = currentDua)
                 }
             }
+        }
+    }
+}
+
+private @Composable
+fun DuaActionButtonsRow(
+    dua: com.example.data.DuaItem,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var showShareMenu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 12.dp),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 1. Copy Button
+            OutlinedButton(
+                onClick = { com.example.utils.DuaShareUtil.copyToClipboard(context, dua) },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy",
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "কপি",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            
+            // 2. Share Button (With Dropdown Menu)
+            Box(
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedButton(
+                    onClick = { showShareMenu = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "শেয়ার",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                
+                // Dropdown Menu for Image & Text Share Options
+                androidx.compose.material3.DropdownMenu(
+                    expanded = showShareMenu,
+                    onDismissRequest = { showShareMenu = false },
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                ) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Text Share",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "টেক্সট শেয়ার",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        },
+                        onClick = {
+                            showShareMenu = false
+                            com.example.utils.DuaShareUtil.shareAsText(context, dua)
+                        }
+                    )
+                    
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = "Image Share",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "ছবি শেয়ার",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        },
+                        onClick = {
+                            showShareMenu = false
+                            com.example.utils.DuaShareUtil.shareAsImage(context, dua)
+                        }
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(14.dp))
+        
+        // App Credit with Logo & Name: (logo) ❝কুরআন রিডার❞ অ্যাপ থেকে শেয়ারকৃত
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_launcher),
+                contentDescription = "App Logo",
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(RoundedCornerShape(4.dp))
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "❝কুরআন রিডার❞ অ্যাপ থেকে শেয়ারকৃত",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
     }
 }
@@ -2091,6 +2413,9 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
     val lastCorrect by viewModel.lastAnswerCorrect.collectAsState()
     val selectedAnswer by viewModel.selectedAnswer.collectAsState()
     val questions by viewModel.dynamicQuestions.collectAsState()
+    val config by viewModel.gameConfig.collectAsState()
+    val arabicFontName by viewModel.arabicFontName.collectAsState()
+    val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     val context = androidx.compose.ui.platform.LocalContext.current
     
     val vibrator = androidx.compose.runtime.remember {
@@ -2132,7 +2457,15 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
             ) {
                 Text("নিচের শব্দটির সঠিক অর্থ নির্বাচন করুন:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(question.question, fontWeight = FontWeight.Bold, fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = question.question,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) 32.sp else 24.sp,
+                    fontFamily = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) arabicFont else androidx.compose.ui.text.font.FontFamily.Default,
+                    lineHeight = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) 48.sp else 32.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
             }
         }
         
@@ -2184,7 +2517,14 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(opt, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = if (isAnswered && isThisSelectedOption && !isCorrectOpt) Color.Red else MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        text = opt,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) 22.sp else 16.sp,
+                        fontFamily = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) arabicFont else androidx.compose.ui.text.font.FontFamily.Default,
+                        lineHeight = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) 36.sp else 24.sp,
+                        color = if (isAnswered && isThisSelectedOption && !isCorrectOpt) Color.Red else MaterialTheme.colorScheme.onSurface
+                    )
                     if (isAnswered && isCorrectOpt) {
                         Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, tint = PrimaryGreen)
                     } else if (isAnswered && isThisSelectedOption && !isCorrectOpt) {

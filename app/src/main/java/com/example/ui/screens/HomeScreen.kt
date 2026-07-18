@@ -4,6 +4,7 @@ import com.example.data.QuranData
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -150,6 +151,7 @@ fun HomeScreen(
     val lastReadMode by viewModel.lastReadMode.collectAsState()
     val lastReadMushafId by viewModel.lastReadMushafId.collectAsState()
     val lastReadMushafPage by viewModel.lastReadMushafPage.collectAsState()
+    val lastReadAyah by viewModel.lastReadAyah.collectAsState()
     val defaultMushafId by viewModel.defaultMushafId.collectAsState()
     val hijriOffset by viewModel.hijriOffset.collectAsState()
     val surahList by viewModel.surahs.collectAsState()
@@ -168,6 +170,17 @@ fun HomeScreen(
     var showMushafDownloadRequestDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var showMushafDownloadProgressDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var showHijriAdjustDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var selectedDuaForDetail by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.example.data.DuaItem?>(null) }
+
+    val arabicFontName by viewModel.arabicFontName.collectAsState()
+
+    if (selectedDuaForDetail != null) {
+        DuaDetailDialog(
+            dua = selectedDuaForDetail!!,
+            arabicFontName = arabicFontName,
+            onDismiss = { selectedDuaForDetail = null }
+        )
+    }
 
     androidx.compose.runtime.LaunchedEffect(mushafDownloadStatus) {
         val status = mushafDownloadStatus
@@ -467,7 +480,7 @@ fun HomeScreen(
                             Icon(Icons.Default.MenuBook, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("কুরআন", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp)
+                        Text("কুরআন রিডার", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
@@ -535,11 +548,12 @@ fun HomeScreen(
                                     "TAJWEED" -> onNavigateToTajweedMode(lastReadPage)
                                     "READING" -> onNavigateToReadingMode(lastReadSurah)
                                     "MUSHAF" -> onNavigateToMushafPage(lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId, lastReadMushafPage, false)
-                                    "DETAIL" -> onNavigateToSurah(lastReadSurah)
-                                    else -> onNavigateToSurah(lastReadSurah)
+                                    "DETAIL" -> onNavigateToSurahWithAyah(lastReadSurah, "LIST", lastReadAyah)
+                                    else -> onNavigateToSurahWithAyah(lastReadSurah, "LIST", lastReadAyah)
                                 }
                             },
-                            onHijriDateClick = { showHijriAdjustDialog = true }
+                            onHijriDateClick = { showHijriAdjustDialog = true },
+                            onDuaClick = { selectedDuaForDetail = it }
                         )
                         Box(
                             modifier = Modifier
@@ -569,6 +583,7 @@ fun HomeScreen(
                         lastReadMushafName = viewModel.getMushafStyle(lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId)?.nameBengali ?: (lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId),
                         defaultMushafId = defaultMushafId,
                         bookmarks = bookmarks,
+                        lastReadAyah = lastReadAyah,
                         onSurahClick = onNavigateToSurah,
                         onNavigateToHafeziMode = onNavigateToHafeziMode,
                         onNavigateToReadingMode = onNavigateToReadingMode,
@@ -583,13 +598,13 @@ fun HomeScreen(
                     ModesGridSection(
                         onHafeziPdfClick = {
                             if (viewModel.isMushafDownloaded(defaultMushafId)) {
-                                onNavigateToMushafPage(defaultMushafId, 1, true)
+                                onNavigateToMushafPage(defaultMushafId, lastReadMushafPage, false)
                             } else {
                                 showMushafDownloadRequestDialog = true
                             }
                         },
-                        onTajweedClick = onNavigateToTajweedIndex,
-                        onTranslationClick = onNavigateToNormalMode,
+                        onTajweedClick = { onNavigateToTajweedMode(lastReadPage) },
+                        onTranslationClick = { onNavigateToSurahWithAyah(lastReadSurah, "LIST", lastReadAyah) },
                         onPlayerClick = onNavigateToPlayer
                     )
                 }
@@ -645,7 +660,8 @@ fun HeroSection(
     lastReadSubtitle: String,
     hijriOffset: Int,
     onResumeClick: () -> Unit,
-    onHijriDateClick: () -> Unit = {}
+    onHijriDateClick: () -> Unit = {},
+    onDuaClick: (com.example.data.DuaItem) -> Unit = {}
 ) {
     val pagerState = rememberPagerState(pageCount = { 4 })
     LaunchedEffect(pagerState) {
@@ -733,32 +749,66 @@ fun HeroSection(
                         }
                         1 -> {
                             // Slide 2: Dua of the day
-                            val dua = com.example.data.DuaData.getDuaOfTheDay()
+                            val duaItem = com.example.data.DuaData.getDuaItemOfTheDay()
+                            val banglaDigits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
+                            val banglaNumber = duaItem.id.toString().map { char ->
+                                if (char.isDigit()) banglaDigits[char - '0'] else char
+                            }.joinToString("")
+
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(16.dp),
-                                verticalArrangement = Arrangement.Center
+                                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = White, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(100.dp))
+                                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Text(
-                                        text = "আজকের দুআ: ${dua.first}",
-                                        color = White.copy(alpha = 0.9f),
-                                        fontSize = 12.sp,
+                                        text = "আজকের দোয়া",
+                                        color = White,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(8.dp))
+                                
                                 Text(
-                                    text = dua.second.replace("\n", " • "),
+                                    text = "[$banglaNumber] ${duaItem.title}",
                                     color = White,
-                                    fontSize = 12.sp,
-                                    lineHeight = 18.sp,
-                                    maxLines = 3,
-                                    overflow = TextOverflow.Ellipsis
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
                                 )
+                                
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onDuaClick(duaItem) }
+                                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "বিস্তারিত পড়ুন",
+                                        color = White.copy(alpha = 0.9f),
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = White.copy(alpha = 0.9f),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
                             }
                         }
                         2 -> {
@@ -1592,6 +1642,7 @@ fun BookmarksAndLastReadSection(
     lastReadMushafName: String,
     defaultMushafId: String,
     bookmarks: List<com.example.data.local.entity.BookmarkEntity>,
+    lastReadAyah: Int = 1,
     onSurahClick: (Int) -> Unit,
     onNavigateToHafeziMode: (Int) -> Unit,
     onNavigateToReadingMode: (Int) -> Unit,
@@ -1628,7 +1679,8 @@ fun BookmarksAndLastReadSection(
                                 val targetMushafId = lastReadMushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId
                                 onNavigateToMushafPage(targetMushafId, lastReadMushafPage, false)
                             }
-                            else -> onSurahClick(lastReadSurah) // DETAIL mode or default
+                            "DETAIL" -> onNavigateToSurahWithAyah(lastReadSurah, "LIST", lastReadAyah)
+                            else -> onNavigateToSurahWithAyah(lastReadSurah, "LIST", lastReadAyah)
                         }
                     }
                     .padding(14.dp),
@@ -2531,4 +2583,345 @@ fun FloatingPlayerShortcut(
             }
         }
     }
+}
+
+private @Composable
+fun DuaActionButtonsRow(
+    dua: com.example.data.DuaItem,
+    modifier: Modifier = Modifier
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var showShareMenu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 12.dp),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 1. Copy Button
+            androidx.compose.material3.OutlinedButton(
+                onClick = { com.example.utils.DuaShareUtil.copyToClipboard(context, dua) },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.ContentCopy,
+                        contentDescription = "Copy",
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "কপি",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            
+            // 2. Share Button (With Dropdown Menu)
+            Box(
+                modifier = Modifier.weight(1f)
+            ) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { showShareMenu = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "শেয়ার",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                
+                // Dropdown Menu for Image & Text Share Options
+                androidx.compose.material3.DropdownMenu(
+                    expanded = showShareMenu,
+                    onDismissRequest = { showShareMenu = false },
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                ) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Share,
+                                    contentDescription = "Text Share",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "টেক্সট শেয়ার",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        },
+                        onClick = {
+                            showShareMenu = false
+                            com.example.utils.DuaShareUtil.shareAsText(context, dua)
+                        }
+                    )
+                    
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Image,
+                                    contentDescription = "Image Share",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "ছবি শেয়ার",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        },
+                        onClick = {
+                            showShareMenu = false
+                            com.example.utils.DuaShareUtil.shareAsImage(context, dua)
+                        }
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(14.dp))
+        
+        // App Credit with Logo & Name: (logo) ❝কুরআন রিডার❞ অ্যাপ থেকে শেয়ারকৃত
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_launcher),
+                contentDescription = "App Logo",
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(RoundedCornerShape(4.dp))
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "❝কুরআন রিডার❞ অ্যাপ থেকে শেয়ারকৃত",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+fun DuaDetailDialog(
+    dua: com.example.data.DuaItem,
+    arabicFontName: String,
+    onDismiss: () -> Unit
+) {
+    val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
+    
+    fun formatToBanglaNumber(num: Int): String {
+        val banglaDigits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
+        return num.toString().map { char ->
+            if (char.isDigit()) banglaDigits[char - '0'] else char
+        }.joinToString("")
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            val formattedIndex = formatToBanglaNumber(dua.id)
+            Text(
+                text = "[$formattedIndex] ${dua.title}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 24.sp
+            )
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .heightIn(max = 280.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    dua.segments.forEachIndexed { index, segment ->
+                        if (index > 0) {
+                            Spacer(modifier = Modifier.height(20.dp))
+                        }
+                        
+                        // Arabic Text
+                        if (segment.arabic.isNotEmpty() && segment.arabic != "null") {
+                            Text(
+                                text = segment.arabic,
+                                fontSize = 24.sp,
+                                fontFamily = arabicFont,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                lineHeight = 40.sp
+                            )
+                        }
+                        
+                        // Translation
+                        if (segment.translation.isNotEmpty() && segment.translation != "null") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min)
+                                    .padding(vertical = 6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .fillMaxHeight()
+                                        .background(Color(0xFF00B4D8), RoundedCornerShape(2.dp))
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "অর্থ:",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF00B4D8)
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = segment.translation,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        lineHeight = 22.sp
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Transliteration
+                        if (segment.transliteration.isNotEmpty() && segment.transliteration != "null") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min)
+                                    .padding(vertical = 6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .fillMaxHeight()
+                                        .background(Color(0xFF00B4D8).copy(alpha = 0.6f), RoundedCornerShape(2.dp))
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "উচ্চারণ:",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF00B4D8).copy(alpha = 0.8f)
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = segment.transliteration,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                        lineHeight = 22.sp
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Prekkhapot (Dua's context)
+                        if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                val contextText = if (segment.bottom.startsWith("দোয়ার প্রেক্ষাপট") || segment.bottom.startsWith("দোয়ার প্রেক্ষাপট:")) {
+                                    segment.bottom
+                                } else {
+                                    "দোয়ার প্রেক্ষাপট: ${segment.bottom}"
+                                }
+                                Text(
+                                    text = contextText,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                    lineHeight = 20.sp
+                                )
+                            }
+                        }
+                        
+                        // Reference
+                        if (segment.reference.isNotEmpty() && segment.reference != "null") {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = segment.reference,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Start
+                            )
+                        }
+                    }
+                }
+                
+                // Copy & Share Actions Row
+                DuaActionButtonsRow(dua = dua)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("বন্ধ করুন", color = PrimaryGreen, fontWeight = FontWeight.Bold)
+            }
+        },
+        shape = RoundedCornerShape(24.dp)
+    )
 }

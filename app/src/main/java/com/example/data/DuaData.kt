@@ -215,4 +215,12 @@ object DuaData {
         val index = dayOfYear % list.size
         return list[index]
     }
+
+    fun getDuaItemOfTheDay(): DuaItem {
+        val calendar = java.util.Calendar.getInstance()
+        val dayOfYear = calendar.get(java.util.Calendar.DAY_OF_YEAR)
+        val list = richDuas
+        val index = dayOfYear % list.size
+        return list[index]
+    }
 }

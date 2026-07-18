@@ -292,6 +292,12 @@ class SurahDetailViewModel(
         }
     }
 
+    fun updateLastReadAyah(ayahNumber: Int) {
+        viewModelScope.launch {
+            settingsRepository.setLastReadAyah(ayahNumber)
+        }
+    }
+
     fun loadJuz(juzNumber: Int) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
