@@ -42,8 +42,9 @@ object DuaShareUtil {
                     append("অর্থ:\n").append(segment.translation).append("\n\n")
                 }
                 if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
-                    val contextText = if (segment.bottom.startsWith("দোয়ার প্রেক্ষাপট") || segment.bottom.startsWith("দোয়ার প্রেক্ষাপট:")) {
-                        segment.bottom
+                    val trimmed = segment.bottom.trim()
+                    val contextText = if (trimmed.startsWith("দোয়ার প্রেক্ষাপট") || trimmed.startsWith("দোয়ার প্রেক্ষাপট")) {
+                        trimmed
                     } else {
                         "দোয়ার প্রেক্ষাপট: ${segment.bottom}"
                     }
@@ -303,8 +304,9 @@ object DuaShareUtil {
 
             // Draw Prekkhapot (Context)
             if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
-                val contextText = if (segment.bottom.startsWith("দোয়ার প্রেক্ষাপট") || segment.bottom.startsWith("দোয়ার প্রেক্ষাপট:")) {
-                    segment.bottom
+                val trimmed = segment.bottom.trim()
+                val contextText = if (trimmed.startsWith("দোয়ার প্রেক্ষাপট") || trimmed.startsWith("দোয়ার প্রেক্ষাপট")) {
+                    trimmed
                 } else {
                     "দোয়ার প্রেক্ষাপট: ${segment.bottom}"
                 }

@@ -197,7 +197,13 @@ fun AppNavGraph(
             TajweedModeScreen(
                 viewModel = viewModel,
                 initialPage = page,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    if (!navController.popBackStack("tajweed/index", false)) {
+                        navController.navigate("tajweed/index") {
+                            popUpTo("home") { saveState = true }
+                        }
+                    }
+                }
             )
         }
 
@@ -284,7 +290,13 @@ fun AppNavGraph(
                 initialViewMode = viewMode,
                 initialAyah = initialAyah,
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    if (!navController.popBackStack("list/normal", false)) {
+                        navController.navigate("list/normal") {
+                            popUpTo("home") { saveState = true }
+                        }
+                    }
+                }
             )
         }
 

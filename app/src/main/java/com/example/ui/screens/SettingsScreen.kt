@@ -2058,8 +2058,9 @@ fun DuaDialogContent(
                         if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
                             Spacer(modifier = Modifier.height(16.dp))
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                val contextText = if (segment.bottom.startsWith("দোয়ার প্রেক্ষাপট") || segment.bottom.startsWith("দোয়ার প্রেক্ষাপট:")) {
-                                    segment.bottom
+                                val trimmed = segment.bottom.trim()
+                                val contextText = if (trimmed.startsWith("দোয়ার প্রেক্ষাপট") || trimmed.startsWith("দোয়ার প্রেক্ষাপট")) {
+                                    trimmed
                                 } else {
                                     "দোয়ার প্রেক্ষাপট: ${segment.bottom}"
                                 }

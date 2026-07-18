@@ -28,6 +28,7 @@ import com.example.data.model.appendStyledWaqfText
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.TajweedModeViewModel
+import androidx.activity.compose.BackHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +37,11 @@ fun TajweedModeScreen(
     initialPage: Int,
     onNavigateBack: () -> Unit
 ) {
+    BackHandler {
+        viewModel.stopAudio()
+        onNavigateBack()
+    }
+
     val uiState by viewModel.uiState.collectAsState()
     val currentPage by viewModel.currentPage.collectAsState()
     val isPageMemorized by viewModel.isPageMemorized.collectAsState()

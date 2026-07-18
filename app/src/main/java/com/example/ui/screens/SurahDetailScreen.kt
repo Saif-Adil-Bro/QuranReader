@@ -90,6 +90,7 @@ fun SurahDetailScreen(
     viewModel: SurahDetailViewModel,
     onNavigateBack: () -> Unit
 ) {
+    androidx.activity.compose.BackHandler(onBack = onNavigateBack)
     val uiState by viewModel.uiState.collectAsState()
     val showTranslation by viewModel.showTranslation.collectAsState()
     val showTransliteration by viewModel.showTransliteration.collectAsState()
