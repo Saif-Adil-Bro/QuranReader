@@ -97,12 +97,12 @@ fun RecitationIndexScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = DarkText
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 modifier = Modifier.shadow(2.dp)
             )
         },
-        containerColor = Color(0xFFF9FAFB)
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -250,7 +250,7 @@ fun RecitationIndexScreen(
                                                 text = "সূরা $bengaliName",
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 15.sp,
-                                                color = if (isCurrent) PrimaryGreen else DarkText
+                                                color = if (isCurrent) PrimaryGreen else MaterialTheme.colorScheme.onSurface
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(

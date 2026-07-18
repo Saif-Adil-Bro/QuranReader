@@ -87,7 +87,7 @@ fun TajweedLegendDialog(onDismiss: () -> Unit) {
                 text = "তাজবীদের রঙের পরিচিতি",
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 fontSize = 20.sp,
-                color = com.example.ui.theme.DarkText
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
@@ -110,7 +110,7 @@ fun TajweedLegendDialog(onDismiss: () -> Unit) {
                         androidx.compose.material3.Text(
                             text = label,
                             fontSize = 16.sp,
-                            color = com.example.ui.theme.DarkText
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -121,9 +121,9 @@ fun TajweedLegendDialog(onDismiss: () -> Unit) {
                 androidx.compose.material3.Text("বন্ধ করুন", color = com.example.ui.theme.PrimaryGreen)
             }
         },
-        containerColor = com.example.ui.theme.White,
-        titleContentColor = com.example.ui.theme.DarkText,
-        textContentColor = com.example.ui.theme.DarkText
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurface
     )
 }
 
@@ -2772,157 +2772,190 @@ fun DuaDetailDialog(
         }.joinToString("")
     }
 
-    AlertDialog(
+    androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            val formattedIndex = formatToBanglaNumber(dua.id)
-            Text(
-                text = "[$formattedIndex] ${dua.title}",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                lineHeight = 24.sp
-            )
-        },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Column(
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.End
+            ) {
+                IconButton(
+                    onClick = onDismiss,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
-                        .heightIn(max = 280.dp)
-                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 12.dp)
+                        .size(36.dp)
+                        .background(Color.White.copy(alpha = 0.2f), CircleShape)
                 ) {
-                    dua.segments.forEachIndexed { index, segment ->
-                        if (index > 0) {
-                            Spacer(modifier = Modifier.height(20.dp))
-                        }
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.White
+                    )
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                    ) {
+                        val formattedIndex = formatToBanglaNumber(dua.id)
+                        Text(
+                            text = "[$formattedIndex] ${dua.title}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = 24.sp
+                        )
                         
-                        // Arabic Text
-                        if (segment.arabic.isNotEmpty() && segment.arabic != "null") {
-                            Text(
-                                text = segment.arabic,
-                                fontSize = 24.sp,
-                                fontFamily = arabicFont,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 12.dp),
-                                lineHeight = 40.sp
-                            )
-                        }
-                        
-                        // Translation
-                        if (segment.translation.isNotEmpty() && segment.translation != "null") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(IntrinsicSize.Min)
-                                    .padding(vertical = 6.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(4.dp)
-                                        .fillMaxHeight()
-                                        .background(Color(0xFF00B4D8), RoundedCornerShape(2.dp))
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false)
+                                .heightIn(max = 280.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            dua.segments.forEachIndexed { index, segment ->
+                                if (index > 0) {
+                                    Spacer(modifier = Modifier.height(20.dp))
+                                }
+                                
+                                // Arabic Text
+                                if (segment.arabic.isNotEmpty() && segment.arabic != "null") {
                                     Text(
-                                        text = "অর্থ:",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF00B4D8)
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = segment.translation,
-                                        fontSize = 14.sp,
+                                        text = segment.arabic,
+                                        fontSize = 24.sp,
+                                        fontFamily = arabicFont,
+                                        fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onSurface,
-                                        lineHeight = 22.sp
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp),
+                                        lineHeight = 40.sp
                                     )
                                 }
-                            }
-                        }
-                        
-                        // Transliteration
-                        if (segment.transliteration.isNotEmpty() && segment.transliteration != "null") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(IntrinsicSize.Min)
-                                    .padding(vertical = 6.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(4.dp)
-                                        .fillMaxHeight()
-                                        .background(Color(0xFF00B4D8).copy(alpha = 0.6f), RoundedCornerShape(2.dp))
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                                
+                                // Translation
+                                if (segment.translation.isNotEmpty() && segment.translation != "null") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(IntrinsicSize.Min)
+                                            .padding(vertical = 6.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(4.dp)
+                                                .fillMaxHeight()
+                                                .background(Color(0xFF00B4D8), RoundedCornerShape(2.dp))
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = "অর্থ:",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF00B4D8)
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = segment.translation,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                lineHeight = 22.sp
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                // Transliteration
+                                if (segment.transliteration.isNotEmpty() && segment.transliteration != "null") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(IntrinsicSize.Min)
+                                            .padding(vertical = 6.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(4.dp)
+                                                .fillMaxHeight()
+                                                .background(Color(0xFF00B4D8).copy(alpha = 0.6f), RoundedCornerShape(2.dp))
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = "উচ্চারণ:",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF00B4D8).copy(alpha = 0.8f)
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = segment.transliteration,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                                lineHeight = 22.sp
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                // Prekkhapot (Dua's context)
+                                if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        val trimmed = segment.bottom.trim()
+                                        val contextText = if (trimmed.startsWith("দোয়ার প্রেক্ষাপট") || trimmed.startsWith("দোয়ার প্রেক্ষাপট")) {
+                                            trimmed
+                                        } else {
+                                            "দোয়ার প্রেক্ষাপট: ${segment.bottom}"
+                                        }
+                                        Text(
+                                            text = contextText,
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                            lineHeight = 20.sp
+                                        )
+                                    }
+                                }
+                                
+                                // Reference
+                                if (segment.reference.isNotEmpty() && segment.reference != "null") {
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "উচ্চারণ:",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF00B4D8).copy(alpha = 0.8f)
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = segment.transliteration,
-                                        fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                                        lineHeight = 22.sp
+                                        text = segment.reference,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Start
                                     )
                                 }
                             }
                         }
                         
-                        // Prekkhapot (Dua's context)
-                        if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                val trimmed = segment.bottom.trim()
-                                val contextText = if (trimmed.startsWith("দোয়ার প্রেক্ষাপট") || trimmed.startsWith("দোয়ার প্রেক্ষাপট")) {
-                                    trimmed
-                                } else {
-                                    "দোয়ার প্রেক্ষাপট: ${segment.bottom}"
-                                }
-                                Text(
-                                    text = contextText,
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                                    lineHeight = 20.sp
-                                )
-                            }
-                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                         
-                        // Reference
-                        if (segment.reference.isNotEmpty() && segment.reference != "null") {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = segment.reference,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Start
-                            )
-                        }
+                        // Copy & Share Actions Row
+                        DuaActionButtonsRow(dua = dua)
                     }
                 }
-                
-                // Copy & Share Actions Row
-                DuaActionButtonsRow(dua = dua)
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("বন্ধ করুন", color = PrimaryGreen, fontWeight = FontWeight.Bold)
-            }
-        },
-        shape = RoundedCornerShape(24.dp)
-    )
+        }
+    }
 }

@@ -105,10 +105,10 @@ fun BottomNavBar(
                         onClick = {
                             if (currentRoute != item.route) {
                                 navController.navigate(item.route) {
-                                    navController.graph.startDestinationRoute?.let { route ->
-                                        popUpTo(route) {
-                                            saveState = true
-                                        }
+                                    // We use "home" as the base route to pop up to instead of startDestinationRoute
+                                    // because "splash" is popped inclusively and no longer in the backstack.
+                                    popUpTo("home") {
+                                        saveState = true
                                     }
                                     launchSingleTop = true
                                     restoreState = true

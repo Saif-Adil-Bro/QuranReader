@@ -200,7 +200,7 @@ fun AppNavGraph(
                 onNavigateBack = {
                     if (!navController.popBackStack("tajweed/index", false)) {
                         navController.navigate("tajweed/index") {
-                            popUpTo("home") { saveState = true }
+                            popUpTo("home")
                         }
                     }
                 }
@@ -293,7 +293,7 @@ fun AppNavGraph(
                 onNavigateBack = {
                     if (!navController.popBackStack("list/normal", false)) {
                         navController.navigate("list/normal") {
-                            popUpTo("home") { saveState = true }
+                            popUpTo("home")
                         }
                     }
                 }
@@ -326,7 +326,7 @@ fun AppNavGraph(
                 onNavigateBack = { 
                     if (!navController.popBackStack("list/reading", false)) {
                         navController.navigate("list/reading") {
-                            popUpTo("home") { saveState = true }
+                            popUpTo("home")
                         }
                     }
                 }

@@ -80,7 +80,7 @@ fun MushafCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .border(2.dp, Color(0xFFE5E7EB)) // Light gray border
                     .shadow(4.dp)
             ) {

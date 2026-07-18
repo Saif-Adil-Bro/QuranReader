@@ -655,7 +655,7 @@ fun SettingsScreen(
                     OutlinedButton(
                         onClick = { showQariDialog = true },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkText)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                     ) {
                         val selectedQariName = qariList.find { it.first == selectedQariId }?.second ?: "Mishary Rashid Alafasy"
                         Text(text = selectedQariName, modifier = Modifier.weight(1f))
@@ -680,7 +680,7 @@ fun SettingsScreen(
                     OutlinedButton(
                         onClick = { showTafsirDialog = true },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkText)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                     ) {
                         val selectedCount = selectedTafsirIds.size
                         Text(text = "$selectedCount টি তাফসীর নির্বাচিত", modifier = Modifier.weight(1f))
@@ -805,7 +805,7 @@ fun SettingsScreen(
                                                         modifier = Modifier.size(24.dp)
                                                     ) {
                                                         Icon(
-                                                            androidx.compose.material.icons.Icons.Default.Share,
+                                                            androidx.compose.material.icons.Icons.Default.Download,
                                                             contentDescription = "Download Tafsir",
                                                             tint = PrimaryGreen
                                                         )
@@ -1146,7 +1146,7 @@ fun ProfileDialogContent(viewModel: SettingsViewModel) {
         
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
         ) {
             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1209,7 +1209,7 @@ fun BookmarkDialogContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onBookmarkClick(bookmark) },
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
                 ) {
                     Row(
@@ -1264,7 +1264,7 @@ fun NotepadDialogContent(viewModel: SettingsViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
@@ -1328,7 +1328,7 @@ fun NotepadDialogContent(viewModel: SettingsViewModel) {
                 items(notes) { note ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -1745,7 +1745,7 @@ fun SubjectwiseDialogContent() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expandedTopic = if (isExp) null else title },
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -2286,6 +2286,21 @@ fun GameSetupScreen(viewModel: SettingsViewModel) {
     val surahs = com.example.data.surahInfoList
     var isSurahDropdownExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val inactiveBg = MaterialTheme.colorScheme.surface
+    val inactiveBorder = if (isDark) Color(0xFF2A3E39) else Border
+    val textInactive = MaterialTheme.colorScheme.onSurface
+    
+    // Orange/Amber selections
+    val amberActiveBg = if (isDark) Color(0xFF452B09) else Color(0xFFFDE6B0)
+    val amberActiveBorder = if (isDark) Color(0xFFFBBF24) else PrimaryGreen
+    val amberActiveText = if (isDark) Color(0xFFFBBF24) else PrimaryGreen
+    
+    // Teal/Mint selections
+    val tealActiveBg = if (isDark) Color(0xFF0A3631) else Color(0xFFD1FAF5)
+    val tealActiveBorder = if (isDark) Color(0xFF34D399) else PrimaryGreen
+    val tealActiveText = if (isDark) Color(0xFF34D399) else PrimaryGreen
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -2295,26 +2310,28 @@ fun GameSetupScreen(viewModel: SettingsViewModel) {
         Text("১. কিসের উপর গেম খেলতে চান?", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val isEntireSelected = config.source == com.example.ui.viewmodels.GameSource.ENTIRE_QURAN
             Card(
                 modifier = Modifier.weight(1f).clickable { viewModel.updateGameConfig(config.copy(source = com.example.ui.viewmodels.GameSource.ENTIRE_QURAN)) },
-                colors = CardDefaults.cardColors(containerColor = if (config.source == com.example.ui.viewmodels.GameSource.ENTIRE_QURAN) Color(0xFFFDE6B0) else Color.White),
-                border = BorderStroke(1.dp, if (config.source == com.example.ui.viewmodels.GameSource.ENTIRE_QURAN) PrimaryGreen else Border)
+                colors = CardDefaults.cardColors(containerColor = if (isEntireSelected) amberActiveBg else inactiveBg),
+                border = BorderStroke(1.dp, if (isEntireSelected) amberActiveBorder else inactiveBorder)
             ) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(androidx.compose.material.icons.Icons.Default.MenuBook, contentDescription = null, tint = if (config.source == com.example.ui.viewmodels.GameSource.ENTIRE_QURAN) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(androidx.compose.material.icons.Icons.Default.MenuBook, contentDescription = null, tint = if (isEntireSelected) amberActiveText else MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("সম্পূর্ণ কুরআন", fontSize = 13.sp, fontWeight = if (config.source == com.example.ui.viewmodels.GameSource.ENTIRE_QURAN) FontWeight.Bold else FontWeight.Medium, color = if (config.source == com.example.ui.viewmodels.GameSource.ENTIRE_QURAN) PrimaryGreen else MaterialTheme.colorScheme.onSurface)
+                    Text("সম্পূর্ণ কুরআন", fontSize = 13.sp, fontWeight = if (isEntireSelected) FontWeight.Bold else FontWeight.Medium, color = if (isEntireSelected) amberActiveText else textInactive)
                 }
             }
+            val isSpecificSelected = config.source == com.example.ui.viewmodels.GameSource.SPECIFIC_SURAH
             Card(
                 modifier = Modifier.weight(1f).clickable { viewModel.updateGameConfig(config.copy(source = com.example.ui.viewmodels.GameSource.SPECIFIC_SURAH)) },
-                colors = CardDefaults.cardColors(containerColor = if (config.source == com.example.ui.viewmodels.GameSource.SPECIFIC_SURAH) Color(0xFFFDE6B0) else Color.White),
-                border = BorderStroke(1.dp, if (config.source == com.example.ui.viewmodels.GameSource.SPECIFIC_SURAH) PrimaryGreen else Border)
+                colors = CardDefaults.cardColors(containerColor = if (isSpecificSelected) amberActiveBg else inactiveBg),
+                border = BorderStroke(1.dp, if (isSpecificSelected) amberActiveBorder else inactiveBorder)
             ) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(androidx.compose.material.icons.Icons.Default.Description, contentDescription = null, tint = if (config.source == com.example.ui.viewmodels.GameSource.SPECIFIC_SURAH) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(androidx.compose.material.icons.Icons.Default.Description, contentDescription = null, tint = if (isSpecificSelected) amberActiveText else MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("নির্দিষ্ট সূরা", fontSize = 13.sp, fontWeight = if (config.source == com.example.ui.viewmodels.GameSource.SPECIFIC_SURAH) FontWeight.Bold else FontWeight.Medium, color = if (config.source == com.example.ui.viewmodels.GameSource.SPECIFIC_SURAH) PrimaryGreen else MaterialTheme.colorScheme.onSurface)
+                    Text("নির্দিষ্ট সূরা", fontSize = 13.sp, fontWeight = if (isSpecificSelected) FontWeight.Bold else FontWeight.Medium, color = if (isSpecificSelected) amberActiveText else textInactive)
                 }
             }
         }
@@ -2323,8 +2340,8 @@ fun GameSetupScreen(viewModel: SettingsViewModel) {
             Spacer(modifier = Modifier.height(12.dp))
             Card(
                 modifier = Modifier.fillMaxWidth().clickable { isSurahDropdownExpanded = true },
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, Border)
+                colors = CardDefaults.cardColors(containerColor = inactiveBg),
+                border = BorderStroke(1.dp, inactiveBorder)
             ) {
                 Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     val selectedName = surahs.find { it.first == config.selectedSurah }?.second?.arabicName ?: "সূরা নির্বাচন করুন"
@@ -2352,19 +2369,21 @@ fun GameSetupScreen(viewModel: SettingsViewModel) {
         Text("২. গেমের ধরণ নির্ধারণ করুন", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val isArToBn = config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI
             Card(
                 modifier = Modifier.weight(1f).clickable { viewModel.updateGameConfig(config.copy(type = com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI)) },
-                colors = CardDefaults.cardColors(containerColor = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) Color(0xFFD1FAF5) else Color.White),
-                border = BorderStroke(1.dp, if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) PrimaryGreen else Border)
+                colors = CardDefaults.cardColors(containerColor = if (isArToBn) tealActiveBg else inactiveBg),
+                border = BorderStroke(1.dp, if (isArToBn) tealActiveBorder else inactiveBorder)
             ) {
-                Text("আরবি -> বাংলা", modifier = Modifier.padding(16.dp).fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) FontWeight.Bold else FontWeight.Medium, color = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) PrimaryGreen else MaterialTheme.colorScheme.onSurface)
+                Text("আরবি -> বাংলা", modifier = Modifier.padding(16.dp).fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = if (isArToBn) FontWeight.Bold else FontWeight.Medium, color = if (isArToBn) tealActiveText else textInactive)
             }
+            val isBnToAr = config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC
             Card(
                 modifier = Modifier.weight(1f).clickable { viewModel.updateGameConfig(config.copy(type = com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC)) },
-                colors = CardDefaults.cardColors(containerColor = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) Color(0xFFD1FAF5) else Color.White),
-                border = BorderStroke(1.dp, if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) PrimaryGreen else Border)
+                colors = CardDefaults.cardColors(containerColor = if (isBnToAr) tealActiveBg else inactiveBg),
+                border = BorderStroke(1.dp, if (isBnToAr) tealActiveBorder else inactiveBorder)
             ) {
-                Text("বাংলা -> আরবি", modifier = Modifier.padding(16.dp).fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) FontWeight.Bold else FontWeight.Medium, color = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) PrimaryGreen else MaterialTheme.colorScheme.onSurface)
+                Text("বাংলা -> আরবি", modifier = Modifier.padding(16.dp).fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = if (isBnToAr) FontWeight.Bold else FontWeight.Medium, color = if (isBnToAr) tealActiveText else textInactive)
             }
         }
         
@@ -2373,12 +2392,13 @@ fun GameSetupScreen(viewModel: SettingsViewModel) {
         Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(5, 10, 20, 30).forEach { count ->
+                val isCountSelected = config.totalQuestions == count
                 Card(
                     modifier = Modifier.weight(1f).clickable { viewModel.updateGameConfig(config.copy(totalQuestions = count)) },
-                    colors = CardDefaults.cardColors(containerColor = if (config.totalQuestions == count) Color(0xFFFDE6B0) else Color.White),
-                    border = BorderStroke(1.dp, if (config.totalQuestions == count) PrimaryGreen else Border)
+                    colors = CardDefaults.cardColors(containerColor = if (isCountSelected) amberActiveBg else inactiveBg),
+                    border = BorderStroke(1.dp, if (isCountSelected) amberActiveBorder else inactiveBorder)
                 ) {
-                    Text("$count টি", modifier = Modifier.padding(vertical = 12.dp).fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = if (config.totalQuestions == count) FontWeight.Bold else FontWeight.Medium, color = if (config.totalQuestions == count) PrimaryGreen else MaterialTheme.colorScheme.onSurface)
+                    Text("$count টি", modifier = Modifier.padding(vertical = 12.dp).fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = if (isCountSelected) FontWeight.Bold else FontWeight.Medium, color = if (isCountSelected) amberActiveText else textInactive)
                 }
             }
         }
@@ -2419,6 +2439,8 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     val context = androidx.compose.ui.platform.LocalContext.current
     
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    
     val vibrator = androidx.compose.runtime.remember {
         context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
     }
@@ -2447,7 +2469,7 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
         // Question Box
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
         ) {
             Column(
@@ -2479,14 +2501,14 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
             val isThisSelectedOption = selectedAnswer == opt
             
             val borderCol = when {
-                isAnswered && isCorrectOpt -> Color(0xFF10B981)
-                isAnswered && isThisSelectedOption && !isCorrectOpt -> Color.Red
-                else -> Border
+                isAnswered && isCorrectOpt -> if (isDark) Color(0xFF34D399) else Color(0xFF10B981)
+                isAnswered && isThisSelectedOption && !isCorrectOpt -> if (isDark) Color(0xFFF87171) else Color.Red
+                else -> if (isDark) Color(0xFF2A3E39) else Border
             }
             val bgCol = when {
-                isAnswered && isCorrectOpt -> Color(0xFFD1FAF5)
-                isAnswered && isThisSelectedOption && !isCorrectOpt -> Color(0xFFFFEBEE)
-                else -> Color.White
+                isAnswered && isCorrectOpt -> if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAF5)
+                isAnswered && isThisSelectedOption && !isCorrectOpt -> if (isDark) Color(0xFF450A0A) else Color(0xFFFFEBEE)
+                else -> MaterialTheme.colorScheme.surface
             }
             
             Card(
@@ -2524,12 +2546,16 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
                         fontSize = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) 22.sp else 16.sp,
                         fontFamily = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) arabicFont else androidx.compose.ui.text.font.FontFamily.Default,
                         lineHeight = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) 36.sp else 24.sp,
-                        color = if (isAnswered && isThisSelectedOption && !isCorrectOpt) Color.Red else MaterialTheme.colorScheme.onSurface
+                        color = if (isAnswered && isThisSelectedOption && !isCorrectOpt) {
+                            if (isDark) Color(0xFFF87171) else Color.Red
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
                     )
                     if (isAnswered && isCorrectOpt) {
-                        Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, tint = PrimaryGreen)
+                        Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null, tint = if (isDark) Color(0xFF34D399) else PrimaryGreen)
                     } else if (isAnswered && isThisSelectedOption && !isCorrectOpt) {
-                        Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = null, tint = Color.Red)
+                        Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = null, tint = if (isDark) Color(0xFFF87171) else Color.Red)
                     }
                 }
             }
@@ -2603,6 +2629,10 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
         else -> "ইনশাআল্লাহ! পরবর্তীতে আরো ভালো হবে।"
     }
     
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val outerCardBg = if (isDark) Color(0xFF0C241F) else Color(0xFFE8F5E9)
+    val innerCardBg = if (isDark) Color(0xFF061A16) else Color(0xFFE8F5E9)
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -2614,7 +2644,7 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
                 }
                 drawLayer(graphicsLayer)
             },
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+            colors = CardDefaults.cardColors(containerColor = outerCardBg),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
         ) {
             Column(
@@ -2627,7 +2657,7 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
                 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                    colors = CardDefaults.cardColors(containerColor = innerCardBg),
                     border = BorderStroke(1.dp, PrimaryGreen.copy(alpha=0.2f))
                 ) {
                    Column(modifier = Modifier.padding(24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -2670,7 +2700,7 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
         ) {
-            Icon(androidx.compose.material.icons.Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Icon(androidx.compose.material.icons.Icons.Default.Download, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("ফলাফল কার্ড ডাউনলোড করুন", color = Color.White, fontWeight = FontWeight.Bold)
         }
@@ -2711,13 +2741,13 @@ fun PlayerDialogContent() {
                     .fillMaxWidth()
                     .padding(bottom = 6.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSel) PrimaryGreen.copy(alpha = 0.1f) else Color.White)
+                    .background(if (isSel) PrimaryGreen.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface)
                     .border(1.dp, if (isSel) PrimaryGreen else Border, RoundedCornerShape(8.dp))
                     .clickable { currentReciter = r }
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(r, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = if (isSel) PrimaryGreen else DarkText)
+                Text(r, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = if (isSel) PrimaryGreen else MaterialTheme.colorScheme.onSurface)
             }
         }
         
@@ -2726,7 +2756,7 @@ fun PlayerDialogContent() {
         // Player Controller Box
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
         ) {
             Column(
@@ -2760,7 +2790,7 @@ fun PlayerDialogContent() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = {}) {
-                        Icon(Icons.Default.SkipPrevious, contentDescription = null, tint = DarkText, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.SkipPrevious, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(32.dp))
                     }
                     IconButton(
                         onClick = { isPlaying = !isPlaying },
@@ -2776,7 +2806,7 @@ fun PlayerDialogContent() {
                         )
                     }
                     IconButton(onClick = {}) {
-                        Icon(Icons.Default.SkipNext, contentDescription = null, tint = DarkText, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.SkipNext, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(32.dp))
                     }
                 }
                 
@@ -2815,7 +2845,7 @@ fun HifzDialogContent(viewModel: SettingsViewModel) {
             val status = hifzProgress[surah] ?: "শুরু করা হয়নি"
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
             ) {
                 Row(
@@ -2835,7 +2865,7 @@ fun HifzDialogContent(viewModel: SettingsViewModel) {
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (active) col else OffWhite)
+                                    .background(if (active) col else MaterialTheme.colorScheme.surfaceVariant)
                                     .border(1.dp, if (active) col else Border, RoundedCornerShape(6.dp))
                                     .clickable {
                                         val newStatus = if (active) "শুরু করা হয়নি" else activeLabel
@@ -2867,7 +2897,7 @@ fun LearnDialogContent() {
         items(lessons) { (title, content) ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -2896,7 +2926,7 @@ fun VideoDialogContent() {
         items(classes) { (title, subtitle) ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
             ) {
                 Row(
@@ -2953,7 +2983,7 @@ fun BackupDialogContent() {
         
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
         ) {
             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -3053,7 +3083,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
         // 1. Quran Texts Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -3233,7 +3263,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
         // 2. Audio Cache Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -3539,7 +3569,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                     Text("বন্ধ করুন", color = Color(0xFF06B6D4))
                 }
             },
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp)
         )
     }

@@ -156,7 +156,7 @@ fun SurahDetailScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .shadow(2.dp, RoundedCornerShape(12.dp))
-                                .background(White, RoundedCornerShape(12.dp)),
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Default.MenuBook, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
@@ -179,7 +179,7 @@ fun SurahDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = OffWhite,
+                    containerColor = MaterialTheme.colorScheme.background,
                 )
             )
         },
@@ -211,7 +211,7 @@ fun SurahDetailScreen(
                 onBackClick = onNavigateBack
             )
         },
-        containerColor = OffWhite
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -456,7 +456,7 @@ fun SurahDetailScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(48.dp)
-                                                .background(Color(0xFFF9FAFB), RoundedCornerShape(8.dp))
+                                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                                         )
                                     }
                                 }
@@ -585,7 +585,7 @@ fun HeaderCard(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(20.dp))
-            .background(White, RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp))
             .padding(24.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -604,7 +604,7 @@ fun HeaderCard(
                 Box(
                     modifier = Modifier
                         .shadow(2.dp, RoundedCornerShape(100.dp))
-                        .background(White, RoundedCornerShape(100.dp))
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                         .border(0.5.dp, Border, RoundedCornerShape(100.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
@@ -616,7 +616,7 @@ fun HeaderCard(
                     Box(
                         modifier = Modifier
                             .shadow(2.dp, RoundedCornerShape(100.dp))
-                            .background(White, RoundedCornerShape(100.dp))
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                             .border(0.5.dp, PrimaryGreen.copy(alpha = 0.3f), RoundedCornerShape(100.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center
@@ -629,7 +629,7 @@ fun HeaderCard(
                     Box(
                         modifier = Modifier
                             .shadow(2.dp, RoundedCornerShape(100.dp))
-                            .background(White, RoundedCornerShape(100.dp))
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                             .border(0.5.dp, Border, RoundedCornerShape(100.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center
@@ -657,7 +657,7 @@ fun HeaderCard(
                         onValueChange = onSearchQueryChange,
                         modifier = Modifier
                             .width(60.dp)
-                            .background(OffWhite, RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
@@ -686,7 +686,7 @@ fun HeaderCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(White, RoundedCornerShape(100.dp))
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                     .border(1.dp, Border, RoundedCornerShape(100.dp))
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -721,7 +721,7 @@ fun RowScope.ViewModeToggle(text: String, icon: androidx.compose.ui.graphics.vec
     Box(
         modifier = Modifier
             .weight(1f)
-            .background(if (isSelected) PrimaryGreen else White, RoundedCornerShape(100.dp))
+            .background(if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
             .clickable { onClick() }
             .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center
@@ -740,7 +740,7 @@ fun BismillahSection(arabicFontName: String = "Amiri Quran") {
         modifier = Modifier
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(20.dp))
-            .background(White, RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp))
             .padding(vertical = 24.dp, horizontal = 16.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -829,8 +829,8 @@ fun AyahCard(
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = DarkText,
-            textContentColor = DarkText
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface
         )
     }
 
@@ -838,8 +838,8 @@ fun AyahCard(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(20.dp))
-            .background(if (isPlaying) PrimaryGreen.copy(alpha = 0.05f) else White, RoundedCornerShape(20.dp))
-            .border(if (isPlaying) 1.dp else 0.dp, if (isPlaying) PrimaryGreen else White, RoundedCornerShape(20.dp))
+            .background(if (isPlaying) PrimaryGreen.copy(alpha = 0.05f) else MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp))
+            .border(if (isPlaying) 1.dp else 0.dp, if (isPlaying) PrimaryGreen else MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp))
             .padding(20.dp)
     ) {
         Column {
@@ -1136,7 +1136,7 @@ fun FloatingAudioPlayer(
             // 2. Center Pill controller
             Row(
                 modifier = Modifier
-                    .background(OffWhite, RoundedCornerShape(30.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(30.dp))
                     .border(1.dp, GrayText.copy(alpha = 0.15f), RoundedCornerShape(30.dp))
                     .clickable { onPlayerTabClick() }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -1272,7 +1272,7 @@ fun PlayerBottomSheetContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(OffWhite, RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                 .padding(4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -1289,7 +1289,7 @@ fun PlayerBottomSheetContent(
                     text = "সিঙ্গেল আয়াত",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (playbackMode == PlaybackMode.AYAH) White else DarkText
+                    color = if (playbackMode == PlaybackMode.AYAH) White else MaterialTheme.colorScheme.onSurface
                 )
             }
             Box(
@@ -1305,7 +1305,7 @@ fun PlayerBottomSheetContent(
                     text = "সূরা কন্টিনিউয়াস",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (playbackMode == PlaybackMode.SURAH) White else DarkText
+                    color = if (playbackMode == PlaybackMode.SURAH) White else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -1380,7 +1380,7 @@ fun ReaderSettingsBottomSheetContent(
                     checkedThumbColor = White,
                     checkedTrackColor = PrimaryGreen,
                     uncheckedThumbColor = GrayText,
-                    uncheckedTrackColor = OffWhite
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             )
         }
@@ -1405,7 +1405,7 @@ fun ReaderSettingsBottomSheetContent(
                     checkedThumbColor = White,
                     checkedTrackColor = PrimaryGreen,
                     uncheckedThumbColor = GrayText,
-                    uncheckedTrackColor = OffWhite
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             )
         }
@@ -1477,7 +1477,7 @@ fun ReaderSettingsBottomSheetContent(
                     modifier = Modifier
                         .height(56.dp)
                         .background(
-                            if (isSelected) PrimaryGreen else OffWhite,
+                            if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant,
                             RoundedCornerShape(12.dp)
                         )
                         .border(
@@ -1491,7 +1491,7 @@ fun ReaderSettingsBottomSheetContent(
                 ) {
                     Text(
                         text = "الحمد لله",
-                        color = if (isSelected) White else DarkText,
+                        color = if (isSelected) White else MaterialTheme.colorScheme.onSurface,
                         fontSize = 22.sp,
                         fontFamily = com.example.ui.theme.getArabicFont(font)
                     )
@@ -1523,7 +1523,7 @@ fun ReaderSettingsBottomSheetContent(
                 Box(
                     modifier = Modifier
                         .background(
-                            if (isSelected) PrimaryGreen else OffWhite,
+                            if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant,
                             RoundedCornerShape(12.dp)
                         )
                         .border(
@@ -1536,7 +1536,7 @@ fun ReaderSettingsBottomSheetContent(
                 ) {
                     Text(
                         text = styleName,
-                        color = if (isSelected) White else DarkText,
+                        color = if (isSelected) White else MaterialTheme.colorScheme.onSurface,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1872,7 +1872,7 @@ fun MushafPageView(
             HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth())
             Box(
                 modifier = Modifier
-                    .background(White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(horizontal = 8.dp)
             ) {
                 Text(
