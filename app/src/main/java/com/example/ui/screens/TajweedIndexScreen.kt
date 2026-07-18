@@ -30,6 +30,7 @@ import com.example.ui.theme.Border
 import com.example.ui.theme.GrayText
 import com.example.ui.theme.White
 import com.example.ui.theme.DarkText
+import com.example.ui.viewmodels.HomeViewModel
 
 private val paraNamesBangla = listOf(
     "আলিফ লাম মীম", "সাইয়াকুল", "তিলকাল রুসুল", "লান তানালু", "ওয়াল মুহসানাত",
@@ -43,7 +44,9 @@ private val paraNamesBangla = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TajweedIndexScreen(
+    homeViewModel: HomeViewModel,
     onBackClick: () -> Unit,
+    onPageClick: (Int) -> Unit,
     onSurahClick: (Int) -> Unit,
     onJuzClick: (Int) -> Unit,
     onSettingsClick: () -> Unit
@@ -94,6 +97,24 @@ fun TajweedIndexScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            val lastReadPage by homeViewModel.lastReadPage.collectAsState()
+            if (searchQuery.isEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clickable { onPageClick(lastReadPage) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("সর্বশেষ পঠিত তাজবীদ", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("পৃষ্ঠা ${com.example.utils.DateUtil.toBengaliNumerals(lastReadPage)}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            }
+
             // Elegant tab capsule selector
             Row(
                 modifier = Modifier

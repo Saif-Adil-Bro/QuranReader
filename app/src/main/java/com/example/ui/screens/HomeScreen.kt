@@ -502,8 +502,8 @@ fun HomeScreen(
                                 showMushafDownloadRequestDialog = true
                             }
                         },
-                        onTajweedClick = { onNavigateToTajweedMode(lastReadPage) },
-                        onTranslationClick = { onNavigateToSurahWithAyah(lastReadSurah, "LIST", lastReadAyah) },
+                        onTajweedClick = onNavigateToTajweedIndex,
+                        onTranslationClick = onNavigateToNormalMode,
                         onPlayerClick = onNavigateToPlayer
                     )
                 }

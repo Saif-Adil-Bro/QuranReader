@@ -174,7 +174,9 @@ fun AppNavGraph(
 
         composable("tajweed/index") {
             TajweedIndexScreen(
+                homeViewModel = homeViewModel,
                 onBackClick = { navController.popBackStack() },
+                onPageClick = { page -> navController.navigate("tajweed/$page") },
                 onSurahClick = { surahId ->
                     val startPage = com.example.data.QuranData.surahStartPages[surahId - 1]
                     navController.navigate("tajweed/$startPage")
@@ -215,6 +217,7 @@ fun AppNavGraph(
             val viewModel: QuranListViewModel = viewModel(factory = viewModelFactory)
             QuranListScreen(
                 viewModel = viewModel,
+                homeViewModel = homeViewModel,
                 mode = mode,
                 onSurahClick = { surahNumber ->
                     if (mode == "normal") {
@@ -222,6 +225,9 @@ fun AppNavGraph(
                     } else {
                         navController.navigate("reading/$surahNumber")
                     }
+                },
+                onNavigateToSurahWithAyah = { surahNumber, viewMode, initialAyah ->
+                    navController.navigate("detail/$surahNumber?viewMode=$viewMode&initialAyah=$initialAyah")
                 },
                 onJuzClick = { juzNumber ->
                     if (mode == "normal") {
