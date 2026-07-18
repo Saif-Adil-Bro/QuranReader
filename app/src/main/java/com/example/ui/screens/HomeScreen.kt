@@ -196,108 +196,7 @@ fun HomeScreen(
         TajweedLegendDialog(onDismiss = { showTajweedLegend = false })
     }
 
-    if (!hasAskedDownloadPrompt) {
-        AlertDialog(
-            onDismissRequest = { viewModel.setHasAskedDownloadPrompt() },
-            title = {
-                Text(
-                    text = "অফলাইন কুরআন ডাটা",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    text = "আপনি কি অফলাইনে পড়ার জন্য কুরআনের সব সুরা ও অনুবাদ ডাটা ডাউনলোড করতে চান? ডাউনলোড করলে কোনো ইন্টারনেট ছাড়াই শব্দার্থ ও সুরা অফলাইনে পড়তে পারবেন।\n\n(অন্যথায় ক্যাশিং সিস্টেম অনুযায়ী আপনি যখন যে সুরা ওপেন করবেন, সেটি স্বয়ংক্রিয়ভাবে সেভ হয়ে যাবে।)",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.setHasAskedDownloadPrompt()
-                        viewModel.downloadAllQuranData()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                ) {
-                    Text("হ্যাঁ, ডাউনলোড করুন", color = White)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { viewModel.setHasAskedDownloadPrompt() },
-                    border = BorderStroke(1.dp, GrayText.copy(alpha = 0.5f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = GrayText)
-                ) {
-                    Text("না, পরে করব", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(16.dp)
-        )
-    }
 
-    // Show downloading progress dialog
-    if (isDownloading) {
-        AlertDialog(
-            onDismissRequest = { /* Non-dismissable */ },
-            title = {
-                Text(
-                    text = "ডাটা ডাউনলোড হচ্ছে...",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator(
-                        color = PrimaryGreen,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "সুরা ডাউনলোড হয়েছে: ${downloadProgress.toBengaliNumerals()} / ১১৪",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    LinearProgressIndicator(
-                        progress = { downloadProgress / 114f },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = PrimaryGreen,
-                        trackColor = PrimaryGreen.copy(alpha = 0.2f)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "অনুগ্রহ করে অপেক্ষা করুন, ডাটা ডাউনলোড সম্পন্ন হচ্ছে। ডাউনলোড শেষ হলে সব ফিচার অফলাইনে ব্যবহার করতে পারবেন।",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.stopQuranDownload() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("ডাউনলোড বন্ধ করুন", color = Color.White)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(16.dp)
-        )
-    }
 
     // Show download error toast if any
     LaunchedEffect(downloadError) {
@@ -2808,7 +2707,7 @@ fun DuaDetailDialog(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp)
+                            .padding(top = 24.dp, start = 24.dp, end = 24.dp, bottom = 16.dp)
                     ) {
                         val formattedIndex = formatToBanglaNumber(dua.id)
                         Text(

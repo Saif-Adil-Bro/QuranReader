@@ -26,31 +26,31 @@ fun QuranListScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     Scaffold(
-        containerColor = Color(0xFFFCFAF2), // Premium Warm background
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { 
                     Text(
                         text = if (mode == "reading") "প্যারাগ্রাফ পঠন" else "সূরা তালিকা",
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E4534)
+                        color = MaterialTheme.colorScheme.onBackground
                     ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF2E4534))
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color(0xFF2E4534))
+                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFFFCFAF2),
-                    titleContentColor = Color(0xFF2E4534),
-                    navigationIconContentColor = Color(0xFF2E4534),
-                    actionIconContentColor = Color(0xFF2E4534)
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }

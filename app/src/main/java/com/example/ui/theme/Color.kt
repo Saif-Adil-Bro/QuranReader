@@ -17,6 +17,6 @@ val OrangeAccent = Color(0xFFFBBF24)
 val BlueDot = Color(0xFF3B82F6)
 val GreenDot = Color(0xFF10B981)
 
-val DarkSurface = Color(0xFF0A1F1A)
-val DarkBackground = Color(0xFF051210)
-val DarkCard = Color(0xFF0F2B24)
+val DarkSurface = Color(0xFF0C201A)
+val DarkBackground = Color(0xFF000000) // Pure black for better contrast
+val DarkCard = Color(0xFF122B24)

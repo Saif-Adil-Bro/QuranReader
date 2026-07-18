@@ -240,7 +240,7 @@ fun HafeziModeScreen(
                                 containerColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
                             )
                         ) {
-                            Text("Retry")
+                            Text("আবার চেষ্টা করুন", color = Color.White)
                         }
                     }
                 }

@@ -238,7 +238,7 @@ fun SurahDetailScreen(
                                 viewModel.loadSurah(surahNumber) 
                             }
                         }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)) {
-                            Text("Retry", color = White)
+                            Text("আবার চেষ্টা করুন", color = White)
                         }
                     }
                 }

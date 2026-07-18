@@ -64,12 +64,12 @@ fun QuranIndexComponent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFFCFAF2))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Tab Row
         TabRow(
             selectedTabIndex = selectedTabIndex,
-            containerColor = Color(0xFFFCFAF2),
+            containerColor = MaterialTheme.colorScheme.background,
             contentColor = PrimaryGreen,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
@@ -79,7 +79,7 @@ fun QuranIndexComponent(
                 )
             },
             divider = {
-                HorizontalDivider(color = Color(0xFFEBE7DC), thickness = 1.dp)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
             }
         ) {
             tabs.forEachIndexed { index, title ->
@@ -121,11 +121,11 @@ fun QuranIndexComponent(
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = PrimaryGreen,
-                unfocusedBorderColor = Color(0xFFEBE7DC),
-                focusedContainerColor = Color(0xFFFFFDF9),
-                unfocusedContainerColor = Color(0xFFFFFDF9),
-                focusedTextColor = Color(0xFF2E4534),
-                unfocusedTextColor = Color(0xFF2E4534)
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
             ),
             shape = RoundedCornerShape(12.dp)
         )

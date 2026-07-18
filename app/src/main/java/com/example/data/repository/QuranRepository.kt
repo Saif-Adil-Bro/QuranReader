@@ -24,6 +24,7 @@ class QuranRepository(
     private val api: QuranApi,
     private val quranComApi: QuranComApi,
     private val settingsRepository: SettingsRepository,
+    private val offlineDao: com.example.data.local.offline.OfflineQuranDao,
     val context: Context
 ) {
     private val downloadedSurahsCache = java.util.concurrent.ConcurrentHashMap<Int, Boolean>()
@@ -299,6 +300,27 @@ class QuranRepository(
     suspend fun getSurahs(): List<Surah> {
         cachedSurahs?.let { return it }
         return withContext(Dispatchers.IO) {
+            try {
+                // Fetch from pre-packaged offline DB first
+                val offlineSurahs = offlineDao.getAllSurahs()
+                if (offlineSurahs.isNotEmpty()) {
+                    val list = offlineSurahs.map {
+                        Surah(
+                            number = it.number,
+                            name = it.name,
+                            englishName = it.englishName,
+                            englishNameTranslation = it.englishNameTranslation,
+                            numberOfAyahs = it.numberOfAyahs,
+                            revelationType = it.revelationType
+                        )
+                    }
+                    cachedSurahs = list
+                    return@withContext list
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             // First, try loading from cache
             if (surahCacheFile.exists() && surahCacheFile.length() > 0) {
                 try {
@@ -382,6 +404,42 @@ class QuranRepository(
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
+            }
+
+            // Fallback to pre-packaged SQLite if cache is missing or incomplete
+            if (cachedList.isNullOrEmpty()) {
+                try {
+                    val offlineAyahs = offlineDao.getAyahsBySurah(surahNumber)
+                    if (offlineAyahs.isNotEmpty()) {
+                        val dbList = offlineAyahs.map {
+                            CombinedAyah(
+                                number = it.globalNumber,
+                                numberInSurah = it.numberInSurah,
+                                page = it.page,
+                                juz = it.juz,
+                                surahNumber = surahNumber,
+                                arabicText = it.arabicText,
+                                bengaliText = it.bengaliText,
+                                tafsirText = null,
+                                audioUrl = null,
+                                words = emptyList(),
+                                textUthmaniTajweed = null
+                            )
+                        }
+                        cachedList = cleanCombinedAyahList(dbList)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // If no internet, return what we have (either file cache or sqlite)
+            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                cachedList?.let { 
+                    cachedSurahDetails[cacheKey] = it
+                    return@withContext it 
+                }
+                throw com.example.util.NoInternetException()
             }
 
             try {
@@ -505,6 +563,42 @@ class QuranRepository(
                 }
             }
 
+            // Fallback to pre-packaged SQLite if cache is missing or incomplete
+            if (cachedList.isNullOrEmpty()) {
+                try {
+                    val offlineAyahs = offlineDao.getAyahsByPage(pageNumber)
+                    if (offlineAyahs.isNotEmpty()) {
+                        val dbList = offlineAyahs.map {
+                            CombinedAyah(
+                                number = it.globalNumber,
+                                numberInSurah = it.numberInSurah,
+                                page = it.page,
+                                juz = it.juz,
+                                surahNumber = it.surahNumber,
+                                arabicText = it.arabicText,
+                                bengaliText = it.bengaliText,
+                                tafsirText = null,
+                                audioUrl = null,
+                                words = emptyList(),
+                                textUthmaniTajweed = null
+                            )
+                        }
+                        cachedList = cleanCombinedAyahList(dbList)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // If no internet, return what we have (either file cache or sqlite)
+            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                cachedList?.let { 
+                    cachedPageDetails[cacheKey] = it
+                    return@withContext it 
+                }
+                throw com.example.util.NoInternetException()
+            }
+
             try {
                 val result = withTimeoutOrNull(25000) {
                     val arabicResponse = api.getPageArabic(pageNumber)
@@ -624,6 +718,42 @@ class QuranRepository(
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
+            }
+
+            // Fallback to pre-packaged SQLite if cache is missing or incomplete
+            if (cachedList.isNullOrEmpty()) {
+                try {
+                    val offlineAyahs = offlineDao.getAyahsByJuz(juzNumber)
+                    if (offlineAyahs.isNotEmpty()) {
+                        val dbList = offlineAyahs.map {
+                            CombinedAyah(
+                                number = it.globalNumber,
+                                numberInSurah = it.numberInSurah,
+                                page = it.page,
+                                juz = it.juz,
+                                surahNumber = it.surahNumber,
+                                arabicText = it.arabicText,
+                                bengaliText = it.bengaliText,
+                                tafsirText = null,
+                                audioUrl = null,
+                                words = emptyList(),
+                                textUthmaniTajweed = null
+                            )
+                        }
+                        cachedList = cleanCombinedAyahList(dbList)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // If no internet, return what we have (either file cache or sqlite)
+            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                cachedList?.let { 
+                    cachedJuzDetails[cacheKey] = it
+                    return@withContext it 
+                }
+                throw com.example.util.NoInternetException()
             }
 
             try {

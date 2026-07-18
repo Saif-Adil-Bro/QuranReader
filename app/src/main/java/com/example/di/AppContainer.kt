@@ -5,12 +5,15 @@ import com.example.data.api.QuranApi
 import com.example.data.api.QfTokenManager
 import com.example.data.repository.QuranRepository
 import com.example.data.repository.SettingsRepository
+import com.example.util.NetworkUtils
+import com.example.util.NoInternetException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-
 import okhttp3.OkHttpClient
 import okhttp3.Interceptor
+import okhttp3.Cache
 import com.example.BuildConfig
+import java.io.File
 
 /**
  * A manual Dependency Injection container.
@@ -24,12 +27,21 @@ class AppContainer(private val context: Context) {
     private val qfTokenManager = QfTokenManager()
 
     private val okHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder().addInterceptor { chain ->
-            val originalRequest = chain.request()
-            val urlString = originalRequest.url.toString()
-            
-            // Check if this request is to the Quran Foundation Content API
-            if (urlString.contains("apis.quran.foundation")) {
+        val cacheSize = (50 * 1024 * 1024).toLong() // 50 MB
+        val cache = Cache(File(context.cacheDir, "http_cache"), cacheSize)
+
+        OkHttpClient.Builder()
+            .cache(cache)
+            .addInterceptor { chain ->
+                if (!NetworkUtils.isNetworkAvailable(context)) {
+                    throw NoInternetException()
+                }
+                
+                val originalRequest = chain.request()
+                val urlString = originalRequest.url.toString()
+                
+                // Check if this request is to the Quran Foundation Content API
+                if (urlString.contains("apis.quran.foundation")) {
                 val token = qfTokenManager.getAccessToken() ?: ""
                 val clientId = BuildConfig.QURAN_FOUNDATION_CLIENT_ID
                 
@@ -93,8 +105,12 @@ class AppContainer(private val context: Context) {
         quranComRetrofit.create(com.example.data.api.QuranComApi::class.java)
     }
 
+    val offlineQuranDatabase: com.example.data.local.offline.OfflineQuranDatabase by lazy {
+        com.example.data.local.offline.OfflineQuranDatabase.getDatabase(context)
+    }
+
     val quranRepository: QuranRepository by lazy {
-        QuranRepository(quranApi, quranComApi, settingsRepository, context)
+        QuranRepository(quranApi, quranComApi, settingsRepository, offlineQuranDatabase.offlineQuranDao(), context)
     }
 
     val settingsRepository: SettingsRepository by lazy {
