@@ -34,10 +34,53 @@ class SurahDetailViewModel(
 
     private var currentSelectedQariId = "ar.alafasy"
 
+    val selectedTafsirIds: StateFlow<Set<String>> = settingsRepository.selectedTafsirIdsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = setOf("164")
+        )
+
+    private val _availableTafsirs = MutableStateFlow<List<com.example.data.model.TafsirResourceDto>>(emptyList())
+    val availableTafsirs: StateFlow<List<com.example.data.model.TafsirResourceDto>> = _availableTafsirs.asStateFlow()
+
+    val selectedTafsirNames: StateFlow<List<String>> = kotlinx.coroutines.flow.combine(
+        selectedTafsirIds,
+        availableTafsirs
+    ) { ids, available ->
+        ids.map { id ->
+            val found = available.find { it.id.toString() == id }
+            if (found != null) {
+                found.name ?: "Unknown Tafsir"
+            } else {
+                when (id) {
+                    "164" -> "তাফসীর আল-মুয়াসসার"
+                    "165" -> "তাফসীর ইবনে কাসীর (আরবি)"
+                    "166" -> "তাফসীর আল-জালালাইন"
+                    "168" -> "তাফসীর আহসানুল বয়ান"
+                    "169" -> "তাফসীর আবু বকর জাকারিয়া"
+                    "171" -> "তাফসীর ইবনে কাসীর"
+                    else -> "তাফসীর $id"
+                }
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = listOf("তাফসীর আল-মুয়াসসার")
+    )
+
     init {
         viewModelScope.launch {
             settingsRepository.selectedQariIdFlow.collect { qariId ->
                 currentSelectedQariId = qariId
+            }
+        }
+        viewModelScope.launch {
+            try {
+                _availableTafsirs.value = repository.getAvailableTafsirs("bn")
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

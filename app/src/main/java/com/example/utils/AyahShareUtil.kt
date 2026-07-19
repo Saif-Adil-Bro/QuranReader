@@ -63,7 +63,7 @@ object AyahShareUtil {
         
         // Load custom fonts
         val arabicFont = try {
-            ResourcesCompat.getFont(context, R.font.uthman_taha)
+            ResourcesCompat.getFont(context, R.font.scheherazade_new)
         } catch (e: Exception) {
             Typeface.DEFAULT
         }

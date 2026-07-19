@@ -354,7 +354,7 @@ fun HomeScreen(
                     }
                 ) {
                     Text(
-                        text = if (status?.state is com.example.data.model.DownloadState.Failed) "বন্ধ করুন" else "বাতিল করুন",
+                        text = "বন্ধ করুন",
                         color = if (isDark) Color.White else Color.Black
                     )
                 }

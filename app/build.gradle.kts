@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -35,11 +37,23 @@ android {
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/debug.keystore"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD") ?: "android"
-      keyAlias = System.getenv("KEY_ALIAS") ?: "androiddebugkey"
-      keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+      val keystorePropsFile = rootProject.file("keystore.properties")
+      if (keystorePropsFile.exists()) {
+        val properties = Properties()
+        keystorePropsFile.inputStream().use { properties.load(it) }
+        
+        val relativePath = properties.getProperty("storeFile") ?: "debug.keystore"
+        storeFile = rootProject.file(relativePath)
+        storePassword = properties.getProperty("storePassword") ?: "android"
+        keyAlias = properties.getProperty("keyAlias") ?: "androiddebugkey"
+        keyPassword = properties.getProperty("keyPassword") ?: "android"
+      } else {
+        val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/debug.keystore"
+        storeFile = file(keystorePath)
+        storePassword = System.getenv("STORE_PASSWORD") ?: "android"
+        keyAlias = System.getenv("KEY_ALIAS") ?: "androiddebugkey"
+        keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+      }
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")

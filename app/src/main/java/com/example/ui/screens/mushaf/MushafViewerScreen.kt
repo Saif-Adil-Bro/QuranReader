@@ -219,7 +219,7 @@ fun MushafViewerScreen(
     if (showSelectorSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSelectorSheet = false },
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = if (isDark) Color(0xFF1C1C1E) else Color.White,
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
             var selectedTab by remember { mutableStateOf(0) } // 0 for Surah, 1 for Para
@@ -296,12 +296,26 @@ fun MushafViewerScreen(
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0; searchQuery = "" },
-                        text = { Text("সূরা সূচী", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+                        text = {
+                            Text(
+                                text = "সূরা সূচী",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = if (selectedTab == 0) Color(0xFF10B981) else (if (isDark) Color.LightGray else Color.Gray)
+                            )
+                        }
                     )
                     Tab(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1; searchQuery = "" },
-                        text = { Text("পারা সূচী", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+                        text = {
+                            Text(
+                                text = "পারা সূচী",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = if (selectedTab == 1) Color(0xFF10B981) else (if (isDark) Color.LightGray else Color.Gray)
+                            )
+                        }
                     )
                 }
 
@@ -310,11 +324,21 @@ fun MushafViewerScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text(if (selectedTab == 0) "সূরা খুঁজুন..." else "পারা খুঁজুন...") },
+                    placeholder = { 
+                        Text(
+                            text = if (selectedTab == 0) "সূরা খুঁজুন..." else "পারা খুঁজুন...",
+                            color = if (isDark) Color.Gray else Color.LightGray
+                        ) 
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF10B981),
-                        cursorColor = Color(0xFF10B981)
+                        unfocusedBorderColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color.Gray.copy(alpha = 0.4f),
+                        cursorColor = Color(0xFF10B981),
+                        focusedTextColor = if (isDark) Color.White else Color.Black,
+                        unfocusedTextColor = if (isDark) Color.White else Color.Black,
+                        focusedPlaceholderColor = if (isDark) Color.Gray else Color.LightGray,
+                        unfocusedPlaceholderColor = if (isDark) Color.Gray else Color.LightGray
                     ),
                     singleLine = true
                 )

@@ -116,37 +116,6 @@ fun TajweedModeScreen(
                                 tint = topBarContentColor
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    color = if (theme == "Dark") Color(0xFFF59E0B).copy(alpha = 0.15f) else Color(0xFFFEF3C7),
-                                    shape = RoundedCornerShape(100.dp)
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = Color(0xFFFBBF24).copy(alpha = 0.4f),
-                                    shape = RoundedCornerShape(100.dp)
-                                )
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Cloud,
-                                    contentDescription = null,
-                                    tint = if (theme == "Dark") Color(0xFFFBBF24) else Color(0xFFF59E0B),
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "আংশিক অফলাইন",
-                                    color = if (theme == "Dark") Color(0xFFFBBF24) else Color(0xFFB45309),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
                     }
                 },
                 navigationIcon = {

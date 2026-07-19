@@ -113,6 +113,9 @@ fun SurahDetailScreen(
     val downloadProgress by viewModel.downloadProgress.collectAsState()
     val downloadStatus by viewModel.downloadStatus.collectAsState()
     val downloadError by viewModel.downloadError.collectAsState()
+
+    val selectedTafsirIds by viewModel.selectedTafsirIds.collectAsState()
+    val selectedTafsirNames by viewModel.selectedTafsirNames.collectAsState()
     
     val parsedViewMode = when (initialViewMode) {
         "MUSHAF" -> ViewMode.MUSHAF
@@ -139,7 +142,7 @@ fun SurahDetailScreen(
     
     val currentPlayingAyah = (uiState as? UiState.Success)?.data?.find { it.numberInSurah == currentPlayingAyahNumber }
 
-    LaunchedEffect(surahNumber, isJuz, tanzilTextStyle) {
+    LaunchedEffect(surahNumber, isJuz, tanzilTextStyle, selectedTafsirIds) {
         if (isJuz) {
             viewModel.loadJuz(surahNumber)
         } else {
@@ -170,38 +173,6 @@ fun SurahDetailScreen(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text("BN", color = White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    color = Color(0xFFFEF3C7),
-                                    shape = RoundedCornerShape(100.dp)
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = Color(0xFFFBBF24).copy(alpha = 0.5f),
-                                    shape = RoundedCornerShape(100.dp)
-                                )
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Cloud,
-                                    contentDescription = null,
-                                    tint = Color(0xFFF59E0B),
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "আংশিক অফলাইন",
-                                    color = Color(0xFFB45309),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
                         }
                     }
                 },
@@ -536,7 +507,8 @@ fun SurahDetailScreen(
                                     currentPlayingWordUrl = currentPlayingWordUrl,
                                     isBookmarked = isBookmarked,
                                     onToggleBookmark = { viewModel.toggleBookmark(ayah, surahNumber) },
-                                    arabicLineSpacing = arabicLineSpacing
+                                    arabicLineSpacing = arabicLineSpacing,
+                                    selectedTafsirNames = selectedTafsirNames
                                 )
                             }
                         }
@@ -804,7 +776,8 @@ fun AyahCard(
     currentPlayingWordUrl: String? = null,
     isBookmarked: Boolean = false,
     onToggleBookmark: () -> Unit = {},
-    arabicLineSpacing: Float = 2.0f
+    arabicLineSpacing: Float = 2.0f,
+    selectedTafsirNames: List<String> = emptyList()
 ) {
     var showTafsirDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -836,7 +809,12 @@ fun AyahCard(
             modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.9f),
             title = {
                 Column {
-                    Text(text = "তাফসীরে ইবনে কাসীর", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
+                    val tafsirTitle = if (selectedTafsirNames.isNotEmpty()) {
+                        selectedTafsirNames.joinToString(", ")
+                    } else {
+                        "তাফসীর"
+                    }
+                    Text(text = tafsirTitle, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
                     Text(text = "আয়াত ${ayah.numberInSurah}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
@@ -1087,6 +1065,19 @@ fun AyahCard(
                 }
                 if (parsedTafsir != null) {
                     Spacer(modifier = Modifier.height(16.dp))
+                    val tafsirHeader = if (selectedTafsirNames.isNotEmpty()) {
+                        selectedTafsirNames.joinToString(", ")
+                    } else {
+                        "তাফসীর"
+                    }
+                    Text(
+                        text = tafsirHeader,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryGreen,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = parsedTafsir,
                         fontSize = 15.sp,
@@ -1140,7 +1131,7 @@ fun FloatingAudioPlayer(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = White,
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 8.dp,
         shadowElevation = 8.dp
     ) {
