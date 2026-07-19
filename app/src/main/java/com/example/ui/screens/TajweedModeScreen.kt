@@ -55,7 +55,12 @@ fun TajweedModeScreen(
     val showTajweed by viewModel.showTajweed.collectAsState()
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val arabicFontName by viewModel.arabicFontName.collectAsState()
-    val theme by viewModel.theme.collectAsState()
+    val themeRaw by viewModel.theme.collectAsState()
+    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val theme = when (themeRaw) {
+        "System" -> if (isSystemDark) "Dark" else "Light"
+        else -> themeRaw
+    }
     val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
     val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
 

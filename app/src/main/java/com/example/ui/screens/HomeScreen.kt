@@ -139,6 +139,7 @@ fun HomeScreen(
     onNavigateToSearch: () -> Unit,
     onSettingsClick: () -> Unit,
     onNavigateToMushaf: () -> Unit,
+    onNavigateToMushafPoriciti: () -> Unit,
     onNavigateToMushafPage: (String, Int, Boolean) -> Unit,
     onNavigateToSurahWithAyah: (Int, String, Int) -> Unit,
     onNavigateToTajweedIndex: () -> Unit,
@@ -156,7 +157,12 @@ fun HomeScreen(
     val hijriOffset by viewModel.hijriOffset.collectAsState()
     val surahList by viewModel.surahs.collectAsState()
     val currentTheme by viewModel.theme.collectAsState()
-    val isDark = currentTheme == "Dark"
+    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = when (currentTheme) {
+        "Dark" -> true
+        "Light" -> false
+        else -> isSystemDark
+    }
     // New premium bookmarks
     val bookmarks by viewModel.bookmarks.collectAsState(initial = emptyList())
 
@@ -498,11 +504,7 @@ fun HomeScreen(
                         isHafeziDownloaded = viewModel.isMushafDownloaded(defaultMushafId),
                         isDark = isDark,
                         onHafeziPdfClick = {
-                            if (viewModel.isMushafDownloaded(defaultMushafId)) {
-                                onNavigateToMushafPage(defaultMushafId, lastReadMushafPage, false)
-                            } else {
-                                showMushafDownloadRequestDialog = true
-                            }
+                            onNavigateToMushafPoriciti()
                         },
                         onTajweedClick = onNavigateToTajweedIndex,
                         onTranslationClick = onNavigateToNormalMode,
@@ -1687,7 +1689,7 @@ fun BookmarksAndLastReadSection(
                             Icon(
                                 imageVector = Icons.Default.Bookmark,
                                 contentDescription = null,
-                                tint = PrimaryGreen,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -1695,13 +1697,13 @@ fun BookmarksAndLastReadSection(
                                 text = bookmark.name,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = PrimaryGreen
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Delete",
-                                tint = GrayText,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                                 modifier = Modifier
                                     .size(12.dp)
                                     .clickable { onDeleteBookmark(bookmark) }
@@ -1748,9 +1750,9 @@ fun ModesGridSection(
                 iconColor = Color(0xFF10B981),
                 onClick = onHafeziPdfClick,
                 badgeText = if (isHafeziDownloaded) "অফলাইন" else "অনলাইন",
-                badgeIcon = if (isHafeziDownloaded) Icons.Default.CloudDone else Icons.Default.Cloud,
+                badgeIcon = if (isHafeziDownloaded) Icons.Default.CloudDone else Icons.Default.CloudDownload,
                 badgeBgColor = if (isHafeziDownloaded) {
-                    if (isDark) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFE6F4EA)
+                    if (isDark) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFD1FAE5)
                 } else {
                     if (isDark) Color(0xFF0EA5E9).copy(alpha = 0.15f) else Color(0xFFE0F2FE)
                 },
@@ -1760,7 +1762,7 @@ fun ModesGridSection(
                     Color(0xFF38BDF8).copy(alpha = 0.4f)
                 },
                 badgeContentColor = if (isHafeziDownloaded) {
-                    if (isDark) Color(0xFF10B981) else Color(0xFF0F9D58)
+                    if (isDark) Color(0xFF34D399) else Color(0xFF047857)
                 } else {
                     if (isDark) Color(0xFF38BDF8) else Color(0xFF0369A1)
                 },

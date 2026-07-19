@@ -549,57 +549,132 @@ class SettingsViewModel(
         viewModelScope.launch {
             try {
                 val config = _gameConfig.value
-                val surahToFetch = if (config.source == GameSource.ENTIRE_QURAN) {
-                    (1..114).random()
-                } else {
-                    config.selectedSurah
-                }
-                
-                val ayahs = quranRepository.getSurahDetailsCombined(surahToFetch)
+                val numRegex = Regex("[0-9০-৯٠-٩]")
                 val allWords = mutableListOf<com.example.data.model.QuranComWord>()
-                for (ayah in ayahs) {
-                    allWords.addAll(ayah.words.filter { it.charTypeName == "word" && it.translation?.text != null && it.textUthmani != null && it.translation.text.isNotBlank() && it.textUthmani.isNotBlank() })
-                }
+                val seenKeys = mutableSetOf<Pair<String, String>>()
                 
-                // If not enough words, fallback to Surah Al-Baqarah
-                val finalWords = if (allWords.size < config.totalQuestions) {
-                    val fallbackAyahs = quranRepository.getSurahDetailsCombined(2)
-                    allWords.clear()
-                    for (ayah in fallbackAyahs) {
-                        allWords.addAll(ayah.words.filter { it.charTypeName == "word" && it.translation?.text != null && it.textUthmani != null && it.translation.text.isNotBlank() && it.textUthmani.isNotBlank() })
+                if (config.source == GameSource.ENTIRE_QURAN) {
+                    var attempts = 0
+                    while (seenKeys.size < config.totalQuestions && attempts < 15) {
+                        attempts++
+                        val randomSurah = (1..114).random()
+                        val ayahs = quranRepository.getSurahDetailsCombined(randomSurah)
+                        for (ayah in ayahs) {
+                            val filtered = ayah.words.filter { 
+                                it.charTypeName == "word" && 
+                                it.translation?.text != null && 
+                                it.textUthmani != null && 
+                                it.translation.text.isNotBlank() && 
+                                it.textUthmani.isNotBlank() 
+                            }
+                            for (w in filtered) {
+                                val cleanAr = w.textUthmani?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                                val cleanBn = w.translation?.text?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                                if (cleanAr.isNotEmpty() && cleanBn.isNotEmpty()) {
+                                    val pair = cleanAr to cleanBn
+                                    if (pair !in seenKeys) {
+                                        seenKeys.add(pair)
+                                        allWords.add(w)
+                                    }
+                                }
+                            }
+                        }
                     }
-                    allWords
                 } else {
-                    allWords
+                    val ayahs = quranRepository.getSurahDetailsCombined(config.selectedSurah)
+                    for (ayah in ayahs) {
+                        val filtered = ayah.words.filter { 
+                            it.charTypeName == "word" && 
+                            it.translation?.text != null && 
+                            it.textUthmani != null && 
+                            it.translation.text.isNotBlank() && 
+                            it.textUthmani.isNotBlank() 
+                        }
+                        for (w in filtered) {
+                            val cleanAr = w.textUthmani?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                            val cleanBn = w.translation?.text?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                            if (cleanAr.isNotEmpty() && cleanBn.isNotEmpty()) {
+                                val pair = cleanAr to cleanBn
+                                if (pair !in seenKeys) {
+                                    seenKeys.add(pair)
+                                    allWords.add(w)
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Supplement with Surah Al-Baqarah if not enough unique words in the selected surah
+                    if (allWords.size < config.totalQuestions) {
+                        val fallbackAyahs = quranRepository.getSurahDetailsCombined(2)
+                        for (ayah in fallbackAyahs) {
+                            if (allWords.size >= config.totalQuestions) break
+                            val filtered = ayah.words.filter { 
+                                it.charTypeName == "word" && 
+                                it.translation?.text != null && 
+                                it.textUthmani != null && 
+                                it.translation.text.isNotBlank() && 
+                                it.textUthmani.isNotBlank() 
+                            }
+                            for (w in filtered) {
+                                if (allWords.size >= config.totalQuestions) break
+                                val cleanAr = w.textUthmani?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                                val cleanBn = w.translation?.text?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                                if (cleanAr.isNotEmpty() && cleanBn.isNotEmpty()) {
+                                    val pair = cleanAr to cleanBn
+                                    if (pair !in seenKeys) {
+                                        seenKeys.add(pair)
+                                        allWords.add(w)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 
-                val selectedWords = finalWords.shuffled().take(config.totalQuestions)
+                val selectedWords = allWords.shuffled().take(config.totalQuestions)
                 
                 val generatedQuestions = selectedWords.map { word ->
                     val isArabicToBengali = config.type == GameType.ARABIC_TO_BENGALI
-                    val numRegex = Regex("[0-9০-৯٠-٩]")
                     val questionTextRaw = if (isArabicToBengali) "${word.textUthmani}" else "${word.translation?.text}"
                     val correctAnsRaw = if (isArabicToBengali) "${word.translation?.text}" else "${word.textUthmani}"
                     
                     val questionText = questionTextRaw.replace(numRegex, "").trim()
                     val correctAns = correctAnsRaw.replace(numRegex, "").trim()
                     
-                    // Pick 3 random wrong answers
-                    val wrongWords = finalWords.filter { it.id != word.id }.shuffled().take(3)
-                    val wrongAns = wrongWords.map { 
+                    // Generate unique wrong options that are visually/textually distinct from correctAns
+                    val otherWords = allWords.filter {
+                        val otherAr = it.textUthmani?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                        val otherBn = it.translation?.text?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                        val thisAr = word.textUthmani?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                        val thisBn = word.translation?.text?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
+                        
+                        if (isArabicToBengali) {
+                            otherBn != thisBn && otherBn.isNotEmpty()
+                        } else {
+                            otherAr != thisAr && otherAr.isNotEmpty()
+                        }
+                    }
+                    
+                    val wrongOptions = otherWords.map {
                         val raw = if (isArabicToBengali) "${it.translation?.text}" else "${it.textUthmani}"
                         raw.replace(numRegex, "").trim()
-                    }.toMutableList()
+                    }.filter { it.isNotEmpty() }.distinct().shuffled().take(3)
                     
-                    // Ensure unique options
-                    var options = (wrongAns + correctAns).distinct()
-                    while(options.size < 4 && finalWords.size > 4) {
-                       val extraWord = finalWords.random()
-                       val extraOptRaw = if (isArabicToBengali) "${extraWord.translation?.text}" else "${extraWord.textUthmani}"
-                       val extraOpt = extraOptRaw.replace(numRegex, "").trim()
-                       if (!options.contains(extraOpt)) {
-                           options = options + extraOpt
-                       }
+                    var options = (wrongOptions + correctAns).distinct()
+                    
+                    // Ensure we have exactly 4 options by filling with high-quality fallback options if needed
+                    if (options.size < 4) {
+                        val defaultWrong = if (isArabicToBengali) {
+                            listOf("দয়া", "শান্তি", "জ্ঞান", "বিশ্বাস", "পরিত্রাণ", "ধৈর্য", "সত্য")
+                        } else {
+                            listOf("رَحْمَة", "سَلَام", "عِلْم", "إِيمَان", "نَجَاة", "صَبْر", "حَقّ")
+                        }
+                        for (fallbackOpt in defaultWrong) {
+                            if (options.size >= 4) break
+                            if (!options.contains(fallbackOpt)) {
+                                options = options + fallbackOpt
+                            }
+                        }
                     }
                     
                     WordQuestion(questionText, options.shuffled(), correctAns)

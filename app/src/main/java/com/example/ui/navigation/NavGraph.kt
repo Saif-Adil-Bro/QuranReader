@@ -2,6 +2,13 @@ package com.example.ui.navigation
 
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import coil.ImageLoader
+import coil.compose.rememberAsyncImagePainter
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import android.os.Build
+import coil.request.ImageRequest
 import com.example.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +51,7 @@ import kotlinx.coroutines.delay
 
 import com.example.ui.screens.mushaf.MushafTabScreen
 import com.example.ui.screens.mushaf.MushafViewerScreen
+import com.example.ui.screens.mushaf.QuranPoricitiScreen
 import com.example.ui.viewmodels.MushafSelectionViewModel
 import com.example.ui.viewmodels.MushafViewerViewModel
 import com.example.ui.viewmodels.SplashViewModel
@@ -56,12 +64,15 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MenuBook
@@ -87,6 +98,16 @@ fun AppNavGraph(
                         popUpTo("splash") { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable("mushaf/poriciti") {
+            QuranPoricitiScreen(
+                viewModel = homeViewModel,
+                onNavigateToMushafPage = { mushafId, page, showIndex ->
+                    navController.navigate("mushaf/viewer/$mushafId?page=$page&showIndex=$showIndex")
+                },
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -135,6 +156,7 @@ fun AppNavGraph(
                 onNavigateToSearch = { navController.navigate("search") },
                 onSettingsClick = { navController.navigate("settings") },
                 onNavigateToMushaf = { navController.navigate("mushaf") },
+                onNavigateToMushafPoriciti = { navController.navigate("mushaf/poriciti") },
                 onNavigateToMushafPage = { mushafId, page, showIndex ->
                     navController.navigate("mushaf/viewer/$mushafId?page=$page&showIndex=$showIndex")
                 },
@@ -415,37 +437,121 @@ fun SplashScreen(
             .background(Color(0xFF115E39)), // Deep elegant dark green background
         contentAlignment = Alignment.Center
     ) {
+        // Elegant pulsing logo or icon
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val pulseScale by infiniteTransition.animateFloat(
+            initialValue = 0.95f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "scale"
+        )
+        
+        val heartTransition = rememberInfiniteTransition(label = "heartBeat")
+        val heartScale by heartTransition.animateFloat(
+            initialValue = 0.88f,
+            targetValue = 1.15f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(650, easing = FastOutLinearInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "heartScale"
+        )
+        
+        val glowAlpha by heartTransition.animateFloat(
+            initialValue = 0.4f,
+            targetValue = 0.9f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(650, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "glowAlpha"
+        )
+        
+        val context = LocalContext.current
+        val splashResId = remember(context) {
+            val drawableId = context.resources.getIdentifier("splash_logo", "drawable", context.packageName)
+            if (drawableId != 0) drawableId else context.resources.getIdentifier("splash_logo", "raw", context.packageName)
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Elegant pulsing logo or icon
-            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-            val pulseScale by infiniteTransition.animateFloat(
-                initialValue = 0.95f,
-                targetValue = 1.05f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1200, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "scale"
-            )
-            
+
+            // 1. Center Logo / GIF Section
             Box(
                 modifier = Modifier
                     .scale(pulseScale)
-                    .size(96.dp)
-                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                    .align(Alignment.CenterHorizontally),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher),
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp)
-                )
+                if (splashResId != 0) {
+                    // Animated GIF using Coil with GifDecoder support
+                    val imageLoader = remember(context) {
+                        ImageLoader.Builder(context)
+                            .components {
+                                if (Build.VERSION.SDK_INT >= 28) {
+                                    add(ImageDecoderDecoder.Factory())
+                                } else {
+                                    add(GifDecoder.Factory())
+                                }
+                            }
+                            .build()
+                    }
+                    
+                    val painter = rememberAsyncImagePainter(
+                        model = ImageRequest.Builder(context)
+                            .data(splashResId)
+                            .build(),
+                        imageLoader = imageLoader
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(200.dp), // Spacious centered container for animated GIF splash logo
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painter,
+                            contentDescription = "Animated Splash Logo",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                } else {
+                    // Fallback launcher icon with gentle glowing background
+                    Box(
+                        modifier = Modifier
+                            .size(130.dp)
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                    colors = listOf(
+                                        Color(0xFF10B981).copy(alpha = 0.25f * glowAlpha),
+                                        Color.Transparent
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(96.dp)
+                                .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_launcher),
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp)
+                            )
+                        }
+                    }
+                }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
             
             Text(
                 text = "Quran Reader",
@@ -491,6 +597,64 @@ fun SplashScreen(
                     )
                 }
             }
+        }
+        
+        // 2. Lovely 'A ❤️ S' signature positioned at the absolute bottom of the screen like a credit text
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 36.dp)
+        ) {
+            Text(
+                text = "A",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                color = Color.White.copy(alpha = 0.95f),
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color(0xFFFFD700),
+                        offset = androidx.compose.ui.geometry.Offset(1.5f, 1.5f),
+                        blurRadius = 6f
+                    )
+                )
+            )
+            
+            Spacer(modifier = Modifier.width(4.dp))
+            
+            Text(
+                text = "❤️",
+                fontSize = 24.sp,
+                modifier = Modifier
+                    .scale(heartScale)
+                    .align(Alignment.CenterVertically),
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color(0xFFFF0000),
+                        offset = androidx.compose.ui.geometry.Offset(0f, 0f),
+                        blurRadius = 12f
+                    )
+                )
+            )
+            
+            Spacer(modifier = Modifier.width(4.dp))
+            
+            Text(
+                text = "S",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                color = Color.White.copy(alpha = 0.95f),
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color(0xFF60A5FA),
+                        offset = androidx.compose.ui.geometry.Offset(-1.5f, 1.5f),
+                        blurRadius = 6f
+                    )
+                )
+            )
         }
     }
 }

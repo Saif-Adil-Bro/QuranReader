@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -53,7 +54,12 @@ fun SearchScreen(
     val arabicFont by viewModel.arabicFont.collectAsState()
     val focusManager = LocalFocusManager.current
 
-    val isDark = theme == "Dark"
+    val isSystemDark = isSystemInDarkTheme()
+    val isDark = when (theme) {
+        "Dark" -> true
+        "Light" -> false
+        else -> isSystemDark
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,

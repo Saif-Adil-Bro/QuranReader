@@ -14,10 +14,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+import com.example.data.local.dao.BookmarkDao
+import com.example.data.local.entity.BookmarkEntity
+
 class MushafViewerViewModel(
     private val repository: MushafRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val bookmarkDao: BookmarkDao
 ) : ViewModel() {
+
+    private val _isBookmarked = MutableStateFlow(false)
+    val isBookmarked: StateFlow<Boolean> = _isBookmarked.asStateFlow()
 
     val theme: StateFlow<String> = settingsRepository.themeFlow.stateIn(
         scope = viewModelScope,
@@ -84,6 +91,23 @@ class MushafViewerViewModel(
             // Save last read state
             settingsRepository.setLastReadMushaf(currentMushafId, pageNumber)
             settingsRepository.setLastReadMode("MUSHAF")
+
+            val bookmarkEntity = bookmarkDao.getBookmark("PAGE", pageNumber)
+            _isBookmarked.value = bookmarkEntity != null
+        }
+    }
+
+    fun toggleBookmark() {
+        val page = _currentPageNumber.value
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentlyBookmarked = _isBookmarked.value
+            if (currentlyBookmarked) {
+                bookmarkDao.deleteBookmarkByReference("PAGE", page)
+                _isBookmarked.value = false
+            } else {
+                bookmarkDao.insertBookmark(BookmarkEntity(type = "PAGE", referenceId = page, name = "Page $page"))
+                _isBookmarked.value = true
+            }
         }
     }
 

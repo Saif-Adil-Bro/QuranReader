@@ -2369,13 +2369,13 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("নিচের শব্দটির সঠিক অর্থ নির্বাচন করুন:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("নিচের শব্দটির সঠিক অর্থ নির্বাচন করুন:", fontFamily = solaimanLipiFont, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = question.question,
                     fontWeight = FontWeight.Bold,
                     fontSize = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) 32.sp else 24.sp,
-                    fontFamily = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) arabicFont else androidx.compose.ui.text.font.FontFamily.Default,
+                    fontFamily = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) arabicFont else solaimanLipiFont,
                     lineHeight = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) 48.sp else 32.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -2435,7 +2435,7 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
                         text = opt,
                         fontWeight = FontWeight.Medium,
                         fontSize = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) 22.sp else 16.sp,
-                        fontFamily = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) arabicFont else androidx.compose.ui.text.font.FontFamily.Default,
+                        fontFamily = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) arabicFont else solaimanLipiFont,
                         lineHeight = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) 36.sp else 24.sp,
                         color = if (isAnswered && isThisSelectedOption && !isCorrectOpt) {
                             if (isDark) Color(0xFFF87171) else Color.Red
@@ -3030,7 +3030,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                     statusColor = PrimaryGreen
                     statusIcon = Icons.Default.CheckCircle
                 } else if (downloadedCount > 0) {
-                    statusText = "আংশিক ডাউনলোড হয়েছে ($downloadedCount/১১৪ সুরা)"
+                    statusText = "আংশিক ডাউনলোড হয়েছে (${com.example.utils.DateUtil.toBengaliNumerals(downloadedCount)}/১১৪ সুরা)"
                     statusColor = Color(0xFFF59E0B)
                     statusIcon = Icons.Default.Warning
                 } else {
@@ -3065,9 +3065,9 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                             modifier = Modifier.fillMaxWidth(),
+                             horizontalArrangement = Arrangement.SpaceBetween,
+                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = "সুরা ডাউনলোড হচ্ছে...",
@@ -3075,7 +3075,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "${'$'}progress / 114",
+                                text = "${com.example.utils.DateUtil.toBengaliNumerals(progress)} / ১১৪",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = PrimaryGreen
@@ -3095,7 +3095,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 error?.let { err ->
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "ত্রুটি: ${'$'}err",
+                        text = "ত্রুটি: $err",
                         color = Color.Red,
                         fontSize = 12.sp
                     )

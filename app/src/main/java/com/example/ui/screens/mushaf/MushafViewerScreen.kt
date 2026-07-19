@@ -6,6 +6,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -31,8 +34,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.text.style.TextAlign
 import com.example.ui.screens.mushaf.components.PageViewer
 import com.example.ui.viewmodels.MushafViewerViewModel
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.window.Dialog
+import com.example.utils.DateUtil
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.focusable
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -49,6 +69,7 @@ fun MushafViewerScreen(
     }
 
     val currentPage by viewModel.currentPageNumber.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val pagePath by viewModel.currentPagePath.collectAsState()
     val isPdf by viewModel.isPdf.collectAsState()
     val pdfPageOffset by viewModel.pdfPageOffset.collectAsState()
@@ -57,12 +78,24 @@ fun MushafViewerScreen(
     val isDownloaded by viewModel.isDownloaded.collectAsState()
     val currentTheme by viewModel.theme.collectAsState()
     val scrollDirection by viewModel.scrollDirection.collectAsState()
-    val isDark = currentTheme == "Dark"
+    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = when (currentTheme) {
+        "Dark" -> true
+        "Light" -> false
+        else -> isSystemDark
+    }
     val isVertical = scrollDirection == "Vertical"
     
-    val pagerState = rememberPagerState(initialPage = initialPage - 1, pageCount = { totalPages })
+    val isBookmarked by viewModel.isBookmarked.collectAsState()
     var showSelectorSheet by remember { mutableStateOf(initialShowIndex) }
+
+    BackHandler(enabled = !showSelectorSheet) {
+        showSelectorSheet = true
+    }
+
+    val pagerState = rememberPagerState(initialPage = initialPage - 1, pageCount = { totalPages })
     var showOffsetDialog by remember { mutableStateOf(false) }
+    var showJumpDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(pagerState.currentPage) {
         val newPage = pagerState.currentPage + 1
@@ -82,53 +115,22 @@ fun MushafViewerScreen(
         topBar = {
             TopAppBar(
                 title = { 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "পৃষ্ঠা $currentPage", 
-                            fontWeight = FontWeight.Bold, 
-                            fontSize = 18.sp,
-                            color = Color(0xFF10B981)
-                        )
-                        if (isDownloaded) {
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        color = if (isDark) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFE6F4EA),
-                                        shape = RoundedCornerShape(100.dp)
-                                    )
-                                    .border(
-                                        width = 1.dp,
-                                        color = Color(0xFF10B981).copy(alpha = 0.4f),
-                                        shape = RoundedCornerShape(100.dp)
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                Icon(
-                                    imageVector = Icons.Default.CloudDone,
-                                    contentDescription = null,
-                                    tint = if (isDark) Color(0xFF10B981) else Color(0xFF0F9D58),
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                    Text(
-                                        text = "অফলাইন",
-                                        color = if (isDark) Color(0xFF10B981) else Color(0xFF0F9D58),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    Text(
+                        text = "পৃষ্ঠা $currentPage", 
+                        fontWeight = FontWeight.Bold, 
+                        fontSize = 18.sp,
+                        color = Color(0xFF10B981)
+                    )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        if (showSelectorSheet) {
+                            showSelectorSheet = false
+                            onBack()
+                        } else {
+                            showSelectorSheet = true
+                        }
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
                             contentDescription = "Back",
@@ -153,12 +155,24 @@ fun MushafViewerScreen(
                             tint = Color(0xFF10B981)
                         )
                     }
+                    IconButton(onClick = { showJumpDialog = true }) {
+                        Icon(Icons.Default.Search, contentDescription = "নির্দিষ্ট পৃষ্ঠায় যান", tint = Color(0xFF10B981))
+                    }
                     if (isPdf) {
                         IconButton(onClick = { showOffsetDialog = true }) {
                             Icon(Icons.Default.Tune, contentDescription = "Page Offset Alignment", tint = Color(0xFF10B981))
                         }
                     }
-                    IconButton(onClick = { showSelectorSheet = true }) {
+                    IconButton(onClick = { viewModel.toggleBookmark() }) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = "Bookmark Page",
+                            tint = if (isBookmarked) Color(0xFFE5A93C) else Color(0xFF10B981)
+                        )
+                    }
+                    IconButton(onClick = { 
+                        showSelectorSheet = true 
+                    }) {
                         Icon(Icons.Default.List, contentDescription = "Surah / Para Selector", tint = Color(0xFF10B981))
                     }
                 },
@@ -222,6 +236,16 @@ fun MushafViewerScreen(
             containerColor = if (isDark) Color(0xFF1C1C1E) else Color.White,
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
+            val focusRequester = remember { FocusRequester() }
+            LaunchedEffect(showSelectorSheet) {
+                if (showSelectorSheet) {
+                    focusRequester.requestFocus()
+                }
+            }
+            BackHandler(enabled = true) {
+                showSelectorSheet = false
+                onBack()
+            }
             var selectedTab by remember { mutableStateOf(0) } // 0 for Surah, 1 for Para
             var searchQuery by remember { mutableStateOf("") }
             
@@ -230,6 +254,17 @@ fun MushafViewerScreen(
                     .fillMaxHeight(0.85f)
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
+                    .focusRequester(focusRequester)
+                    .focusable()
+                    .onPreviewKeyEvent { keyEvent ->
+                        if (keyEvent.key == Key.Back && keyEvent.type == KeyEventType.KeyUp) {
+                            showSelectorSheet = false
+                            onBack()
+                            true
+                        } else {
+                            false
+                        }
+                    }
             ) {
                 Text(
                     text = "দ্রুত নেভিগেশন",
@@ -288,7 +323,7 @@ fun MushafViewerScreen(
                     }
                 }
 
-                TabRow(
+                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent,
                     contentColor = Color(0xFF10B981)
@@ -435,7 +470,7 @@ fun MushafViewerScreen(
                             }
                         }
                     }
-                } else {
+                } else if (selectedTab == 1) {
                     val filteredParas = remember(searchQuery) {
                         com.example.data.QuranData.juzList.filter { juz ->
                             val num = juz.first.toString()
@@ -641,6 +676,212 @@ fun MushafViewerScreen(
             }
         )
     }
+
+    if (showJumpDialog) {
+        Dialog(
+            onDismissRequest = { showJumpDialog = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) Color(0xFF1C1C1E) else Color.White
+                ),
+                border = BorderStroke(1.dp, if (isDark) Color(0xFF2D2D2D) else Color(0xFFE5E7EB)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "নির্দিষ্ট পৃষ্ঠায় যান",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color(0xFF10B981),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    var selectedParaIndex by remember { mutableStateOf(0) }
+                    var pageInput by remember { mutableStateOf("") }
+
+                    // Dynamic list of 30 paras
+                    val paras = remember {
+                        (1..30).map { paraNum ->
+                            val paraName = "${DateUtil.toBengaliNumerals(paraNum)} পারা"
+                            Pair(paraNum, paraName)
+                        }
+                    }
+
+                    // Helper logic for custom page system
+                    fun getParaPageCount(para: Int): Int {
+                        return when (para) {
+                            1 -> 21
+                            29 -> 24
+                            30 -> 25
+                            else -> 20
+                        }
+                    }
+
+                    fun getParaStartPage(para: Int): Int {
+                        var startPage = 1
+                        for (i in 1 until para) {
+                            startPage += getParaPageCount(i)
+                        }
+                        return startPage
+                    }
+
+                    val selectedParaNum = paras[selectedParaIndex].first
+                    val maxPagesInPara = getParaPageCount(selectedParaNum)
+
+                    var expandedPara by remember { mutableStateOf(false) }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Left: Para Selector (Box with Dropdown)
+                        Box(modifier = Modifier.weight(0.65f)) {
+                            OutlinedButton(
+                                onClick = { expandedPara = true },
+                                modifier = Modifier.fillMaxWidth().height(56.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, if (isDark) Color(0xFF2D2D2D) else Color(0xFFE5E7EB)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isDark) Color.White else Color.Black),
+                                contentPadding = PaddingValues(horizontal = 12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = paras[selectedParaIndex].second,
+                                        color = if (isDark) Color.White else Color.Black,
+                                        fontSize = 14.sp,
+                                        maxLines = 1
+                                    )
+                                    Icon(
+                                        Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = Color(0xFF10B981)
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = expandedPara,
+                                onDismissRequest = { expandedPara = false },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.55f)
+                                    .heightIn(max = 250.dp)
+                                    .background(if (isDark) Color(0xFF1C1C1E) else Color.White)
+                            ) {
+                                paras.forEachIndexed { idx, item ->
+                                    DropdownMenuItem(
+                                        text = { Text(item.second, color = if (isDark) Color.White else Color.Black) },
+                                        onClick = {
+                                            selectedParaIndex = idx
+                                            pageInput = "" // Clear page input when changing para
+                                            expandedPara = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Right: Page input (OutlinedTextField)
+                        OutlinedTextField(
+                            value = pageInput,
+                            onValueChange = { input ->
+                                val filtered = input.filter { it.isDigit() || it in '০'..'৯' }
+                                if (filtered.length <= 2) {
+                                    val converted = filtered.map { char ->
+                                        if (char in '0'..'9') (char - '0' + '০'.code).toChar() else char
+                                    }.joinToString("")
+                                    pageInput = converted
+                                }
+                            },
+                            label = { Text("পৃষ্ঠা...", color = if (isDark) Color.LightGray else Color.Gray, fontSize = 12.sp) },
+                            placeholder = { Text("১ - ${DateUtil.toBengaliNumerals(maxPagesInPara)}", color = Color.Gray, fontSize = 11.sp) },
+                            modifier = Modifier.weight(0.35f),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF10B981),
+                                unfocusedBorderColor = if (isDark) Color(0xFF2D2D2D) else Color(0xFFE5E7EB),
+                                focusedTextColor = if (isDark) Color.White else Color.Black,
+                                unfocusedTextColor = if (isDark) Color.White else Color.Black
+                            )
+                        )
+                    }
+
+                    // Real-time page preview math
+                    val cleanInput = pageInput.map { char ->
+                        if (char in '০'..'৯') (char - '০' + '0'.code).toChar() else char
+                    }.joinToString("")
+                    val parsedPage = cleanInput.toIntOrNull()
+                    if (parsedPage != null && parsedPage in 1..maxPagesInPara) {
+                        val prevPagesCount = getParaStartPage(selectedParaNum) - 1
+                        val absPage = prevPagesCount + parsedPage
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "হিসাব: ${DateUtil.toBengaliNumerals(prevPagesCount)} + ${DateUtil.toBengaliNumerals(parsedPage)} = ${DateUtil.toBengaliNumerals(absPage)} নম্বর পৃষ্ঠা",
+                            color = Color(0xFF10B981),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        TextButton(
+                            onClick = { showJumpDialog = false },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("বাদ দিন", color = if (isDark) Color.LightGray else Color.Gray, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                val cleanInputVal = pageInput.map { char ->
+                                    if (char in '০'..'৯') (char - '০' + '0'.code).toChar() else char
+                                }.joinToString("")
+                                val targetParaPage = cleanInputVal.toIntOrNull()
+                                if (targetParaPage != null && targetParaPage in 1..maxPagesInPara) {
+                                    val targetPage = getParaStartPage(selectedParaNum) + targetParaPage - 1
+                                    if (targetPage in 1..totalPages) {
+                                        showJumpDialog = false
+                                        viewModel.jumpToPage(targetPage)
+                                    } else {
+                                        android.widget.Toast.makeText(context, "সঠিক পৃষ্ঠা নম্বর লিখুন", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    val maxPagesBengali = DateUtil.toBengaliNumerals(maxPagesInPara)
+                                    android.widget.Toast.makeText(context, "১ থেকে $maxPagesBengali এর মধ্যে পৃষ্ঠা নম্বর লিখুন", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("পৃষ্ঠায় যান", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -684,7 +925,7 @@ fun OnDemandPageViewer(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(color = Color(0xFF10B981))
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("পাতা ডাউনলোড হচ্ছে...", color = if (isDark) Color.LightGray else Color.Gray, fontSize = 13.sp)
+                Text("লোড হচ্ছে...", color = if (isDark) Color.LightGray else Color.Gray, fontSize = 13.sp)
             }
         }
     } else if (hasError) {
