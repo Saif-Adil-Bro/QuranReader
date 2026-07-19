@@ -495,6 +495,8 @@ fun HomeScreen(
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
                     ModesGridSection(
+                        isHafeziDownloaded = viewModel.isMushafDownloaded(defaultMushafId),
+                        isDark = isDark,
                         onHafeziPdfClick = {
                             if (viewModel.isMushafDownloaded(defaultMushafId)) {
                                 onNavigateToMushafPage(defaultMushafId, lastReadMushafPage, false)
@@ -1714,6 +1716,8 @@ fun BookmarksAndLastReadSection(
 
 @Composable
 fun ModesGridSection(
+    isHafeziDownloaded: Boolean,
+    isDark: Boolean,
     onHafeziPdfClick: () -> Unit,
     onTajweedClick: () -> Unit,
     onTranslationClick: () -> Unit,
@@ -1743,6 +1747,23 @@ fun ModesGridSection(
                 containerColor = Color(0xFFECFDF5),
                 iconColor = Color(0xFF10B981),
                 onClick = onHafeziPdfClick,
+                badgeText = if (isHafeziDownloaded) "অফলাইন" else "অনলাইন",
+                badgeIcon = if (isHafeziDownloaded) Icons.Default.CloudDone else Icons.Default.Cloud,
+                badgeBgColor = if (isHafeziDownloaded) {
+                    if (isDark) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFE6F4EA)
+                } else {
+                    if (isDark) Color(0xFF0EA5E9).copy(alpha = 0.15f) else Color(0xFFE0F2FE)
+                },
+                badgeBorderColor = if (isHafeziDownloaded) {
+                    Color(0xFF10B981).copy(alpha = 0.4f)
+                } else {
+                    Color(0xFF38BDF8).copy(alpha = 0.4f)
+                },
+                badgeContentColor = if (isHafeziDownloaded) {
+                    if (isDark) Color(0xFF10B981) else Color(0xFF0F9D58)
+                } else {
+                    if (isDark) Color(0xFF38BDF8) else Color(0xFF0369A1)
+                },
                 modifier = Modifier.weight(1f)
             )
             ModeItemCard(
@@ -1752,6 +1773,11 @@ fun ModesGridSection(
                 containerColor = Color(0xFFEFF6FF),
                 iconColor = Color(0xFF3B82F6),
                 onClick = onTajweedClick,
+                badgeText = "আংশিক অফলাইন",
+                badgeIcon = Icons.Default.Cloud,
+                badgeBgColor = if (isDark) Color(0xFFF59E0B).copy(alpha = 0.15f) else Color(0xFFFEF3C7),
+                badgeBorderColor = Color(0xFFFBBF24).copy(alpha = 0.4f),
+                badgeContentColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -1769,6 +1795,11 @@ fun ModesGridSection(
                 containerColor = Color(0xFFF5F3FF),
                 iconColor = Color(0xFF8B5CF6),
                 onClick = onTranslationClick,
+                badgeText = "আংশিক অফলাইন",
+                badgeIcon = Icons.Default.Cloud,
+                badgeBgColor = if (isDark) Color(0xFFF59E0B).copy(alpha = 0.15f) else Color(0xFFFEF3C7),
+                badgeBorderColor = Color(0xFFFBBF24).copy(alpha = 0.4f),
+                badgeContentColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
                 modifier = Modifier.weight(1f)
             )
             ModeItemCard(
@@ -1778,6 +1809,11 @@ fun ModesGridSection(
                 containerColor = Color(0xFFFFF7ED),
                 iconColor = Color(0xFFF97316),
                 onClick = onPlayerClick,
+                badgeText = "অনলাইন",
+                badgeIcon = Icons.Default.Cloud,
+                badgeBgColor = if (isDark) Color(0xFF0EA5E9).copy(alpha = 0.15f) else Color(0xFFE0F2FE),
+                badgeBorderColor = Color(0xFF38BDF8).copy(alpha = 0.4f),
+                badgeContentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0369A1),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -1792,7 +1828,12 @@ fun ModeItemCard(
     containerColor: Color,
     iconColor: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    badgeText: String? = null,
+    badgeIcon: ImageVector? = null,
+    badgeBgColor: Color = Color.Transparent,
+    badgeBorderColor: Color = Color.Transparent,
+    badgeContentColor: Color = Color.Transparent
 ) {
     Card(
         modifier = modifier
@@ -1802,38 +1843,59 @@ fun ModeItemCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 20.dp, horizontal = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(containerColor, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
+        Box(modifier = Modifier.fillMaxWidth()) {
+            if (badgeIcon != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(top = 10.dp, start = 10.dp)
+                        .background(badgeBgColor, CircleShape)
+                        .border(0.5.dp, badgeBorderColor, CircleShape)
+                        .padding(5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = badgeIcon,
+                        contentDescription = badgeText,
+                        tint = badgeContentColor,
+                        modifier = Modifier.size(11.dp)
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(
-                text = title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = subtitle,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                textAlign = TextAlign.Center
-            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 22.dp, bottom = 18.dp, start = 12.dp, end = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(containerColor, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

@@ -57,6 +57,17 @@ class SettingsViewModel(
     val audioRepository: AudioRepository
 ) : ViewModel() {
 
+    
+    val themeState: StateFlow<String> = repository.themeFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = "System"
+    )
+    
+    fun setTheme(theme: String) {
+        viewModelScope.launch { repository.setTheme(theme) }
+    }
+
     val arabicFontName: StateFlow<String> = repository.arabicFontNameFlow
         .stateIn(
             scope = viewModelScope,
@@ -107,6 +118,8 @@ class SettingsViewModel(
             }
         }
     }
+
+    // ---------------- Offline Sync States ----------------
 
     // ---------------- Offline Sync States ----------------
     private val _isDownloadingQuran = MutableStateFlow(false)
@@ -194,6 +207,7 @@ class SettingsViewModel(
                         val progress = ((index + 1) * 100) / totalAyahs
                         _audioDownloadProgress.value = progress
                         updateAudioCacheSize()
+        updateDownloadedSurahsCount()
                     }
                 }
                 _audioDownloadStatus.value = "সুরা $surahName-এর অডিও ডাউনলোড সফল হয়েছে!"
@@ -203,6 +217,7 @@ class SettingsViewModel(
             } finally {
                 _isDownloadingAudio.value = false
                 updateAudioCacheSize()
+        updateDownloadedSurahsCount()
             }
         }
     }
@@ -212,14 +227,17 @@ class SettingsViewModel(
         _isDownloadingAudio.value = false
         _audioDownloadStatus.value = "ডাউনলোড বাতিল করা হয়েছে"
         updateAudioCacheSize()
+        updateDownloadedSurahsCount()
     }
 
-    fun updateDownloadedSurahsCount() {
-        viewModelScope.launch {
-            val count = withContext(Dispatchers.IO) {
-                quranRepository.getDownloadedSurahsCount()
+
+    fun clearAudioCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val dir = File(repository.context.filesDir, "quran_audio")
+            if (dir.exists()) {
+                dir.deleteRecursively()
             }
-            _downloadedSurahsCount.value = count
+            updateAudioCacheSize()
         }
     }
 
@@ -243,6 +261,7 @@ class SettingsViewModel(
         return length
     }
 
+
     private var downloadJob: Job? = null
 
     fun stopQuranDownload() {
@@ -257,10 +276,7 @@ class SettingsViewModel(
             _quranDownloadProgress.value = 0
             _quranDownloadError.value = null
             try {
-                // First download Surah list
                 quranRepository.getSurahs()
-                
-                // Then download each of the 114 Surahs
                 for (i in 1..114) {
                     ensureActive()
                     if (!quranRepository.isSurahDownloaded(i)) {
@@ -277,7 +293,6 @@ class SettingsViewModel(
                     _downloadedSurahsCount.value = i
                 }
             } catch (e: CancellationException) {
-                // Ignored - job was cancelled
             } catch (e: Exception) {
                 _quranDownloadError.value = e.localizedMessage ?: "ডাউনলোড ব্যর্থ হয়েছে"
             } finally {
@@ -293,17 +308,15 @@ class SettingsViewModel(
             updateDownloadedSurahsCount()
         }
     }
-
-    fun clearAudioCache() {
+    
+    fun updateDownloadedSurahsCount() {
         viewModelScope.launch {
-            val dir = File(repository.context.filesDir, "quran_audio")
-            if (dir.exists()) {
-                dir.deleteRecursively()
+            val count = withContext(Dispatchers.IO) {
+                quranRepository.getDownloadedSurahsCount()
             }
-            updateAudioCacheSize()
+            _downloadedSurahsCount.value = count
         }
     }
-
     val hijriOffset: StateFlow<Int> = repository.hijriOffsetFlow
         .stateIn(
             scope = viewModelScope,
@@ -658,6 +671,40 @@ class SettingsViewModel(
     private val _plannerReminderMinute = MutableStateFlow(0)
     val plannerReminderMinute: StateFlow<Int> = _plannerReminderMinute.asStateFlow()
 
+    
+    private val _dailyMessageEnabled = MutableStateFlow(false)
+    val dailyMessageEnabled: StateFlow<Boolean> = _dailyMessageEnabled.asStateFlow()
+
+    private val _dailyMessageHour = MutableStateFlow(8)
+    val dailyMessageHour: StateFlow<Int> = _dailyMessageHour.asStateFlow()
+
+    private val _dailyMessageMinute = MutableStateFlow(0)
+    val dailyMessageMinute: StateFlow<Int> = _dailyMessageMinute.asStateFlow()
+
+    fun toggleDailyMessage(enabled: Boolean) {
+        _dailyMessageEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("daily_message_enabled", enabled).apply()
+        val context = repository.context
+        if (enabled) {
+            com.example.receiver.DailyMessageReceiver.scheduleNextAlarm(context)
+        } else {
+            com.example.receiver.DailyMessageReceiver.cancelAlarm(context)
+        }
+    }
+
+    fun updateDailyMessageTime(hour: Int, minute: Int) {
+        _dailyMessageHour.value = hour
+        _dailyMessageMinute.value = minute
+        sharedPrefs.edit()
+            .putInt("daily_message_hour", hour)
+            .putInt("daily_message_minute", minute)
+            .apply()
+        
+        if (_dailyMessageEnabled.value) {
+            com.example.receiver.DailyMessageReceiver.scheduleNextAlarm(repository.context)
+        }
+    }
+
     fun updatePlannerTarget(target: String) {
         _plannerTarget.value = target
         _plannerPagesRead.value = 0
@@ -728,6 +775,11 @@ class SettingsViewModel(
         _plannerPagesRead.value = sharedPrefs.getInt("planner_pages_read", 0)
         _plannerStartDate.value = sharedPrefs.getLong("planner_start_date", System.currentTimeMillis())
         _plannerStreak.value = sharedPrefs.getInt("planner_streak", 0)
+        
+        _dailyMessageEnabled.value = sharedPrefs.getBoolean("daily_message_enabled", false)
+        _dailyMessageHour.value = sharedPrefs.getInt("daily_message_hour", 8)
+        _dailyMessageMinute.value = sharedPrefs.getInt("daily_message_minute", 0)
+
         _plannerReminderEnabled.value = sharedPrefs.getBoolean("planner_reminder", false)
         _plannerReminderHour.value = sharedPrefs.getInt("planner_reminder_hour", 20)
         _plannerReminderMinute.value = sharedPrefs.getInt("planner_reminder_minute", 0)
@@ -742,8 +794,9 @@ class SettingsViewModel(
         }
 
         loadNotesFromPrefs()
-        updateDownloadedSurahsCount()
+        
         updateAudioCacheSize()
+        updateDownloadedSurahsCount()
         
         viewModelScope.launch {
             _availableTafsirs.value = quranRepository.getAvailableTafsirs("bn")

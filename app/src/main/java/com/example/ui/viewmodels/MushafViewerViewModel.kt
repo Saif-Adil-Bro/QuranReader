@@ -49,6 +49,9 @@ class MushafViewerViewModel(
     private val _isReady = MutableStateFlow(false)
     val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
     
+    private val _isDownloaded = MutableStateFlow(false)
+    val isDownloaded: StateFlow<Boolean> = _isDownloaded.asStateFlow()
+    
     var currentMushafId = ""
 
     fun initMushaf(mushafId: String, initialPage: Int = 1) {
@@ -56,6 +59,7 @@ class MushafViewerViewModel(
         val style = repository.getAvailableMushafs().find { it.id == mushafId }
         _isPdf.value = style?.isPdf == true
         _totalPages.value = style?.totalPages ?: 604
+        _isDownloaded.value = repository.isMushafDownloaded(mushafId)
         // Set the page synchronously BEFORE the suspend call below.
         // Without this, currentPage stays at its default (1) while pagerState
         // is already created at the correct initialPage, causing the

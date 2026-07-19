@@ -4,6 +4,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -92,24 +93,60 @@ fun TajweedModeScreen(
             TopAppBar(
                 title = {
                     Row(
-                        modifier = Modifier
-                            .clickable { showJumpToPageDialog = true }
-                            .padding(vertical = 4.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "পৃষ্ঠা ${currentPage.toBengaliNumerals()}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = topBarContentColor
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Jump to Page",
-                            modifier = Modifier.size(20.dp),
-                            tint = topBarContentColor
-                        )
+                        Row(
+                            modifier = Modifier
+                                .clickable { showJumpToPageDialog = true }
+                                .padding(vertical = 4.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "পৃষ্ঠা ${currentPage.toBengaliNumerals()}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = topBarContentColor
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Jump to Page",
+                                modifier = Modifier.size(20.dp),
+                                tint = topBarContentColor
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = if (theme == "Dark") Color(0xFFF59E0B).copy(alpha = 0.15f) else Color(0xFFFEF3C7),
+                                    shape = RoundedCornerShape(100.dp)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = Color(0xFFFBBF24).copy(alpha = 0.4f),
+                                    shape = RoundedCornerShape(100.dp)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Cloud,
+                                    contentDescription = null,
+                                    tint = if (theme == "Dark") Color(0xFFFBBF24) else Color(0xFFF59E0B),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "আংশিক অফলাইন",
+                                    color = if (theme == "Dark") Color(0xFFFBBF24) else Color(0xFFB45309),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 },
                 navigationIcon = {

@@ -28,35 +28,48 @@ private fun String.toArabicNumerals(): String {
 
 fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
     return buildAnnotatedString {
-        val regex = "<(tajweed|span)\\s+class=([a-zA-Z0-9_]+)>([^<]+)</(?:tajweed|span)>".toRegex()
-        var lastIndex = 0
-        
-        for (match in regex.findAll(raw)) {
-            val start = match.range.first
-            if (start > lastIndex) {
-                append(raw.substring(lastIndex, start))
+        // Preprocess <span class=end>...</span>
+        val regexEnd = "<span\\s+class=end>([^<]+)</span>".toRegex()
+        val preprocessed = raw.replace(regexEnd) { matchResult ->
+            "﴿${matchResult.groupValues[1].toArabicNumerals()}﴾"
+        }
+
+        var currentIndex = 0
+        while (currentIndex < preprocessed.length) {
+            val nextTagStart = preprocessed.indexOf("<", currentIndex)
+            if (nextTagStart == -1) {
+                append(preprocessed.substring(currentIndex))
+                break
             }
             
-            val tagType = match.groupValues[1]
-            val className = match.groupValues[2]
-            val content = match.groupValues[3]
+            if (nextTagStart > currentIndex) {
+                append(preprocessed.substring(currentIndex, nextTagStart))
+            }
             
-            if (tagType == "span" && className == "end") {
-                append("﴿${content.toArabicNumerals()}﴾")
-            } else if (tagType == "tajweed") {
-                val color = TajweedColors[className] ?: defaultColor
-                withStyle(SpanStyle(color = color)) {
-                    append(content)
+            val nextTagEnd = preprocessed.indexOf(">", nextTagStart)
+            if (nextTagEnd == -1) {
+                append(preprocessed.substring(nextTagStart))
+                break
+            }
+            
+            val tag = preprocessed.substring(nextTagStart + 1, nextTagEnd)
+            
+            if (tag.startsWith("/")) {
+                if (tag == "/tajweed" || tag == "/span") {
+                    try {
+                        pop()
+                    } catch (e: Exception) {
+                        // ignore if stack is empty
+                    }
                 }
             } else {
-                append(content)
+                if (tag.startsWith("tajweed class=") || tag.startsWith("span class=")) {
+                    val className = tag.substringAfter("class=").trim('\'', '"')
+                    val color = TajweedColors[className] ?: defaultColor
+                    pushStyle(SpanStyle(color = color))
+                }
             }
-            
-            lastIndex = match.range.last + 1
-        }
-        
-        if (lastIndex < raw.length) {
-            append(raw.substring(lastIndex))
+            currentIndex = nextTagEnd + 1
         }
     }
 }

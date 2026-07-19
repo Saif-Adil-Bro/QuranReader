@@ -300,6 +300,7 @@ class QuranRepository(
     suspend fun getSurahs(): List<Surah> {
         cachedSurahs?.let { return it }
         return withContext(Dispatchers.IO) {
+            var dbError: String? = null
             try {
                 // Fetch from pre-packaged offline DB first
                 val offlineSurahs = offlineDao.getAllSurahs()
@@ -316,9 +317,12 @@ class QuranRepository(
                     }
                     cachedSurahs = list
                     return@withContext list
+                } else {
+                    dbError = "DB empty"
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                dbError = e.message ?: e.toString()
             }
 
             // First, try loading from cache
@@ -337,19 +341,27 @@ class QuranRepository(
             }
 
             // Fetch from network
-            val response = api.getSurahs()
-            if (response.code == 200) {
-                val data = response.data
-                cachedSurahs = data
-                try {
-                    surahCacheFile.parentFile?.mkdirs()
-                    surahCacheFile.writeText(Gson().toJson(data))
-                } catch (e: Exception) {
-                    e.printStackTrace()
+            try {
+                val response = api.getSurahs()
+                if (response.code == 200) {
+                    val data = response.data
+                    cachedSurahs = data
+                    try {
+                        surahCacheFile.parentFile?.mkdirs()
+                        surahCacheFile.writeText(Gson().toJson(data))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    data
+                } else {
+                    throw Exception("Failed to load Surahs: ${response.status}")
                 }
-                data
-            } else {
-                throw Exception("Failed to load Surahs: ${response.status}")
+            } catch (e: Exception) {
+                if (dbError != null) {
+                    throw Exception("Network Error: ${e.message}. DB Error: $dbError")
+                } else {
+                    throw e
+                }
             }
         }
     }

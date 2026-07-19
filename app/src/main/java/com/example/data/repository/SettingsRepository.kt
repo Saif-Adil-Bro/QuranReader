@@ -94,7 +94,7 @@ class SettingsRepository(val context: Context) {
         .map { preferences -> (preferences[ARABIC_LINE_SPACING_KEY] ?: 2.0f).coerceAtLeast(2.0f) }
 
     val themeFlow: Flow<String> = context.dataStore.data
-        .map { preferences -> preferences[THEME_KEY] ?: "Light" }
+        .map { preferences -> preferences[THEME_KEY] ?: "System" }
 
     val autoScrollSpeedFlow: Flow<Float> = context.dataStore.data
         .map { preferences -> preferences[AUTO_SCROLL_SPEED_KEY] ?: 1f }

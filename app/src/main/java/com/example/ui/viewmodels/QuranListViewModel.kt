@@ -45,15 +45,15 @@ class QuranListViewModel(
     }
 
     private fun filterSurahs(query: String) {
-        if (query.isBlank()) {
+        if (query.isEmpty()) {
             _uiState.value = UiState.Success(allSurahs)
         } else {
-            val filteredList = allSurahs.filter {
-                it.englishName.contains(query, ignoreCase = true) ||
-                (it.name ?: "").contains(query) ||
-                it.englishNameTranslation.contains(query, ignoreCase = true)
+            val filtered = allSurahs.filter { surah ->
+                surah.englishName.contains(query, ignoreCase = true) ||
+                surah.name?.contains(query, ignoreCase = true) == true ||
+                surah.englishNameTranslation.contains(query, ignoreCase = true)
             }
-            _uiState.value = UiState.Success(filteredList)
+            _uiState.value = UiState.Success(filtered)
         }
     }
 }

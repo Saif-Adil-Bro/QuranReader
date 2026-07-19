@@ -83,12 +83,48 @@ fun RecitationPlayerScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "অডিও প্লেয়ার",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "অডিও প্লেয়ার",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = Color(0xFFE0F2FE),
+                                    shape = RoundedCornerShape(100.dp)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = Color(0xFF38BDF8).copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(100.dp)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Cloud,
+                                    contentDescription = null,
+                                    tint = Color(0xFF0EA5E9),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "অনলাইন",
+                                    color = Color(0xFF0369A1),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {

@@ -18,7 +18,7 @@ abstract class OfflineQuranDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     OfflineQuranDatabase::class.java,
-                    "offline_quran_database_v3"
+                    "offline_quran_database_v4"
                 )
                 .createFromAsset("databases/quran.db")
                 .fallbackToDestructiveMigration()

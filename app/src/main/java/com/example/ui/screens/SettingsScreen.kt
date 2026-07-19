@@ -22,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -96,7 +97,11 @@ fun SettingsScreen(
         MenuItem("learn", "কুরআন শিক্ষা", Icons.Default.Book, Color(0xFF4F46E5)),
         MenuItem("video", "কুরআন ভিডিও", Icons.Default.Videocam, Color(0xFFEF4444)),
         MenuItem("offline_sync", "অফলাইন ডাউনলোড", Icons.Default.Download, Color(0xFFF59E0B)),
-        MenuItem("backup", "ক্লাউড ব্যাকআপ", Icons.Default.Cloud, Color(0xFF6B7280))
+        MenuItem("backup", "ব্যাকআপ", Icons.Default.Cloud, Color(0xFF6B7280)),
+        MenuItem("notifications", "নোটিফিকেশন", Icons.Default.Notifications, Color(0xFFFBBF24)),
+        MenuItem("theme", "অ্যাপ থিম", Icons.Default.Palette, Color(0xFF9C27B0)),
+        MenuItem("about", "সম্পর্কে", Icons.Default.Info, Color(0xFF4CAF50)),
+        MenuItem("contact", "যোগাযোগ", Icons.Default.ContactMail, Color(0xFFF97316))
     )
     
     Scaffold(
@@ -257,19 +262,26 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     rowItems.forEach { item ->
+                        val isBackup = item.id == "backup"
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .shadow(2.dp, RoundedCornerShape(16.dp))
+                                .shadow(if (isBackup) 0.dp else 2.dp, RoundedCornerShape(16.dp))
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surface)
+                                .background(
+                                    if (isBackup) MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                                    else MaterialTheme.colorScheme.surface
+                                )
                                 .clickable {
-                                    if (item.id == "player") {
+                                    if (isBackup) {
+                                        android.widget.Toast.makeText(context, "শীঘ্রই আসছে!", android.widget.Toast.LENGTH_SHORT).show()
+                                    } else if (item.id == "player") {
                                         onNavigateToPlayer()
                                     } else {
                                         activeDialog = item.id
                                     }
                                 }
+                                .alpha(if (isBackup) 0.5f else 1f)
                                 .padding(12.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -663,29 +675,7 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    Text(
-                        text = "তাফসীর নির্বাচন করুন",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "একসাথে সর্বোচ্চ ৩টি তাফসীর নির্বাচন করতে পারবেন",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
                     
-                    OutlinedButton(
-                        onClick = { showTafsirDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
-                    ) {
-                        val selectedCount = selectedTafsirIds.size
-                        Text(text = "$selectedCount টি তাফসীর নির্বাচিত", modifier = Modifier.weight(1f))
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Tafsir")
-                    }
                     
                     if (showQariDialog) {
                         AlertDialog(
@@ -725,116 +715,7 @@ fun SettingsScreen(
                         )
                     }
 
-                    if (showTafsirDialog) {
-                        AlertDialog(
-                            onDismissRequest = { showTafsirDialog = false },
-                            title = {
-                                Text("তাফসীর নির্বাচন করুন")
-                            },
-                            text = {
-                                LazyColumn {
-                                    items(availableTafsirs) { tafsir ->
-                                        val tafsirId = tafsir.id.toString()
-                                        val isSelected = selectedTafsirIds.contains(tafsirId)
-                                        val isDownloaded = downloadedTafsirIds.contains(tafsirId)
-                                        val isDownloading = downloadingTafsirIds.contains(tafsirId)
-                                        val progress = tafsirDownloadProgress[tafsirId] ?: 0f
-
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable { viewModel.toggleTafsir(tafsirId) }
-                                                .padding(vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            if (isDownloaded) {
-                                                androidx.compose.material3.Checkbox(
-                                                    checked = isSelected,
-                                                    onCheckedChange = { viewModel.toggleTafsir(tafsirId) },
-                                                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = PrimaryGreen)
-                                                )
-                                            } else {
-                                                androidx.compose.material3.RadioButton(
-                                                    selected = isSelected,
-                                                    onClick = { viewModel.toggleTafsir(tafsirId) },
-                                                    colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = PrimaryGreen)
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    modifier = Modifier.fillMaxWidth()
-                                                ) {
-                                                    Text(
-                                                        text = tafsir.name ?: "Unknown", 
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.weight(1f),
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .background(PrimaryGreen.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
-                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = tafsir.languageName.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
-                                                            fontSize = 10.sp,
-                                                            color = PrimaryGreen,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                    }
-                                                }
-                                                Text(text = tafsir.authorName ?: "Unknown", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            if (!isDownloaded) {
-                                                if (isDownloading) {
-                                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp).padding(2.dp)) {
-                                                        androidx.compose.material3.CircularProgressIndicator(
-                                                            progress = progress,
-                                                            color = PrimaryGreen,
-                                                            strokeWidth = 2.dp
-                                                        )
-                                                    }
-                                                } else {
-                                                    IconButton(
-                                                        onClick = { viewModel.downloadTafsir(tafsirId) },
-                                                        modifier = Modifier.size(24.dp)
-                                                    ) {
-                                                        Icon(
-                                                            androidx.compose.material.icons.Icons.Default.Download,
-                                                            contentDescription = "Download Tafsir",
-                                                            tint = PrimaryGreen
-                                                        )
-                                                    }
-                                                }
-                                            } else {
-                                                Icon(
-                                                    androidx.compose.material.icons.Icons.Default.CheckCircle,
-                                                    contentDescription = "Downloaded",
-                                                    tint = PrimaryGreen,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                    if (availableTafsirs.isEmpty()) {
-                                        item {
-                                            Text("তাফসীর লোড হচ্ছে...", modifier = Modifier.padding(16.dp))
-                                        }
-                                    }
-                                }
-                            },
-                            confirmButton = {
-                                androidx.compose.material3.TextButton(onClick = { showTafsirDialog = false }) {
-                                    Text("বন্ধ করুন", color = PrimaryGreen)
-                                }
-                            }
-                        )
-                    }
+                    
                 }
             }
 
@@ -973,7 +854,11 @@ fun MenuDetailDialog(
                     "learn" -> "কুরআন শিক্ষা"
                     "video" -> "ভিডিও ক্লাস"
                     "offline_sync" -> "কুরআন অফলাইন ডাউনলোড"
-                    "backup" -> "ক্লাউড ব্যাকআপ"
+                    "backup" -> "ব্যাকআপ"
+                    "notifications" -> "নোটিফিকেশন সেটিংস"
+                    "theme" -> "অ্যাপ থিম"
+                    "about" -> "আমাদের সম্পর্কে ও প্রাইভেসি"
+                    "contact" -> "যোগাযোগ"
                     else -> "বিস্তারিত"
                 }
                 
@@ -1039,6 +924,10 @@ fun MenuDetailDialog(
                         "video" -> VideoDialogContent()
                         "offline_sync" -> OfflineSyncDialogContent(viewModel)
                         "backup" -> BackupDialogContent()
+                        "notifications" -> NotificationDialogContent(viewModel)
+                        "theme" -> ThemeDialogContent(viewModel)
+                        "about" -> AboutDialogContent()
+                        "contact" -> ContactDialogContent()
                     }
                 }
             }
@@ -1722,6 +1611,7 @@ fun PlannerDialogContent(viewModel: SettingsViewModel) {
             }
         }
         
+
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
@@ -2403,6 +2293,7 @@ fun GameSetupScreen(viewModel: SettingsViewModel) {
             }
         }
         
+
         Spacer(modifier = Modifier.height(32.dp))
         Button(
             onClick = { viewModel.startDynamicGame() },
@@ -3038,9 +2929,17 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
 
     var showSurahSelectorSheet by remember { mutableStateOf(false) }
 
+
+    // Tafsir States
+    val availableTafsirs by viewModel.availableTafsirs.collectAsState()
+    val selectedTafsirIds by viewModel.selectedTafsirIds.collectAsState()
+    val downloadedTafsirIds by viewModel.downloadedTafsirIds.collectAsState()
+    val downloadingTafsirIds by viewModel.downloadingTafsirIds.collectAsState()
+    val tafsirDownloadProgress by viewModel.tafsirDownloadProgress.collectAsState()
+
     // Refresh states
     LaunchedEffect(Unit) {
-        viewModel.updateDownloadedSurahsCount()
+        
         viewModel.updateAudioCacheSize()
         viewModel.loadSurahList()
     }
@@ -3069,18 +2968,18 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
+
         Text(
-            text = "আপনার কুরআন রিডিং ডাটা এবং অডিও অফলাইন ব্যবহারের জন্য ডাউনলোড করে রাখুন যাতে ইন্টারনেট না থাকলেও পড়তে ও শুনতে পারেন।",
+            text = "আপনার কুরআন অডিও অফলাইন ব্যবহারের জন্য ডাউনলোড করে রাখুন যাতে ইন্টারনেট না থাকলেও শুনতে পারেন। কুরআন টেক্সট (আরবি ও বাংলা) ইতিমধ্যেই অ্যাপে অফলাইনে দেওয়া আছে।",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
             lineHeight = 18.sp,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 1. Quran Texts Card
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Word by Word & Tajweed Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -3099,7 +2998,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Book,
+                            imageVector = Icons.Default.MenuBook,
                             contentDescription = null,
                             tint = PrimaryGreen,
                             modifier = Modifier.size(20.dp)
@@ -3107,19 +3006,18 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                     }
                     Column {
                         Text(
-                            text = "কুরআন রিডিং ডাটা (সুরা ও অর্থ)",
+                            text = "শব্দার্থ ও তাজবীদ ডাটা",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "১১৪টি সুরার আরবি ও বাংলা অনুবাদ ডাটা",
+                            text = "১১৪টি সুরার শব্দে শব্দে অর্থ ও তাজবীদ ক্যাশ",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Download Status UI
@@ -3177,7 +3075,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "$progress / 114",
+                                text = "${'$'}progress / 114",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = PrimaryGreen
@@ -3189,7 +3087,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             progress = { progressPct },
                             modifier = Modifier.fillMaxWidth(),
                             color = PrimaryGreen,
-                            trackColor = Border
+                            trackColor = Color.LightGray
                         )
                     }
                 }
@@ -3197,7 +3095,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 error?.let { err ->
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "ত্রুটি: $err",
+                        text = "ত্রুটি: ${'$'}err",
                         color = Color.Red,
                         fontSize = 12.sp
                     )
@@ -3257,8 +3155,6 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         // 2. Audio Cache Card
         Card(
@@ -3451,6 +3347,152 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 3. Tafsir Data Card
+        androidx.compose.material3.Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(PrimaryGreen.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.LibraryBooks,
+                            contentDescription = null,
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "তাফসীর ডাটা",
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "অফলাইনে পড়ার জন্য তাফসীর ডাউনলোড করুন",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "একসাথে সর্বোচ্চ ৩টি তাফসীর নির্বাচন করতে পারবেন",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
+                    availableTafsirs.forEach { tafsir ->
+                        val tafsirId = tafsir.id.toString()
+                        val isSelected = selectedTafsirIds.contains(tafsirId)
+                        val isDownloaded = downloadedTafsirIds.contains(tafsirId)
+                        val isDownloading = downloadingTafsirIds.contains(tafsirId)
+                        val progress = tafsirDownloadProgress[tafsirId] ?: 0f
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.toggleTafsir(tafsirId) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isDownloaded) {
+                                androidx.compose.material3.Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { viewModel.toggleTafsir(tafsirId) },
+                                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = PrimaryGreen)
+                                )
+                            } else {
+                                androidx.compose.material3.RadioButton(
+                                    selected = isSelected,
+                                    onClick = { viewModel.toggleTafsir(tafsirId) },
+                                    colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = PrimaryGreen)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = tafsir.name ?: "Unknown", 
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        modifier = Modifier.weight(1f),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 13.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .background(PrimaryGreen.copy(alpha = 0.1f), androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = tafsir.languageName.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
+                                            fontSize = 9.sp,
+                                            color = PrimaryGreen,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                Text(text = tafsir.authorName ?: "Unknown", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            if (!isDownloaded) {
+                                if (isDownloading) {
+                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp).padding(2.dp)) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            progress = { progress },
+                                            color = PrimaryGreen,
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                } else {
+                                    IconButton(
+                                        onClick = { viewModel.downloadTafsir(tafsirId) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            androidx.compose.material.icons.Icons.Default.Download,
+                                            contentDescription = "Download Tafsir",
+                                            tint = PrimaryGreen
+                                        )
+                                    }
+                                }
+                            } else {
+                                Icon(
+                                    androidx.compose.material.icons.Icons.Default.CheckCircle,
+                                    contentDescription = "Downloaded",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                    if (availableTafsirs.isEmpty()) {
+                        Text("তাফসীর লোড হচ্ছে...", modifier = Modifier.padding(16.dp), fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
     }
 
@@ -3581,4 +3623,484 @@ fun formatBytesLocal(bytes: Long): String {
     val i = (java.lang.Math.log10(bytes.toDouble()) / java.lang.Math.log10(1024.0)).toInt()
     val cappedI = if (i >= units.size) units.size - 1 else i
     return String.format(java.util.Locale.US, "%.1f %s", bytes / java.lang.Math.pow(1024.0, cappedI.toDouble()), units[cappedI])
+}
+
+
+@Composable
+fun AboutDialogContent() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.Info,
+            contentDescription = null,
+            tint = PrimaryGreen,
+            modifier = Modifier.size(64.dp).padding(bottom = 16.dp)
+        )
+        Text(
+            text = "কুরআন রিডার",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "সংস্করণ: 1.0.0",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "আমাদের সম্পর্কে",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = PrimaryGreen
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "এই অ্যাপটি ডেভেলপ করা হয়েছে কুরআন তেলাওয়াত, হিফজ, এবং তাফসীর অধ্যয়নের সুবিধার্থে। এখানে শব্দে শব্দে অর্থ, তাজবীদ কালার, একাধিক ক্বারী এর অডিও, এবং সম্পূর্ণ অফলাইন সুবিধা যুক্ত করা হয়েছে। আমাদের লক্ষ্য হলো কুরআন শিক্ষাকে আরও সহজ ও সুন্দর করে তোলা।",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Justify
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "প্রাইভেসি পলিসি (Privacy Policy)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = PrimaryGreen
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "এই অ্যাপটি ব্যবহারকারীর কোনো ব্যক্তিগত তথ্য (Personal Data) সংগ্রহ বা সংরক্ষণ করে না। অ্যাপের বুকমার্ক, হিফজ প্রগ্রেস এবং ইউজার সেটিংস সম্পূর্ণভাবে আপনার ডিভাইসে লোকালি সংরক্ষিত হয়। অ্যাপের কোনো ডেটা কোনো থার্ড-পার্টির সার্ভারে পাঠানো হয় না বা শেয়ার করা হয় না।\n\nকোরআনের অডিও ডাউনলোড এবং অফলাইন সুবিধার জন্য শুধুমাত্র ইন্টারনেট পারমিশন ব্যবহার করা হয়।",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Justify
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text(
+            text = "Made with ❤️ by MuslimsLibrary",
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+
+@Composable
+fun ContactDialogContent() {
+    val context = LocalContext.current
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.ContactMail,
+            contentDescription = null,
+            tint = Color(0xFFF97316),
+            modifier = Modifier.size(64.dp).padding(bottom = 16.dp)
+        )
+        Text(
+            text = "আমাদের সাথে যোগাযোগ করুন",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "যেকোনো পরামর্শ বা প্রশ্নের জন্য",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Email
+        ContactCard(
+            title = "ইমেইল",
+            value = "ammamun94@gmail.com",
+            icon = Icons.Default.Email,
+            color = Color(0xFFEA4335),
+            onClick = {
+                val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                    data = android.net.Uri.parse("mailto:ammamun94@gmail.com")
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    // Handle case where no email app is available
+                }
+            }
+        )
+        
+        // Mobile
+        ContactCard(
+            title = "মোবাইল নম্বর",
+            value = "+880 1600-989555",
+            icon = Icons.Default.Phone,
+            color = Color(0xFF34A853),
+            onClick = {
+                val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                    data = android.net.Uri.parse("tel:+8801600989555")
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    // Handle case
+                }
+            }
+        )
+        
+        // WhatsApp
+        ContactCard(
+            title = "হোয়াটসঅ্যাপ (WhatsApp)",
+            value = "মেসেজ করুন",
+            icon = Icons.Default.Chat,
+            color = Color(0xFF25D366),
+            onClick = {
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                    data = android.net.Uri.parse("https://wa.me/qr/PC4IQUUS3OGJE1")
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    // Handle case
+                }
+            }
+        )
+        
+        // Facebook
+        ContactCard(
+            title = "ফেসবুক (Facebook)",
+            value = "MuslimsLibrary",
+            icon = Icons.Default.ThumbUp,
+            color = Color(0xFF1877F2),
+            onClick = {
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                    data = android.net.Uri.parse("https://www.facebook.com/MuslimsLibrary")
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    // Handle case
+                }
+            }
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun ContactCard(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(color.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = value,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+
+@Composable
+fun ThemeDialogContent(viewModel: SettingsViewModel) {
+    val currentTheme by viewModel.themeState.collectAsState()
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.Palette,
+            contentDescription = null,
+            tint = Color(0xFF9C27B0),
+            modifier = Modifier.size(64.dp).padding(bottom = 16.dp)
+        )
+        Text(
+            text = "থিম নির্বাচন করুন",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        ThemeOption(
+            title = "সিস্টেম ডিফল্ট (System)",
+            isSelected = currentTheme == "System",
+            onClick = { viewModel.setTheme("System") }
+        )
+        
+        ThemeOption(
+            title = "লাইট থিম (Light)",
+            isSelected = currentTheme == "Light",
+            onClick = { viewModel.setTheme("Light") }
+        )
+        
+        ThemeOption(
+            title = "ডার্ক থিম (Dark)",
+            isSelected = currentTheme == "Dark",
+            onClick = { viewModel.setTheme("Dark") }
+        )
+    }
+}
+
+@Composable
+fun ThemeOption(title: String, isSelected: Boolean, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) PrimaryGreen.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = PrimaryGreen
+                )
+            }
+        }
+    }
+}
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationDialogContent(viewModel: SettingsViewModel) {
+    val dailyEnabled by viewModel.dailyMessageEnabled.collectAsState()
+    val dailyHour by viewModel.dailyMessageHour.collectAsState()
+    val dailyMinute by viewModel.dailyMessageMinute.collectAsState()
+
+    val context = LocalContext.current
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.toggleDailyMessage(true)
+        } else {
+            android.widget.Toast.makeText(context, "নোটিফিকেশন পারমিশন প্রয়োজন", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    if (showTimePicker) {
+        val timeState = androidx.compose.material3.rememberTimePickerState(
+            initialHour = dailyHour,
+            initialMinute = dailyMinute,
+            is24Hour = false
+        )
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.updateDailyMessageTime(timeState.hour, timeState.minute)
+                    showTimePicker = false
+                }) {
+                    Text("সংরক্ষণ করুন")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("বাতিল")
+                }
+            },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.material3.TimePicker(state = timeState)
+                }
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(8.dp)
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFFFBBF24).copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Notifications, contentDescription = null, tint = Color(0xFFFBBF24))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "দৈনিক ইসলামিক বার্তা",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "প্রতিদিন আয়াত বা হাদিস রিমাইন্ডার পান",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = dailyEnabled,
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                    if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        viewModel.toggleDailyMessage(true)
+                                    } else {
+                                        permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                } else {
+                                    viewModel.toggleDailyMessage(true)
+                                }
+                            } else {
+                                viewModel.toggleDailyMessage(false)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = PrimaryGreen, checkedTrackColor = PrimaryGreen.copy(alpha = 0.5f))
+                    )
+                }
+
+                if (dailyEnabled) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Border)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { showTimePicker = true }.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = PrimaryGreen)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("রিমাইন্ডারের সময়", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                            val timeStr = String.format("%02d:%02d %s", if (dailyHour % 12 == 0) 12 else dailyHour % 12, dailyMinute, if (dailyHour >= 12) "PM" else "AM")
+                            Text(timeStr, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

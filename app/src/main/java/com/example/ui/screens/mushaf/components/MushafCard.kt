@@ -27,6 +27,8 @@ import com.example.data.model.MushafStyle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudDownload
 
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.CircleShape
@@ -74,21 +76,55 @@ fun MushafCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.7f)
-                .padding(top = 12.dp) // Space for the badge
+                .padding(top = 12.dp, start = 4.dp, end = 4.dp) // Space for badges and shadows
         ) {
-            // Main Cover
+            // Main Cover with 3D neon border if default
+            val defaultShape = RoundedCornerShape(12.dp)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(2.dp, Color(0xFFE5E7EB)) // Light gray border
-                    .shadow(4.dp)
+                    .then(
+                        if (isDefault) {
+                            Modifier
+                                .shadow(
+                                    elevation = 8.dp,
+                                    shape = defaultShape,
+                                    clip = false,
+                                    ambientColor = Color(0xFF10B981),
+                                    spotColor = Color(0xFF00F2FE)
+                                )
+                                .background(MaterialTheme.colorScheme.surface, defaultShape)
+                                .border(
+                                    width = 2.5.dp,
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            Color(0xFF10B981), // Neon Emerald
+                                            Color(0xFF00F2FE), // Neon Cyan
+                                            Color(0xFF10B981)
+                                        )
+                                    ),
+                                    shape = defaultShape
+                                )
+                        } else {
+                            Modifier
+                                .shadow(
+                                    elevation = 3.dp,
+                                    shape = defaultShape,
+                                    clip = false
+                                )
+                                .background(MaterialTheme.colorScheme.surface, defaultShape)
+                                .border(1.dp, Color(0xFFE5E7EB), defaultShape)
+                        }
+                    )
+                    .clip(defaultShape)
             ) {
                 AsyncImage(
                     model = mushaf.thumbnailUrl,
                     contentDescription = "Page Preview",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().padding(1.dp)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(defaultShape)
                 )
                 
                 if (downloadStatus?.state == DownloadState.Downloading) {
@@ -108,6 +144,76 @@ fun MushafCard(
                             Text(
                                 "${downloadStatus.progress}%",
                                 color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+
+                // Premium Status Badge (Online / Offline) at the top-left of the cover
+                if (downloadStatus?.state == DownloadState.Downloaded) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .shadow(3.dp, RoundedCornerShape(6.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color(0xFF10B981), Color(0xFF059669))
+                                ),
+                                shape = RoundedCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDone,
+                                contentDescription = "Offline / Saved",
+                                tint = Color.White,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = "অফলাইন",
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                } else if (downloadStatus?.state != DownloadState.Downloading) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .shadow(3.dp, RoundedCornerShape(6.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color(0xFF0EA5E9), Color(0xFF0284C7))
+                                ),
+                                shape = RoundedCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = "Online / Downloadable",
+                                tint = Color.White,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = "অনলাইন",
+                                color = Color.White,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -115,21 +221,28 @@ fun MushafCard(
                 }
             }
             
-            // Checkmark Badge
-            if (downloadStatus?.state == DownloadState.Downloaded) {
+            // Checkmark Badge for default active Mushaf (at top center)
+            if (isDefault) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .offset(y = (-12).dp)
+                        .offset(y = (-10).dp)
                         .size(24.dp)
-                        .background(Color(0xFF326553), CircleShape), // Dark greenish color like screenshot
+                        .shadow(4.dp, CircleShape)
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(Color(0xFF10B981), Color(0xFF059669))
+                            ),
+                            shape = CircleShape
+                        )
+                        .border(1.5.dp, Color.White, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Downloaded",
+                        contentDescription = "Default active Mushaf",
                         tint = Color.White,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
@@ -138,7 +251,7 @@ fun MushafCard(
         Spacer(modifier = Modifier.height(12.dp))
         
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -148,15 +261,18 @@ fun MushafCard(
             ) {
                 Text(
                     text = mushaf.nameBengali,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     textAlign = TextAlign.Center,
-                    color = Color(0xFF374151) // Dark gray
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = mushaf.descriptionBengali,
-                    fontSize = 13.sp,
-                    color = Color(0xFF6B7280),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

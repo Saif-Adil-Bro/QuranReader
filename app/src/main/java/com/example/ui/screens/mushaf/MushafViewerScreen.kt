@@ -2,6 +2,7 @@ package com.example.ui.screens.mushaf
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
@@ -52,6 +54,7 @@ fun MushafViewerScreen(
     val pdfPageOffset by viewModel.pdfPageOffset.collectAsState()
     val totalPages by viewModel.totalPages.collectAsState()
     val isReady by viewModel.isReady.collectAsState()
+    val isDownloaded by viewModel.isDownloaded.collectAsState()
     val currentTheme by viewModel.theme.collectAsState()
     val scrollDirection by viewModel.scrollDirection.collectAsState()
     val isDark = currentTheme == "Dark"
@@ -79,12 +82,50 @@ fun MushafViewerScreen(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text(
-                        text = "পৃষ্ঠা $currentPage", 
-                        fontWeight = FontWeight.Bold, 
-                        fontSize = 18.sp,
-                        color = Color(0xFF10B981)
-                    ) 
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "পৃষ্ঠা $currentPage", 
+                            fontWeight = FontWeight.Bold, 
+                            fontSize = 18.sp,
+                            color = Color(0xFF10B981)
+                        )
+                        if (isDownloaded) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = if (isDark) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFE6F4EA),
+                                        shape = RoundedCornerShape(100.dp)
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = Color(0xFF10B981).copy(alpha = 0.4f),
+                                        shape = RoundedCornerShape(100.dp)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDone,
+                                    contentDescription = null,
+                                    tint = if (isDark) Color(0xFF10B981) else Color(0xFF0F9D58),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                    Text(
+                                        text = "অফলাইন",
+                                        color = if (isDark) Color(0xFF10B981) else Color(0xFF0F9D58),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -301,6 +342,17 @@ fun MushafViewerScreen(
                             val startPage = com.example.data.QuranData.surahStartPages[surahNum - 1]
                             val isCurrent = currentPage in startPage..(if (surahNum < 114) com.example.data.QuranData.surahStartPages[surahNum] - 1 else totalPages)
                             
+                            val cardBgColor = if (isDark) {
+                                if (isCurrent) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFF2D2D2D)
+                            } else {
+                                if (isCurrent) Color(0xFFECFDF5) else Color(0xFFF3F4F6)
+                            }
+                            val cardBorder = if (isCurrent) {
+                                androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color(0xFF10B981) else Color(0xFFA7F3D0))
+                            } else {
+                                if (isDark) androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)) else null
+                            }
+                            
                             Surface(
                                 onClick = {
                                     viewModel.jumpToPage(startPage)
@@ -310,8 +362,8 @@ fun MushafViewerScreen(
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (isCurrent) Color(0xFFECFDF5) else Color(0xFFF3F4F6),
-                                border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0)) else null
+                                color = cardBgColor,
+                                border = cardBorder
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -340,12 +392,12 @@ fun MushafViewerScreen(
                                                 text = name,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 16.sp,
-                                                color = Color(0xFF1F2937)
+                                                color = if (isDark) Color.White else Color(0xFF1F2937)
                                             )
                                             Text(
                                                 text = meaning,
                                                 fontSize = 12.sp,
-                                                color = Color(0xFF6B7280)
+                                                color = if (isDark) Color(0xFF94A3B8) else Color(0xFF6B7280)
                                             )
                                         }
                                     }
@@ -353,7 +405,7 @@ fun MushafViewerScreen(
                                         text = "পৃষ্ঠা $startPage",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp,
-                                        color = Color(0xFF059669)
+                                        color = if (isDark) Color(0xFF34D399) else Color(0xFF059669)
                                     )
                                 }
                             }
@@ -388,6 +440,17 @@ fun MushafViewerScreen(
                             }
                             val isCurrent = currentPage in startPage..endPage
                             
+                            val cardBgColor = if (isDark) {
+                                if (isCurrent) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFF2D2D2D)
+                            } else {
+                                if (isCurrent) Color(0xFFECFDF5) else Color(0xFFF3F4F6)
+                            }
+                            val cardBorder = if (isCurrent) {
+                                androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color(0xFF10B981) else Color(0xFFA7F3D0))
+                            } else {
+                                if (isDark) androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)) else null
+                            }
+
                             Surface(
                                 onClick = {
                                     viewModel.jumpToPage(startPage)
@@ -397,8 +460,8 @@ fun MushafViewerScreen(
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (isCurrent) Color(0xFFECFDF5) else Color(0xFFF3F4F6),
-                                border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0)) else null
+                                color = cardBgColor,
+                                border = cardBorder
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -426,14 +489,14 @@ fun MushafViewerScreen(
                                             text = name,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 16.sp,
-                                            color = Color(0xFF1F2937)
+                                            color = if (isDark) Color.White else Color(0xFF1F2937)
                                         )
                                     }
                                     Text(
                                         text = "পৃষ্ঠা $startPage",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp,
-                                        color = Color(0xFF059669)
+                                        color = if (isDark) Color(0xFF34D399) else Color(0xFF059669)
                                     )
                                 }
                             }
@@ -463,7 +526,7 @@ fun MushafViewerScreen(
                     Text(
                         text = "আপনার পিডিএফ কিতাবের কত নম্বর পাতায় সূরা ফাতিহা বা মূল কুরআন শুরু হয়েছে তা সিলেক্ট করুন। এর পর অফসেট স্বয়ংক্রিয়ভাবে সমন্বয় হয়ে যাবে।",
                         fontSize = 13.sp,
-                        color = Color.DarkGray
+                        color = if (isDark) Color.LightGray else Color.DarkGray
                     )
                     
                     val currentFatihahPage = pdfPageOffset + 1
@@ -472,7 +535,7 @@ fun MushafViewerScreen(
                         text = "সূরা ফাতিহা এর পৃষ্ঠা নম্বর (PDF অনুযায়ী):",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        color = Color.Black
+                        color = if (isDark) Color.White else Color.Black
                     )
                     
                     Row(
@@ -486,9 +549,9 @@ fun MushafViewerScreen(
                                     viewModel.adjustOffset(-1)
                                 }
                             },
-                            modifier = Modifier.background(Color(0xFFF3F4F6), CircleShape)
+                            modifier = Modifier.background(if (isDark) Color(0xFF2D2D2D) else Color(0xFFF3F4F6), CircleShape)
                         ) {
-                            Icon(Icons.Default.Remove, contentDescription = "Decrease Page")
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease Page", tint = if (isDark) Color.White else Color.Black)
                         }
                         
                         Text(
@@ -501,9 +564,9 @@ fun MushafViewerScreen(
                         
                         IconButton(
                             onClick = { viewModel.adjustOffset(1) },
-                            modifier = Modifier.background(Color(0xFFF3F4F6), CircleShape)
+                            modifier = Modifier.background(if (isDark) Color(0xFF2D2D2D) else Color(0xFFF3F4F6), CircleShape)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Increase Page")
+                            Icon(Icons.Default.Add, contentDescription = "Increase Page", tint = if (isDark) Color.White else Color.Black)
                         }
                     }
                     
@@ -512,7 +575,7 @@ fun MushafViewerScreen(
                     Text(
                         text = "সহজ নির্বাচন (ক্লিক করুন):",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = if (isDark) Color.LightGray else Color.Gray
                     )
                     
                     Row(
@@ -528,7 +591,7 @@ fun MushafViewerScreen(
                                     viewModel.adjustOffset(diff)
                                 },
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (isSelected) Color(0xFF10B981) else Color(0xFFF3F4F6),
+                                color = if (isSelected) Color(0xFF10B981) else (if (isDark) Color(0xFF2D2D2D) else Color(0xFFF3F4F6)),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Box(
@@ -537,7 +600,7 @@ fun MushafViewerScreen(
                                 ) {
                                     Text(
                                         text = pageNum.toString(),
-                                        color = if (isSelected) Color.White else Color.Black,
+                                        color = if (isSelected) Color.White else (if (isDark) Color.White else Color.Black),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp
                                     )
