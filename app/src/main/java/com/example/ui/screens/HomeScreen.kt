@@ -473,8 +473,8 @@ fun HomeScreen(
                 item {
                     Spacer(modifier = Modifier.height(36.dp))
                     QuickSurahPills(
-                        onSurahClick = onNavigateToSurah,
-                        onNavigateToSurahWithAyah = onNavigateToSurahWithAyah
+                        defaultMushafId = defaultMushafId,
+                        onNavigateToMushafPage = onNavigateToMushafPage
                     )
                 }
                 item {
@@ -971,8 +971,8 @@ data class AmaliSurah(
 
 @Composable
 fun QuickSurahPills(
-    onSurahClick: (Int) -> Unit,
-    onNavigateToSurahWithAyah: (Int, String, Int) -> Unit
+    defaultMushafId: String,
+    onNavigateToMushafPage: (String, Int, Boolean) -> Unit
 ) {
     var currentTime by remember { mutableStateOf(Calendar.getInstance()) }
     
@@ -1056,7 +1056,7 @@ fun QuickSurahPills(
                 dotColor = GreenDot,
                 isActive = { cal ->
                     val hour = cal.get(Calendar.HOUR_OF_DAY)
-                    hour >= 22 || hour < 4
+                    hour >= 20 || hour < 4
                 }
             ),
             AmaliSurah(
@@ -1153,11 +1153,14 @@ fun QuickSurahPills(
                         }
                     )
                     .clickable {
-                        if (item.startAyah != null) {
-                            onNavigateToSurahWithAyah(item.surahId, "MUSHAF", item.startAyah)
+                        val targetPage = if (item.surahId == 2 && item.startAyah == 255) {
+                            42
+                        } else if (item.surahId == 2 && item.startAyah == 285) {
+                            49
                         } else {
-                            onSurahClick(item.surahId)
+                            com.example.data.QuranData.surahStartPages[item.surahId - 1]
                         }
+                        onNavigateToMushafPage(defaultMushafId, targetPage, false)
                     }
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center

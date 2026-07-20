@@ -60,22 +60,13 @@ fun BottomNavBar(
         BottomNavItem.Menu
     )
 
-    val visibleEntries by navController.visibleEntries.collectAsState()
-
-    // Check if there are any non-bottom-navigation screens currently visible or transitioning
-    val hasNonBottomNavVisible = visibleEntries.any { entry ->
-        val route = entry.destination.route
-        route != null && 
-                route != "home" && 
-                route != "mushaf" && 
-                route != "search" && 
-                route != "settings"
-    }
-
-    // The bottom nav bar should only be visible on top-level screens when no detail screens are transitioning
-    val isBottomNavItem = (items.any { it.route == currentRoute } || currentRoute == "settings") && 
-            !isSplashVisible && 
-            !hasNonBottomNavVisible
+    // The bottom nav bar should only be visible on top-level screens
+    val isBottomNavItem = currentRoute != null && (
+        currentRoute == "home" || 
+        currentRoute == "mushaf" || 
+        currentRoute == "search" || 
+        currentRoute.startsWith("settings")
+    ) && !isSplashVisible
 
     if (isBottomNavItem) {
         Surface(
@@ -98,12 +89,15 @@ fun BottomNavBar(
                         // Place a center play button placeholder or spacer if needed
                         // Spacer(modifier = Modifier.weight(1f))
                     }
-                    val isSelected = currentRoute == item.route || (item.route == "menu" && currentRoute == "settings")
+                    val isSelected = currentRoute != null && (
+                        currentRoute == item.route || 
+                        (item.route == "settings" && currentRoute.startsWith("settings"))
+                    )
                     BottomNavIcon(
                         item = item,
                         isSelected = isSelected,
                         onClick = {
-                            if (currentRoute != item.route) {
+                            if (currentRoute != item.route && !(item.route == "settings" && currentRoute?.startsWith("settings") == true)) {
                                 if (item.route == "home") {
                                     // Pop back to home to clear any pushed screens safely and return to Home
                                     navController.popBackStack("home", inclusive = false)

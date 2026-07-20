@@ -139,6 +139,12 @@ class MushafViewerViewModel(
         }
     }
 
+    fun setTheme(themeKey: String) {
+        viewModelScope.launch {
+            settingsRepository.setTheme(themeKey)
+        }
+    }
+
     fun setScrollDirection(direction: String) {
         viewModelScope.launch {
             settingsRepository.setMushafScrollDirection(direction)

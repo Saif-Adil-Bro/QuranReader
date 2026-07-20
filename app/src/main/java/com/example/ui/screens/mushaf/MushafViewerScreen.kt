@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.window.Dialog
 import com.example.utils.DateUtil
@@ -96,6 +97,7 @@ fun MushafViewerScreen(
     val pagerState = rememberPagerState(initialPage = initialPage - 1, pageCount = { totalPages })
     var showOffsetDialog by remember { mutableStateOf(false) }
     var showJumpDialog by remember { mutableStateOf(false) }
+    var showSettingsSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(pagerState.currentPage) {
         val newPage = pagerState.currentPage + 1
@@ -139,29 +141,12 @@ fun MushafViewerScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.toggleTheme() }) {
+                    IconButton(onClick = { showSettingsSheet = true }) {
                         Icon(
-                            imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = "Toggle Theme",
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "পড়ার সেটিংস",
                             tint = Color(0xFF10B981)
                         )
-                    }
-                    IconButton(onClick = { 
-                        viewModel.setScrollDirection(if (isVertical) "Horizontal" else "Vertical") 
-                    }) {
-                        Icon(
-                            imageVector = if (isVertical) Icons.Default.SwapHoriz else Icons.Default.SwapVert,
-                            contentDescription = "Toggle Scroll Direction",
-                            tint = Color(0xFF10B981)
-                        )
-                    }
-                    IconButton(onClick = { showJumpDialog = true }) {
-                        Icon(Icons.Default.Search, contentDescription = "নির্দিষ্ট পৃষ্ঠায় যান", tint = Color(0xFF10B981))
-                    }
-                    if (isPdf) {
-                        IconButton(onClick = { showOffsetDialog = true }) {
-                            Icon(Icons.Default.Tune, contentDescription = "Page Offset Alignment", tint = Color(0xFF10B981))
-                        }
                     }
                     IconButton(onClick = { viewModel.toggleBookmark() }) {
                         Icon(
@@ -877,6 +862,375 @@ fun MushafViewerScreen(
                         ) {
                             Text("পৃষ্ঠায় যান", color = Color.White, fontWeight = FontWeight.Bold)
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSettingsSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSettingsSheet = false },
+            containerColor = if (isDark) Color(0xFF1C1C1E) else Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "পড়ার সেটিংস",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = Color(0xFF10B981),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // 1. PDF Offset Adjustment (Only if isPdf) - Placed FIRST as requested
+                if (isPdf) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                if (isDark) Color(0xFF252528) else Color(0xFFF9FAFB),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .border(
+                                1.dp,
+                                if (isDark) Color(0xFF323236) else Color(0xFFE5E7EB),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "সূরা ফাতিহা পৃষ্ঠা সমন্বয় (অফসেট)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = if (isDark) Color.White else Color.Black
+                                )
+                                Text(
+                                    text = "পিডিএফে সূরা ফাতিহা কত নং পাতায় রয়েছে সেটি মেলান",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+
+                        val currentFatihahPage = pdfPageOffset + 1
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    if (isDark) Color(0xFF1C1C1E) else Color(0xFFF3F4F6),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    if (currentFatihahPage > 1) {
+                                        viewModel.adjustOffset(-1)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(if (isDark) Color(0xFF2D2D30) else Color.White, CircleShape)
+                                    .border(1.dp, if (isDark) Color(0xFF3A3A3C) else Color(0xFFE5E7EB), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Remove,
+                                    contentDescription = "Decrease Page",
+                                    tint = if (isDark) Color.White else Color.Black,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+
+                            Text(
+                                text = "$currentFatihahPage নং পৃষ্ঠা",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color(0xFF10B981)
+                            )
+
+                            IconButton(
+                                onClick = { viewModel.adjustOffset(1) },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(if (isDark) Color(0xFF2D2D30) else Color.White, CircleShape)
+                                    .border(1.dp, if (isDark) Color(0xFF3A3A3C) else Color(0xFFE5E7EB), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Increase Page",
+                                    tint = if (isDark) Color.White else Color.Black,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
+                        // Short-cut page selector pill row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(1, 2, 3, 4, 5).forEach { pageNum ->
+                                val isSelected = currentFatihahPage == pageNum
+                                Surface(
+                                    onClick = {
+                                        val newOffset = pageNum - 1
+                                        val diff = newOffset - pdfPageOffset
+                                        viewModel.adjustOffset(diff)
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isSelected) Color(0xFF10B981) else (if (isDark) Color(0xFF1C1C1E) else Color.White),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isSelected) Color.Transparent else (if (isDark) Color(0xFF2D2D30) else Color(0xFFE5E7EB))
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = pageNum.toString(),
+                                            color = if (isSelected) Color.White else (if (isDark) Color(0xFFD1D1D6) else Color(0xFF48484A)),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Dark Mode Theme Row Container
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            if (isDark) Color(0xFF252528) else Color(0xFFF9FAFB),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .border(
+                            1.dp,
+                            if (isDark) Color(0xFF323236) else Color(0xFFE5E7EB),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column {
+                            Text(
+                                text = "ডার্ক মোড",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = if (isDark) Color.White else Color.Black
+                            )
+                            Text(
+                                text = "স্ক্রিনের আলো ও থিম নিয়ন্ত্রণ করুন",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .background(
+                                if (isDark) Color(0xFF1C1C1E) else Color(0xFFE5E7EB).copy(alpha = 0.6f),
+                                RoundedCornerShape(10.dp)
+                            )
+                            .padding(3.dp)
+                    ) {
+                        val themes = listOf(
+                            Pair("Light", "লাইট"),
+                            Pair("Dark", "ডার্ক")
+                        )
+                        themes.forEach { (themeKey, label) ->
+                            val isSelected = currentTheme == themeKey || (themeKey == "Dark" && isDark && currentTheme == "System")
+                            Surface(
+                                onClick = { viewModel.setTheme(themeKey) },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) Color(0xFF10B981) else Color.Transparent,
+                                modifier = Modifier.padding(horizontal = 1.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = if (isSelected) Color.White else Color.Gray
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Scroll Mode Row Container
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            if (isDark) Color(0xFF252528) else Color(0xFFF9FAFB),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .border(
+                            1.dp,
+                            if (isDark) Color(0xFF323236) else Color(0xFFE5E7EB),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (scrollDirection == "Vertical") Icons.Default.SwapVert else Icons.Default.SwapHoriz,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column {
+                            Text(
+                                text = "স্ক্রোলিং মোড",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = if (isDark) Color.White else Color.Black
+                            )
+                            Text(
+                                text = "পড়ার পৃষ্ঠা পরিবর্তনের ধরন",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .background(
+                                if (isDark) Color(0xFF1C1C1E) else Color(0xFFE5E7EB).copy(alpha = 0.6f),
+                                RoundedCornerShape(10.dp)
+                            )
+                            .padding(3.dp)
+                    ) {
+                        val modes = listOf(
+                            Pair("Horizontal", "ডানে-বামে"),
+                            Pair("Vertical", "ওপর-নিচ")
+                        )
+                        modes.forEach { (mode, label) ->
+                            val isSelected = scrollDirection == mode
+                            Surface(
+                                onClick = { viewModel.setScrollDirection(mode) },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) Color(0xFF10B981) else Color.Transparent,
+                                modifier = Modifier.padding(horizontal = 1.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = if (isSelected) Color.White else Color.Gray
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. Go to Page Search Bar Button
+                Surface(
+                    onClick = {
+                        showSettingsSheet = false
+                        showJumpDialog = true
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (isDark) Color(0xFF252528) else Color(0xFFF9FAFB),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF323236) else Color(0xFFE5E7EB)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "যেকোনো পৃষ্ঠায় যান",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = if (isDark) Color.White else Color.Black
+                                )
+                                Text(
+                                    text = "পারা, সূরা বা নির্দিষ্ট পৃষ্ঠা সিলেক্ট করুন",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                        
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
