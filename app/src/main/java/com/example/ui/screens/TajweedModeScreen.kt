@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CombinedAyah
 import com.example.data.model.appendStyledWaqfText
+import com.example.data.model.removeWaqfSigns
+import androidx.compose.ui.draw.drawBehind
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.TajweedModeViewModel
@@ -871,12 +873,12 @@ fun TajweedPageContent(
                         val firstAyahOfSurah = surahAyahs.firstOrNull()
                         
                         if (firstAyahOfSurah?.numberInSurah == 1) {
-                            val surahInfo = com.example.data.surahInfoList.find { it.first == surIdCompat(surahId) }?.second
+                            val surahInfo = com.example.data.surahInfoList.find { it.first == surahId }?.second
                             val arabicName = surahInfo?.arabicName ?: "سورة $surahId"
                             val ayahsArabic = com.example.data.QuranData.toArabicNumerals(surahInfo?.ayahCount ?: 0)
-                            val rukuArabic = com.example.data.QuranData.toArabicNumerals(surahInfo?.rukuCount ?: 0)
+                            val rukusArabic = com.example.data.QuranData.toArabicNumerals(surahInfo?.rukuCount ?: 0)
                             
-                            // Surah Header Banner
+                            // Surah Banner
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -903,24 +905,21 @@ fun TajweedPageContent(
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "آيات: $ayahsArabic  |  ركوع: $rukuArabic",
+                                        text = "آيات: $ayahsArabic  |  ركوع: $rukusArabic",
                                         fontSize = 14.sp,
                                         fontFamily = arabicFont,
                                         color = if (theme == "Dark") Color(0xFFA0A0A0) else Color(0xFF606060)
                                     )
                                 }
                             }
-                            
-                            // Bismillah
+
                             if (surahId != 1 && surahId != 9) {
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 12.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                                        text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰনِ ٱلرَّحِيمِ",
                                         fontFamily = arabicFont,
                                         fontSize = (arabicFontSize * 1.15f).sp,
                                         color = when (theme) {
@@ -938,7 +937,7 @@ fun TajweedPageContent(
                             buildAnnotatedString {
                                 surahAyahs.forEachIndexed { index, ayah ->
                                     val start = length
-                                    var textToDisplay = ayah.arabicText
+                                    var textToDisplay = ayah.arabicText.trim()
                                     
                                     val prefixes = listOf(
                                         "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ",
@@ -955,8 +954,9 @@ fun TajweedPageContent(
 
                                     // Render Tajweed or standard text
                                     if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
+                                        val textToParse = if (showWaqfSigns) ayah.textUthmaniTajweed.trim() else ayah.textUthmaniTajweed.trim().removeWaqfSigns()
                                         val tajweedParsed = com.example.ui.components.parseTajweedText(
-                                            ayah.textUthmaniTajweed, 
+                                            textToParse, 
                                             when (theme) {
                                                 "Dark" -> Color(0xFFE0E0E0)
                                                 "Sepia" -> Color(0xFF4E342E)
@@ -982,7 +982,7 @@ fun TajweedPageContent(
                                         if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
                                             for (prefix in prefixes) {
                                                 if (textToDisplay.startsWith(prefix)) {
-                                                    textToDisplay = textToDisplay.removePrefix(prefix).trimStart()
+                                                    textToDisplay = textToDisplay.removePrefix(prefix).trim()
                                                     break
                                                 }
                                             }
@@ -1015,14 +1015,17 @@ fun TajweedPageContent(
                                     }
                                     
                                     if (index < surahAyahs.lastIndex) {
-                                        append("   ") 
+                                        append(" ") 
                                     }
                                 }
                             }
                         }
 
+                        var textLayoutResult by remember { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
+
                         ClickableText(
                             text = annotatedString,
+                            onTextLayout = { textLayoutResult = it },
                             onClick = { offset ->
                                 annotatedString.getStringAnnotations(tag = "AYAH_NUMBER", start = offset, end = offset)
                                     .firstOrNull()?.let { annotation ->
@@ -1045,6 +1048,26 @@ fun TajweedPageContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 4.dp)
+                                .drawBehind {
+                                    textLayoutResult?.let { layoutResult ->
+                                        val lineCount = layoutResult.lineCount
+                                        val lineColor = when (theme) {
+                                            "Dark" -> Color.White.copy(alpha = 0.08f)
+                                            "Sepia" -> Color(0xFF8B7355).copy(alpha = 0.15f)
+                                            else -> Color(0xFF8B7355).copy(alpha = 0.12f)
+                                        }
+                                        val strokeWidth = 1.dp.toPx()
+                                        for (i in 0 until lineCount) {
+                                            val lineBottom = layoutResult.getLineBottom(i)
+                                            drawLine(
+                                                color = lineColor,
+                                                start = androidx.compose.ui.geometry.Offset(0f, lineBottom - 2.dp.toPx()),
+                                                end = androidx.compose.ui.geometry.Offset(size.width, lineBottom - 2.dp.toPx()),
+                                                strokeWidth = strokeWidth
+                                            )
+                                        }
+                                    }
+                                }
                         )
                     }
                 }

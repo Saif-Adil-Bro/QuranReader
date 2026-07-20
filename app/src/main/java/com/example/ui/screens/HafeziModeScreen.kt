@@ -31,6 +31,7 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -787,7 +788,7 @@ fun HafeziPageContent(
                                     )
                                 }
                             }
-                            
+
                             if (surahId != 1 && surahId != 9) {
                                 Box(
                                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
@@ -812,11 +813,11 @@ fun HafeziPageContent(
                             buildAnnotatedString {
                                 surahAyahs.forEachIndexed { index, ayah ->
                                     val start = length
-                                    var textToDisplay = ayah.arabicText // Base text without processing
+                                    var textToDisplay = ayah.arabicText.trim()
                                     
                                     val prefixes = listOf(
-                                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ",
-                                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰনِ ٱلرَّحِيمِ ",
+                                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰনِ ٱلرَّحِيمِ",
                                         "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ ",
                                         "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
                                         "بِسْمِ اللَّهِ الرَّحْمَٰনِ الرَّحِيمِ ",
@@ -824,14 +825,14 @@ fun HafeziPageContent(
                                         "بِسْمِ office.etc ",
                                         "بِسْمِ office.etc",
                                         "بِسْمِ اللهِ الرَّحْمٰনِ الرَّحِيْمِ ",
-                                        "بِسْمِ office.etc",
                                         "بِسْمِ اللهِ الرَّحْمٰনِ الرَّحِيْمِ",
                                         "بسم الله الرحمن الرحيم ",
                                         "بسم الله الرحمن الرحيم"
                                     )
 
                                     if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
-                                        val tajweedParsed = com.example.ui.components.parseTajweedText(ayah.textUthmaniTajweed, when (theme) {
+                                        val textToParse = if (showWaqfSigns) ayah.textUthmaniTajweed.trim() else ayah.textUthmaniTajweed.trim().removeWaqfSigns()
+                                        val tajweedParsed = com.example.ui.components.parseTajweedText(textToParse, when (theme) {
                                             "Dark" -> Color(0xFFE0E0E0)
                                             "Sepia" -> Color(0xFF4E342E)
                                             else -> Color(0xFF1A1A1A)
@@ -856,7 +857,7 @@ fun HafeziPageContent(
                                         if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
                                             for (prefix in prefixes) {
                                                 if (textToDisplay.startsWith(prefix)) {
-                                                    textToDisplay = textToDisplay.removePrefix(prefix).trimStart()
+                                                    textToDisplay = textToDisplay.removePrefix(prefix).trim()
                                                     break
                                                 }
                                             }
@@ -865,7 +866,6 @@ fun HafeziPageContent(
                                         val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
                                         append("﴿$numInSurahStr﴾")
                                     }
-                                    
                                     
                                     val end = length
                                     
@@ -890,14 +890,17 @@ fun HafeziPageContent(
                                     }
                                     
                                     if (index < surahAyahs.lastIndex) {
-                                        append("   ") // Visual negative space between consecutive verses
+                                        append(" ") // Visual negative space between consecutive verses
                                     }
                                 }
                             }
                         }
 
+                        var textLayoutResult by remember { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
+
                         ClickableText(
                             text = annotatedString,
+                            onTextLayout = { textLayoutResult = it },
                             onClick = { offset ->
                                 annotatedString.getStringAnnotations(tag = "AYAH_NUMBER", start = offset, end = offset)
                                     .firstOrNull()?.let { annotation ->
@@ -917,7 +920,29 @@ fun HafeziPageContent(
                                 },
                                 textAlign = TextAlign.Justify
                             ),
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp)
+                                .drawBehind {
+                                    textLayoutResult?.let { layoutResult ->
+                                        val lineCount = layoutResult.lineCount
+                                        val lineColor = when (theme) {
+                                            "Dark" -> Color.White.copy(alpha = 0.08f)
+                                            "Sepia" -> Color(0xFF8B7355).copy(alpha = 0.15f)
+                                            else -> Color(0xFF8B7355).copy(alpha = 0.12f)
+                                        }
+                                        val strokeWidth = 1.dp.toPx()
+                                        for (i in 0 until lineCount) {
+                                            val lineBottom = layoutResult.getLineBottom(i)
+                                            drawLine(
+                                                color = lineColor,
+                                                start = androidx.compose.ui.geometry.Offset(0f, lineBottom - 2.dp.toPx()),
+                                                end = androidx.compose.ui.geometry.Offset(size.width, lineBottom - 2.dp.toPx()),
+                                                strokeWidth = strokeWidth
+                                            )
+                                        }
+                                    }
+                                }
                         )
                     }
                 }

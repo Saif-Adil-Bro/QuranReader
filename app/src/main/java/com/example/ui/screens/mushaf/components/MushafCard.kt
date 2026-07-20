@@ -21,6 +21,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import androidx.compose.ui.platform.LocalContext
+import coil.request.ImageRequest
+import coil.request.CachePolicy
 import com.example.data.model.DownloadState
 import com.example.data.model.DownloadStatus
 import com.example.data.model.MushafStyle
@@ -118,8 +121,17 @@ fun MushafCard(
                     )
                     .clip(defaultShape)
             ) {
+                val context = LocalContext.current
+                val cardImageRequest = remember(mushaf.thumbnailUrl) {
+                    ImageRequest.Builder(context)
+                        .data(mushaf.thumbnailUrl)
+                        .crossfade(true)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .build()
+                }
                 AsyncImage(
-                    model = mushaf.thumbnailUrl,
+                    model = cardImageRequest,
                     contentDescription = "Page Preview",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -358,8 +370,17 @@ fun MushafBookCoverPreview(
             .background(Color(0xFFFAF6EB)) // Soft cream page background color
             .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
     ) {
+        val context = LocalContext.current
+        val previewImageRequest = remember(mushaf.thumbnailUrl) {
+            ImageRequest.Builder(context)
+                .data(mushaf.thumbnailUrl)
+                .crossfade(true)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .build()
+        }
         AsyncImage(
-            model = mushaf.thumbnailUrl,
+            model = previewImageRequest,
             contentDescription = "Page Preview",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

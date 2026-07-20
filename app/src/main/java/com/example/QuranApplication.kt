@@ -1,9 +1,13 @@
 package com.example
 
 import android.app.Application
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import com.example.di.AppContainer
 
-class QuranApplication : Application() {
+class QuranApplication : Application(), ImageLoaderFactory {
 
     lateinit var container: AppContainer
 
@@ -23,5 +27,22 @@ class QuranApplication : Application() {
             val notificationManager = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
+    }
+
+    override fun newImageLoader(): ImageLoader {
+        return ImageLoader.Builder(this)
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    .maxSizePercent(0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(this.cacheDir.resolve("image_cache"))
+                    .maxSizeBytes(100 * 1024 * 1024) // 100 MB disk cache
+                    .build()
+            }
+            .respectCacheHeaders(false) // Cache images even if HTTP response headers restrict caching
+            .build()
     }
 }

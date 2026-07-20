@@ -737,7 +737,7 @@ class SettingsViewModel(
     private val _plannerStreak = MutableStateFlow(0)
     val plannerStreak: StateFlow<Int> = _plannerStreak.asStateFlow()
     
-    private val _plannerReminderEnabled = MutableStateFlow(true)
+    private val _plannerReminderEnabled = MutableStateFlow(false)
     val plannerReminderEnabled: StateFlow<Boolean> = _plannerReminderEnabled.asStateFlow()
 
     private val _plannerReminderHour = MutableStateFlow(20)
@@ -855,7 +855,7 @@ class SettingsViewModel(
         _dailyMessageHour.value = sharedPrefs.getInt("daily_message_hour", 8)
         _dailyMessageMinute.value = sharedPrefs.getInt("daily_message_minute", 0)
 
-        _plannerReminderEnabled.value = sharedPrefs.getBoolean("planner_reminder", true)
+        _plannerReminderEnabled.value = sharedPrefs.getBoolean("planner_reminder", false)
         _plannerReminderHour.value = sharedPrefs.getInt("planner_reminder_hour", 20)
         _plannerReminderMinute.value = sharedPrefs.getInt("planner_reminder_minute", 0)
 
@@ -863,17 +863,12 @@ class SettingsViewModel(
         if (!alarmsInitialized) {
             sharedPrefs.edit()
                 .putBoolean("daily_message_enabled", true)
-                .putBoolean("planner_reminder", true)
+                .putBoolean("planner_reminder", false)
                 .putBoolean("alarms_initialized", true)
                 .apply()
             
             try {
                 com.example.receiver.DailyMessageReceiver.scheduleNextAlarm(repository.context)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            try {
-                com.example.receiver.ReminderReceiver.scheduleNextAlarm(repository.context)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

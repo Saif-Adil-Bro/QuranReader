@@ -492,6 +492,10 @@ fun SplashScreen(
             val drawableId = context.resources.getIdentifier("splash_logo", "drawable", context.packageName)
             if (drawableId != 0) drawableId else context.resources.getIdentifier("splash_logo", "raw", context.packageName)
         }
+        val brandResId = remember(context) {
+            val drawableId = context.resources.getIdentifier("splash_brand", "drawable", context.packageName)
+            if (drawableId != 0) drawableId else context.resources.getIdentifier("splash_brand", "raw", context.packageName)
+        }
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -616,62 +620,93 @@ fun SplashScreen(
             }
         }
         
-        // 2. Lovely 'A ❤️ S' signature positioned at the absolute bottom of the screen like a credit text
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+        // 2. Lovely 'A ❤️ S' signature or dynamic GIF positioned at the absolute bottom of the screen like a credit
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 36.dp)
+                .padding(bottom = 36.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "A",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                color = Color.White.copy(alpha = 0.95f),
-                style = androidx.compose.ui.text.TextStyle(
-                    shadow = androidx.compose.ui.graphics.Shadow(
-                        color = Color(0xFFFFD700),
-                        offset = androidx.compose.ui.geometry.Offset(1.5f, 1.5f),
-                        blurRadius = 6f
-                    )
+            if (brandResId != 0) {
+                val brandImageLoader = remember(context) {
+                    ImageLoader.Builder(context)
+                        .components {
+                            if (Build.VERSION.SDK_INT >= 28) {
+                                add(ImageDecoderDecoder.Factory())
+                            } else {
+                                add(GifDecoder.Factory())
+                            }
+                        }
+                        .build()
+                }
+                
+                val brandPainter = rememberAsyncImagePainter(
+                    model = ImageRequest.Builder(context)
+                        .data(brandResId)
+                        .build(),
+                    imageLoader = brandImageLoader
                 )
-            )
-            
-            Spacer(modifier = Modifier.width(4.dp))
-            
-            Text(
-                text = "❤️",
-                fontSize = 24.sp,
-                modifier = Modifier
-                    .scale(heartScale)
-                    .align(Alignment.CenterVertically),
-                style = androidx.compose.ui.text.TextStyle(
-                    shadow = androidx.compose.ui.graphics.Shadow(
-                        color = Color(0xFFFF0000),
-                        offset = androidx.compose.ui.geometry.Offset(0f, 0f),
-                        blurRadius = 12f
-                    )
+                
+                Image(
+                    painter = brandPainter,
+                    contentDescription = "Brand GIF",
+                    modifier = Modifier.height(36.dp)
                 )
-            )
-            
-            Spacer(modifier = Modifier.width(4.dp))
-            
-            Text(
-                text = "S",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                color = Color.White.copy(alpha = 0.95f),
-                style = androidx.compose.ui.text.TextStyle(
-                    shadow = androidx.compose.ui.graphics.Shadow(
-                        color = Color(0xFF60A5FA),
-                        offset = androidx.compose.ui.geometry.Offset(-1.5f, 1.5f),
-                        blurRadius = 6f
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "A",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        color = Color.White.copy(alpha = 0.95f),
+                        style = androidx.compose.ui.text.TextStyle(
+                            shadow = androidx.compose.ui.graphics.Shadow(
+                                color = Color(0xFFFFD700),
+                                offset = androidx.compose.ui.geometry.Offset(1.5f, 1.5f),
+                                blurRadius = 6f
+                            )
+                        )
                     )
-                )
-            )
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    Text(
+                        text = "❤️",
+                        fontSize = 24.sp,
+                        modifier = Modifier
+                            .scale(heartScale)
+                            .align(Alignment.CenterVertically),
+                        style = androidx.compose.ui.text.TextStyle(
+                            shadow = androidx.compose.ui.graphics.Shadow(
+                                color = Color(0xFFFF0000),
+                                offset = androidx.compose.ui.geometry.Offset(0f, 0f),
+                                blurRadius = 12f
+                            )
+                        )
+                    )
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    Text(
+                        text = "S",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        color = Color.White.copy(alpha = 0.95f),
+                        style = androidx.compose.ui.text.TextStyle(
+                            shadow = androidx.compose.ui.graphics.Shadow(
+                                color = Color(0xFF60A5FA),
+                                offset = androidx.compose.ui.geometry.Offset(-1.5f, 1.5f),
+                                blurRadius = 6f
+                            )
+                        )
+                    )
+                }
+            }
         }
     }
 }

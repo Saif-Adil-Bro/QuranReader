@@ -14,7 +14,7 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             val sharedPrefs = context.getSharedPreferences("quran_menu_prefs", Context.MODE_PRIVATE)
-            val enabled = sharedPrefs.getBoolean("planner_reminder", true)
+            val enabled = sharedPrefs.getBoolean("planner_reminder", false)
             if (enabled) {
                 scheduleNextAlarm(context)
             }

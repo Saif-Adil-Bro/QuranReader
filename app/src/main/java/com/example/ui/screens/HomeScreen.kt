@@ -473,8 +473,7 @@ fun HomeScreen(
                 item {
                     Spacer(modifier = Modifier.height(36.dp))
                     QuickSurahPills(
-                        defaultMushafId = defaultMushafId,
-                        onNavigateToMushafPage = onNavigateToMushafPage
+                        onNavigateToSurahWithAyah = onNavigateToSurahWithAyah
                     )
                 }
                 item {
@@ -971,8 +970,7 @@ data class AmaliSurah(
 
 @Composable
 fun QuickSurahPills(
-    defaultMushafId: String,
-    onNavigateToMushafPage: (String, Int, Boolean) -> Unit
+    onNavigateToSurahWithAyah: (Int, String, Int) -> Unit
 ) {
     var currentTime by remember { mutableStateOf(Calendar.getInstance()) }
     
@@ -1153,14 +1151,7 @@ fun QuickSurahPills(
                         }
                     )
                     .clickable {
-                        val targetPage = if (item.surahId == 2 && item.startAyah == 255) {
-                            42
-                        } else if (item.surahId == 2 && item.startAyah == 285) {
-                            49
-                        } else {
-                            com.example.data.QuranData.surahStartPages[item.surahId - 1]
-                        }
-                        onNavigateToMushafPage(defaultMushafId, targetPage, false)
+                        onNavigateToSurahWithAyah(item.surahId, "MUSHAF", item.startAyah ?: 1)
                     }
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
