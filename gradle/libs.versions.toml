@@ -108,6 +108,7 @@ androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscree
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+firebase-inappmessaging-display = { group = "com.google.firebase", name = "firebase-inappmessaging-display" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

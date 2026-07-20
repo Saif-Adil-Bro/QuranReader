@@ -104,14 +104,19 @@ fun BottomNavBar(
                         isSelected = isSelected,
                         onClick = {
                             if (currentRoute != item.route) {
-                                navController.navigate(item.route) {
-                                    // We use "home" as the base route to pop up to instead of startDestinationRoute
-                                    // because "splash" is popped inclusively and no longer in the backstack.
-                                    popUpTo("home") {
-                                        saveState = true
+                                if (item.route == "home") {
+                                    // Pop back to home to clear any pushed screens safely and return to Home
+                                    navController.popBackStack("home", inclusive = false)
+                                } else {
+                                    navController.navigate(item.route) {
+                                        // We use "home" as the base route to pop up to instead of startDestinationRoute
+                                        // because "splash" is popped inclusively and no longer in the backstack.
+                                        popUpTo("home") {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
                                 }
                             }
                         },

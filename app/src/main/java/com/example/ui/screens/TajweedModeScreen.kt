@@ -65,6 +65,7 @@ fun TajweedModeScreen(
     val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
 
     var showSettings by remember { mutableStateOf(false) }
+    var showTajweedInfo by remember { mutableStateOf(false) }
     var showJuzList by remember { mutableStateOf(false) }
     var showJumpToPageDialog by remember { mutableStateOf(false) }
     var jumpPageInput by remember { mutableStateOf("") }
@@ -155,6 +156,13 @@ fun TajweedModeScreen(
                             imageVector = if (isPageMemorized) Icons.Default.CheckCircle else Icons.Outlined.Circle,
                             contentDescription = "Mark Memorized",
                             tint = if (isPageMemorized) Color(0xFF1E5631) else topBarContentColor
+                        )
+                    }
+                    IconButton(onClick = { showTajweedInfo = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Tajweed Info",
+                            tint = topBarContentColor
                         )
                     }
                     IconButton(onClick = { showSettings = true }) {
@@ -324,6 +332,171 @@ fun TajweedModeScreen(
                 },
                 containerColor = containerColor
             )
+        }
+
+        // Tajweed Info Bottom Sheet
+        if (showTajweedInfo) {
+            ModalBottomSheet(
+                onDismissRequest = { showTajweedInfo = false },
+                sheetState = rememberModalBottomSheetState(),
+                containerColor = containerColor
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "تجويد • তাজবীদ কালার গাইড",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = topBarContentColor
+                        )
+                        IconButton(onClick = { showTajweedInfo = false }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = topBarContentColor
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "কুরআন মাজীদে বিভিন্ন তাজবীদের নিয়ম সহজে চেনার জন্য ভিন্ন ভিন্ন রঙে হরফগুলোকে হাইলাইট করা হয়েছে। নিচে প্রতিটি কালার কোড ও নিয়মের বিবরণ দেওয়া হলো:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = topBarContentColor.copy(alpha = 0.8f)
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    val rules = listOf(
+                        Triple(
+                            "ghunnah",
+                            "ওয়াজিব গুন্নাহ (Ghunnah)",
+                            "নুন (ن) বা মীম (م) এ তাশদীদ থাকলে গুন্নাহ করা ওয়াজিব। যেমন: اِنَّ বা اَمَّا। গুণ গুণ আওয়াজ করে নাকের বাঁশিতে নির্দিষ্ট সময় ধরে ধরে রাখতে হয়।"
+                        ),
+                        Triple(
+                            "qalaqah",
+                            "ক্বলক্বলাহ (Qalqalah)",
+                            "ক্বলক্বলার হরফ ৫টি (ق، ط، ب، ج، د)। এই হরফগুলোতে জযম (সাকিন) বা ওয়াকফ থাকলে ধাক্কা দিয়ে বা প্রতিধ্বনি করে পড়তে হয়।"
+                        ),
+                        Triple(
+                            "ikhafa",
+                            "ইখফা (Ikhfa)",
+                            "নুন সাকিন (نْ) বা তানভীন এর পরে ইখফার ১৫টি হরফের কোনোটি আসলে গুন্নাহসহ নাকের বাঁশিতে লুকিয়ে পড়তে হয়।"
+                        ),
+                        Triple(
+                            "iqlab",
+                            "ইকলাব (Iqlab)",
+                            "নুন সাকিন বা তানভীনের পর 'বা' (ب) আসলে নুন সাকিনকে ছোট মীম (م) দ্বারা পরিবর্তন করে গুন্নাহসহ পড়তে হয়।"
+                        ),
+                        Triple(
+                            "idgham_ghunnah",
+                            "ইদগাম গুন্নাহ (Idgham Ghunnah)",
+                            "নুন সাকিন বা তানভীনের পর ইয়ারমালুন (يرمولون) হরফের মধ্যে (ي، و، م، n) আসলে গুন্নাহর সাথে মিলিয়ে পড়তে হয়।"
+                        ),
+                        Triple(
+                            "idgham_wo_ghunnah",
+                            "গুন্নাহ ছাড়া ইদগাম",
+                            "নুন সাকিন বা তানভীনের পর 'র' (ر) বা 'লাম' (ل) আসলে গুন্নাহ ছাড়া স্পষ্ট ও দ্রুত মিলিয়ে পড়তে হয়।"
+                        ),
+                        Triple(
+                            "ikhafa_shafawi",
+                            "ইখফা শাফাওয়ী (Ikhfa Shafawi)",
+                            "মীম সাকিনের (مْ) পর 'বা' (ب) আসলে গুন্নাহসহ নাকের বাঁশিতে লুকিয়ে পড়তে হয়।"
+                        ),
+                        Triple(
+                            "idgham_shafawi",
+                            "ইদগাম শাফাওয়ী (Idgham Shafawi)",
+                            "মীম সাকিনের (مْ) পর আর একটি মীম (م) আসলে গুন্নাহসহ মিলিয়ে পড়তে হয়।"
+                        ),
+                        Triple(
+                            "madda_normal",
+                            "মাদ (Madd Normal)",
+                            "আরবী শব্দের উচ্চারণ দীর্ঘ বা টেনে পড়া। মদের হরফ ৩টি (আলিফ، ওয়াও، ইয়া)। জবর-পেশ-যের এর পরে যথাক্রমে এগুলো আসলে এক আলিফ পরিমাণ টেনে পড়তে হয়।"
+                        ),
+                        Triple(
+                            "madda_permissible",
+                            "মাদ জায়েজ (Madd Permissible)",
+                            "মদের হরফের পরে অন্য শব্দে হামযাহ আসলে তিন আলিফ পরিমাণ টেনে পড়তে হয়। একে মাদ মুনফাসিলও বলা হয়।"
+                        ),
+                        Triple(
+                            "madda_obligatory",
+                            "মাদ ওয়াজিব (Madd Obligatory)",
+                            "মদের হরফের পরে একই শব্দে হামযাহ আসলে চার আলিফ পরিমাণ টেনে পড়তে হয়। একে মাদ মুত্তাসিলও বলা হয়।"
+                        ),
+                        Triple(
+                            "madda_necessary",
+                            "মাদ লাজিম (Madd Necessary)",
+                            "মদের হরফের পরে আরযী সুকুন বা তাশদীদ থাকলে দীর্ঘ সময় ধরে চার আলিফ পরিমাণ টেনে পড়তে হয়।"
+                        ),
+                        Triple(
+                            "laam_shamsiyah",
+                            "লাম শামসিয়াহ (Laam Shamsiyah)",
+                            "আলিফ-লাম যুক্ত শব্দের 'লাম' অক্ষরটি উচ্চারিত না হয়ে পরবর্তী হরফের সাথে তাশদীদযুক্ত হয়ে উচ্চারিত হয়।"
+                        ),
+                        Triple(
+                            "ham_wasl",
+                            "হামযাতুল ওয়াসল (Hamzatul Wasl)",
+                            "শব্দের শুরুতে সংযোগকারী হামযাহ যা পূর্বের শব্দের সাথে মিলিয়ে পড়ার সময় উচ্চারিত হয় না, তবে স্বতন্ত্রভাবে পড়ার সময় উচ্চারিত হয়।"
+                        ),
+                        Triple(
+                            "slnt",
+                            "উহ্য অক্ষর (Silent)",
+                            "যে হরফগুলো বানানে লেখা থাকে কিন্তু পড়ার সময় একেবারেই উচ্চারিত হয় না।"
+                        )
+                    )
+
+                    rules.forEach { (key, title, description) ->
+                        val ruleColor = com.example.ui.theme.TajweedColors[key] ?: topBarContentColor
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 4.dp, end = 16.dp)
+                                    .size(22.dp)
+                                    .background(ruleColor, CircleShape)
+                                    .border(1.dp, topBarContentColor.copy(alpha = 0.3f), CircleShape)
+                            )
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = topBarContentColor
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = topBarContentColor.copy(alpha = 0.85f),
+                                    lineHeight = 22.sp
+                                )
+                            }
+                        }
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            color = topBarContentColor.copy(alpha = 0.12f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+            }
         }
 
         // Settings Bottom Sheet

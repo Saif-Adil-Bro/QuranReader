@@ -175,45 +175,8 @@ object AyahShareUtil {
         }
         currentY += translationLayout.height + 40f
 
-        // 5. Tafsir Text (if present)
-        if (!ayah.tafsirText.isNullOrEmpty()) {
-            val tafsirLabelPaint = TextPaint().apply {
-                color = Color.parseColor("#00E5FF")
-                textSize = 34f
-                typeface = banglaBoldFont
-                isAntiAlias = true
-            }
-            if (canvas != null) {
-                canvas.drawText("তাফসীর:", margin.toFloat(), currentY + 30f, tafsirLabelPaint)
-            }
-            currentY += 50f
+        // 5. Tafsir rendering section has been removed to keep the shared image layout clean and fully readable.
 
-            val cleanTafsirText = try {
-                android.text.Html.fromHtml(ayah.tafsirText, android.text.Html.FROM_HTML_MODE_LEGACY).toString()
-            } catch (e: Exception) {
-                ayah.tafsirText
-            }
-
-            val tafsirPaint = TextPaint().apply {
-                color = Color.parseColor("#D0D0D0")
-                textSize = 36f
-                typeface = banglaFont
-                isAntiAlias = true
-            }
-            val tafsirLayout = StaticLayout.Builder.obtain(cleanTafsirText, 0, cleanTafsirText.length, tafsirPaint, contentWidth)
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                .setLineSpacing(0f, 1.2f)
-                .setIncludePad(true)
-                .build()
-
-            if (canvas != null) {
-                canvas.save()
-                canvas.translate(margin.toFloat(), currentY)
-                tafsirLayout.draw(canvas)
-                canvas.restore()
-            }
-            currentY += tafsirLayout.height + 40f
-        }
 
         // 6. Draw Divider before Footer
         if (canvas != null) {
