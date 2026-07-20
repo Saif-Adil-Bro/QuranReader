@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -152,25 +153,13 @@ fun QuranPoricitiScreen(
                                 .border(0.5.dp, Color(0xFF10B981).copy(alpha = 0.15f), RoundedCornerShape(10.dp))
                         )
 
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "القرآن",
-                                fontSize = 32.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryGreen,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "الكريم",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFF0D9488),
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = com.example.R.drawable.ic_launcher),
+                            contentDescription = "App Logo",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                        )
                     }
                 }
             }

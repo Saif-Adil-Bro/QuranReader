@@ -737,7 +737,7 @@ class SettingsViewModel(
     private val _plannerStreak = MutableStateFlow(0)
     val plannerStreak: StateFlow<Int> = _plannerStreak.asStateFlow()
     
-    private val _plannerReminderEnabled = MutableStateFlow(false)
+    private val _plannerReminderEnabled = MutableStateFlow(true)
     val plannerReminderEnabled: StateFlow<Boolean> = _plannerReminderEnabled.asStateFlow()
 
     private val _plannerReminderHour = MutableStateFlow(20)
@@ -747,7 +747,7 @@ class SettingsViewModel(
     val plannerReminderMinute: StateFlow<Int> = _plannerReminderMinute.asStateFlow()
 
     
-    private val _dailyMessageEnabled = MutableStateFlow(false)
+    private val _dailyMessageEnabled = MutableStateFlow(true)
     val dailyMessageEnabled: StateFlow<Boolean> = _dailyMessageEnabled.asStateFlow()
 
     private val _dailyMessageHour = MutableStateFlow(8)
@@ -851,13 +851,33 @@ class SettingsViewModel(
         _plannerStartDate.value = sharedPrefs.getLong("planner_start_date", System.currentTimeMillis())
         _plannerStreak.value = sharedPrefs.getInt("planner_streak", 0)
         
-        _dailyMessageEnabled.value = sharedPrefs.getBoolean("daily_message_enabled", false)
+        _dailyMessageEnabled.value = sharedPrefs.getBoolean("daily_message_enabled", true)
         _dailyMessageHour.value = sharedPrefs.getInt("daily_message_hour", 8)
         _dailyMessageMinute.value = sharedPrefs.getInt("daily_message_minute", 0)
 
-        _plannerReminderEnabled.value = sharedPrefs.getBoolean("planner_reminder", false)
+        _plannerReminderEnabled.value = sharedPrefs.getBoolean("planner_reminder", true)
         _plannerReminderHour.value = sharedPrefs.getInt("planner_reminder_hour", 20)
         _plannerReminderMinute.value = sharedPrefs.getInt("planner_reminder_minute", 0)
+
+        val alarmsInitialized = sharedPrefs.getBoolean("alarms_initialized", false)
+        if (!alarmsInitialized) {
+            sharedPrefs.edit()
+                .putBoolean("daily_message_enabled", true)
+                .putBoolean("planner_reminder", true)
+                .putBoolean("alarms_initialized", true)
+                .apply()
+            
+            try {
+                com.example.receiver.DailyMessageReceiver.scheduleNextAlarm(repository.context)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            try {
+                com.example.receiver.ReminderReceiver.scheduleNextAlarm(repository.context)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
         
         val hifzStr = sharedPrefs.getString("hifz_progress_map", "") ?: ""
         if (hifzStr.isNotEmpty()) {

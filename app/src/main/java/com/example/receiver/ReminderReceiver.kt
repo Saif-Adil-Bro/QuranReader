@@ -14,7 +14,7 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             val sharedPrefs = context.getSharedPreferences("quran_menu_prefs", Context.MODE_PRIVATE)
-            val enabled = sharedPrefs.getBoolean("planner_reminder", false)
+            val enabled = sharedPrefs.getBoolean("planner_reminder", true)
             if (enabled) {
                 scheduleNextAlarm(context)
             }
@@ -37,6 +37,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val openIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("target_screen", "planner")
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -51,20 +52,23 @@ class ReminderReceiver : BroadcastReceiver() {
             "দৈনিক কুরআন তিলাওয়াত"
         )
         val messages = listOf(
-            "আপনার আজকের লক্ষ্য পূরণ করতে কয়েক পৃষ্ঠা পড়ুন।",
+            "আপনার আজকের লক্ষ্য পূরণ করতে তেলওয়াত শুরু করুন...",
             "আসুন আজকেও কুরআন পড়ে আমাদের প্ল্যান এগিয়ে নিয়ে যাই।",
             "কুরআনের সাথে থাকুন, জীবনকে বরকতময় করুন।"
         )
         
         val title = titles.random()
         val message = messages.random()
+        val cleanMessage = if (message.endsWith("...")) message.substring(0, message.length - 3) else message
+        val formattedMessage = "$cleanMessage\n...."
 
         val iconRes = com.example.R.mipmap.ic_launcher
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(iconRes)
             .setContentTitle(title)
-            .setContentText(message)
+            .setContentText(formattedMessage)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(formattedMessage))
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

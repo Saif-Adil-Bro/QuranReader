@@ -375,7 +375,22 @@ fun AppNavGraph(
             )
         }
 
-        composable("settings") {
+        composable(
+            route = "settings?subScreen={subScreen}&duaId={duaId}",
+            arguments = listOf(
+                navArgument("subScreen") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("duaId") {
+                    type = NavType.IntType
+                    defaultValue = -1
+                }
+            )
+        ) { backStackEntry ->
+            val subScreen = backStackEntry.arguments?.getString("subScreen")
+            val duaIdVal = backStackEntry.arguments?.getInt("duaId") ?: -1
             val viewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
             SettingsScreen(
                 viewModel = viewModel,
@@ -398,7 +413,9 @@ fun AppNavGraph(
                     } else {
                         navController.navigate("recitation/index")
                     }
-                }
+                },
+                initialSubScreen = subScreen,
+                initialDuaId = if (duaIdVal != -1) duaIdVal else null
             )
         }
 

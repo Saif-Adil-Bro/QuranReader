@@ -109,6 +109,22 @@ class MainActivity : ComponentActivity() {
           val visibleEntries by navController.visibleEntries.collectAsState()
           val isSplashVisible = visibleEntries.any { it.destination.route == "splash" }
           
+          LaunchedEffect(intent, currentRoute) {
+              if (currentRoute != "splash" && currentRoute != null) {
+                  intent?.getStringExtra("target_screen")?.let { target ->
+                      if (target == "dua") {
+                          val duaId = intent.getIntExtra("dua_id", -1)
+                          navController.navigate("settings?subScreen=dua&duaId=$duaId")
+                          intent.removeExtra("target_screen")
+                          intent.removeExtra("dua_id")
+                      } else if (target == "planner") {
+                          navController.navigate("settings?subScreen=planner")
+                          intent.removeExtra("target_screen")
+                      }
+                  }
+              }
+          }
+          
           Scaffold(
             bottomBar = {
               BottomNavBar(
@@ -138,5 +154,10 @@ class MainActivity : ComponentActivity() {
         }
       }
     }
+  }
+
+  override fun onNewIntent(intent: android.content.Intent) {
+      super.onNewIntent(intent)
+      setIntent(intent)
   }
 }

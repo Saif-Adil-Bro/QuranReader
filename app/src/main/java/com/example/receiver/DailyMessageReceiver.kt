@@ -15,7 +15,7 @@ class DailyMessageReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             val sharedPrefs = context.getSharedPreferences("quran_menu_prefs", Context.MODE_PRIVATE)
-            val enabled = sharedPrefs.getBoolean("daily_message_enabled", false)
+            val enabled = sharedPrefs.getBoolean("daily_message_enabled", true)
             if (enabled) {
                 scheduleNextAlarm(context)
             }
@@ -36,8 +36,34 @@ class DailyMessageReceiver : BroadcastReceiver() {
             notificationManager.createNotificationChannel(channel)
         }
 
+        // Ensure DuaData is initialized to fetch real Quranic Duas
+        try {
+            com.example.data.DuaData.initialize(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        val richDuas = com.example.data.DuaData.richDuas
+        val selectedDua = if (richDuas.isNotEmpty()) {
+            val calendar = java.util.Calendar.getInstance()
+            val dayOfYear = calendar.get(java.util.Calendar.DAY_OF_YEAR)
+            richDuas[dayOfYear % richDuas.size]
+        } else {
+            com.example.data.DuaItem(
+                id = 1,
+                title = "দুনিয়া ও পরকালের কল্যাণের দুআ",
+                segments = listOf(
+                    com.example.data.DuaSegment(
+                        translation = "হে আমাদের রব! আমাদেরকে দুনিয়াতে কল্যাণ দান করুন এবং আখিরাতেও কল্যাণ দান করুন। (সূরা বাকারা: ২০১)"
+                    )
+                )
+            )
+        }
+
         val openIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("target_screen", "dua")
+            putExtra("dua_id", selectedDua.id)
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -46,23 +72,17 @@ class DailyMessageReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val messages = listOf(
-            Pair("আজকের আয়াত", "নিশ্চয়ই কষ্টের সাথে স্বস্তি রয়েছে। (সূরা ইনশিরাহ: ৫)"),
-            Pair("আজকের হাদিস", "যে ব্যক্তি জ্ঞান অর্জনের উদ্দেশ্যে কোনো পথ অবলম্বন করে, আল্লাহ তার জন্য জান্নাতের পথ সহজ করে দেন। (মুসলিম)"),
-            Pair("কুরআনিক দুআ", "হে আমাদের রব! আমাদেরকে দুনিয়াতে কল্যাণ দান করুন এবং আখিরাতেও কল্যাণ দান করুন। (সূরা বাকারা: ২০১)"),
-            Pair("ইসলামিক বার্তা", "আল্লাহর জিকিরে অন্তর প্রশান্তি লাভ করে। (সূরা রাদ: ২৮)"),
-            Pair("আজকের সুন্নাহ", "হাসিমুখে কথা বলাও একটি সাদাকাহ। (তিরমিযী)"),
-            Pair("দ্বীনি বার্তা", "নামাজ কায়েম করুন, নিশ্চয়ই নামাজ অশ্লীল ও মন্দ কাজ থেকে বিরত রাখে। (সূরা আনকাবুত: ৪৫)")
-        )
-        
-        val randomMessage = messages.random()
+        val duaTitle = "কুরআনিক দুআ • ${selectedDua.title}"
+        val firstSegment = selectedDua.segments.firstOrNull()
+        val translationText = firstSegment?.translation ?: ""
+        val formattedBody = "$translationText\n...."
 
         val iconRes = com.example.R.mipmap.ic_launcher
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(iconRes)
-            .setContentTitle(randomMessage.first)
-            .setContentText(randomMessage.second)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(randomMessage.second))
+            .setContentTitle(duaTitle)
+            .setContentText(formattedBody)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(formattedBody))
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

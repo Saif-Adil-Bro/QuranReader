@@ -68,7 +68,9 @@ fun SettingsScreen(
     onNavigateToPage: (Int) -> Unit = {},
     onNavigateToJuz: (Int) -> Unit = {},
     onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> },
-    onNavigateToPlayer: () -> Unit = {}
+    onNavigateToPlayer: () -> Unit = {},
+    initialSubScreen: String? = null,
+    initialDuaId: Int? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -83,7 +85,7 @@ fun SettingsScreen(
     val readingTime by viewModel.readingTimeMinutes.collectAsState()
     val bookmarkList by viewModel.bookmarks.collectAsState(initial = emptyList())
     
-    var activeDialog by remember { mutableStateOf<String?>(null) }
+    var activeDialog by remember { mutableStateOf<String?>(initialSubScreen) }
     
     val menuItems = listOf(
         MenuItem("bookmark", "বুকমার্ক", Icons.Default.Bookmark, Color(0xFFEF4444)),
@@ -800,7 +802,8 @@ fun SettingsScreen(
             onNavigateToSurah = onNavigateToSurah,
             onNavigateToPage = onNavigateToPage,
             onNavigateToJuz = onNavigateToJuz,
-            onNavigateToAyah = onNavigateToAyah
+            onNavigateToAyah = onNavigateToAyah,
+            initialDuaId = if (activeDialog == "dua") initialDuaId else null
         )
     }
 }
@@ -813,13 +816,25 @@ fun MenuDetailDialog(
     onNavigateToSurah: (Int) -> Unit = {},
     onNavigateToPage: (Int) -> Unit = {},
     onNavigateToJuz: (Int) -> Unit = {},
-    onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> }
+    onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> },
+    initialDuaId: Int? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
     // Hold selected dua state for back click handling
-    var selectedDuaForDuaTab by remember { mutableStateOf<com.example.data.DuaItem?>(null) }
+    var selectedDuaForDuaTab by remember { 
+        mutableStateOf<com.example.data.DuaItem?>(
+            if (initialDuaId != null && initialDuaId != -1) {
+                try {
+                    com.example.data.DuaData.initialize(context)
+                    com.example.data.DuaData.richDuas.find { it.id == initialDuaId }
+                } catch (e: Exception) {
+                    null
+                }
+            } else null
+        )
+    }
     
     val handleBack = {
         if (type == "dua" && selectedDuaForDuaTab != null) {
