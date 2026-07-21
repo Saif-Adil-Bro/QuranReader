@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Button
@@ -94,7 +96,7 @@ fun SettingsScreen(
         MenuItem("subjectwise", "বিষয়ভিত্তিক কুরআন", Icons.Default.Category, Color(0xFF3B82F6)),
         MenuItem("dua", "কুরআনিক দুআ", Icons.Default.Schedule, Color(0xFF8B5CF6)),
         MenuItem("morning_evening_dua", "সকাল সন্ধ্যার দুআ", Icons.Default.WbSunny, Color(0xFFF59E0B)),
-        MenuItem("game", "কুরআনিক ওয়ার্ড গেম", Icons.Default.PlayCircle, Color(0xFFEC4899)),
+        MenuItem("game", "ওয়ার্ড গেম", Icons.Default.PlayCircle, Color(0xFFEC4899)),
         MenuItem("player", "কুরআন প্লেয়ার", Icons.Default.MusicNote, Color(0xFF06B6D4)),
         MenuItem("hifz", "কুরআন হিফজ", Icons.Default.CheckCircle, Color(0xFF6366F1)),
         MenuItem("learn", "কুরআন শিক্ষা", Icons.Default.Book, Color(0xFF4F46E5)),
@@ -869,7 +871,7 @@ fun MenuDetailDialog(
                     "subjectwise" -> "বিষয়ভিত্তিক কুরআন"
                     "dua" -> "কুরআনিক দুআ"
                     "morning_evening_dua" -> "সকাল সন্ধ্যার দুআ"
-                    "game" -> "কুরআনিক ওয়ার্ড গেম"
+                    "game" -> "ওয়ার্ড গেম"
                     "player" -> "কুরআন অডিও প্লেয়ার"
                     "hifz" -> "হিফজ ট্র্যাকার"
                     "learn" -> "কুরআন শিক্ষা"
@@ -1724,8 +1726,9 @@ fun DuaDialogContent(
         }
     }
 
-    Crossfade(targetState = selectedDua, label = "DuaNavigation") { currentDua ->
-        if (currentDua == null) {
+    val isDetailMode = selectedDua != null
+    Crossfade(targetState = isDetailMode, label = "DuaNavigation") { showDetail ->
+        if (!showDetail) {
             // DUAS INDEX / SUCI LIST
             Column(modifier = Modifier.fillMaxSize()) {
                 // Beautiful Search Field
@@ -1867,147 +1870,174 @@ fun DuaDialogContent(
                 }
             }
         } else {
-            // DUA DETAILS PAGE
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // Main Details Area (Custom elegant container)
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    val formattedIndex = formatToBanglaNumber(allDuas.indexOf(currentDua) + 1)
-                    
-                    // Title styled centered or structured beautifully like the screenshot
-                    Text(
-                        text = "[$formattedIndex] ${currentDua.title}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 26.sp,
-                        textAlign = TextAlign.Center,
+            // DUA DETAILS PAGE WITH HORIZONTAL SWIPE
+            val initialIndex = remember(selectedDua) {
+                if (selectedDua != null) {
+                    val idx = filteredDuas.indexOf(selectedDua)
+                    if (idx >= 0) idx else 0
+                } else 0
+            }
+            val pagerState = rememberPagerState(
+                initialPage = initialIndex,
+                pageCount = { filteredDuas.size }
+            )
+
+            LaunchedEffect(pagerState.currentPage) {
+                val currentDuaFromPager = filteredDuas.getOrNull(pagerState.currentPage)
+                if (currentDuaFromPager != null && currentDuaFromPager != selectedDua) {
+                    onSelectedDuaChange(currentDuaFromPager)
+                }
+            }
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { pageIndex ->
+                val currentDua = filteredDuas.getOrNull(pageIndex)
+                if (currentDua != null) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp)
-                    )
-                    
-                    HorizontalDivider(
-                        modifier = Modifier.padding(bottom = 16.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                    )
-                    
-                    currentDua.segments.forEachIndexed { index, segment ->
-                        if (index > 0) {
-                            Spacer(modifier = Modifier.height(20.dp))
-                        }
-                        
-                        // Arabic Text - large, centered, elegant high-contrast display exactly like the screenshot
-                        if (segment.arabic.isNotEmpty() && segment.arabic != "null") {
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        // Main Details Area (Custom elegant container)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            val formattedIndex = formatToBanglaNumber(allDuas.indexOf(currentDua) + 1)
+                            
+                            // Title styled centered or structured beautifully like the screenshot
                             Text(
-                                text = segment.arabic,
-                                fontSize = 26.sp,
-                                fontFamily = arabicFont,
-                                fontWeight = FontWeight.Medium,
+                                text = "[$formattedIndex] ${currentDua.title}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = 26.sp,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                lineHeight = 44.sp
+                                    .padding(bottom = 16.dp)
                             )
-                        }
-                        
-                        // Translation with Left-Border Accent Bar exactly like the screenshot
-                        if (segment.translation.isNotEmpty() && segment.translation != "null") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(IntrinsicSize.Min)
-                                    .padding(vertical = 8.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(4.dp)
-                                        .fillMaxHeight()
-                                        .background(Color(0xFF00B4D8), RoundedCornerShape(2.dp)) // Cyan/teal left border accent
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                            
+                            HorizontalDivider(
+                                modifier = Modifier.padding(bottom = 16.dp),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                            )
+                            
+                            currentDua.segments.forEachIndexed { index, segment ->
+                                if (index > 0) {
+                                    Spacer(modifier = Modifier.height(20.dp))
+                                }
+                                
+                                // Arabic Text - large, centered, elegant high-contrast display exactly like the screenshot
+                                if (segment.arabic.isNotEmpty() && segment.arabic != "null") {
                                     Text(
-                                        text = segment.translation,
-                                        fontSize = 14.sp,
+                                        text = segment.arabic,
+                                        fontSize = 26.sp,
+                                        fontFamily = arabicFont,
+                                        fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onSurface,
-                                        lineHeight = 22.sp
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        lineHeight = 44.sp
                                     )
                                 }
-                            }
-                        }
-                        
-                        // Transliteration with Left-Border Accent Bar exactly like the screenshot
-                        if (segment.transliteration.isNotEmpty() && segment.transliteration != "null") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(IntrinsicSize.Min)
-                                    .padding(vertical = 8.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(4.dp)
-                                        .fillMaxHeight()
-                                        .background(Color(0xFF00B4D8).copy(alpha = 0.6f), RoundedCornerShape(2.dp)) // Accent left border
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                                
+                                // Translation with Left-Border Accent Bar exactly like the screenshot
+                                if (segment.translation.isNotEmpty() && segment.translation != "null") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(IntrinsicSize.Min)
+                                            .padding(vertical = 8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(4.dp)
+                                                .fillMaxHeight()
+                                                .background(Color(0xFF00B4D8), RoundedCornerShape(2.dp)) // Cyan/teal left border accent
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = segment.translation,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                lineHeight = 22.sp
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                // Transliteration with Left-Border Accent Bar exactly like the screenshot
+                                if (segment.transliteration.isNotEmpty() && segment.transliteration != "null") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(IntrinsicSize.Min)
+                                            .padding(vertical = 8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(4.dp)
+                                                .fillMaxHeight()
+                                                .background(Color(0xFF00B4D8).copy(alpha = 0.6f), RoundedCornerShape(2.dp)) // Accent left border
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = segment.transliteration,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                                lineHeight = 22.sp
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                // Prekkhapot (Dua's context) exactly like the screenshot:
+                                // "দোয়ার প্রেক্ষাপট: এটি দুনিয়া-আখিরাত উভয় জগতে সফলতার জন্য..."
+                                if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        val trimmed = segment.bottom.trim()
+                                        val contextText = if (trimmed.startsWith("দোয়ার প্রেক্ষাপট") || trimmed.startsWith("দোয়ার প্রেক্ষাপট")) {
+                                            trimmed
+                                        } else {
+                                            "দোয়ার প্রেক্ষাপট: ${segment.bottom}"
+                                        }
+                                        Text(
+                                            text = contextText,
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                            lineHeight = 22.sp
+                                        )
+                                    }
+                                }
+                                
+                                // Reference - small, styled at the bottom
+                                if (segment.reference.isNotEmpty() && segment.reference != "null") {
+                                    Spacer(modifier = Modifier.height(12.dp))
                                     Text(
-                                        text = segment.transliteration,
-                                        fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                                        lineHeight = 22.sp
+                                        text = segment.reference,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Start
                                     )
                                 }
                             }
-                        }
-                        
-                        // Prekkhapot (Dua's context) exactly like the screenshot:
-                        // "দোয়ার প্রেক্ষাপট: এটি দুনিয়া-আখিরাত উভয় জগতে সফলতার জন্য..."
-                        if (segment.bottom.isNotEmpty() && segment.bottom != "null") {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                val trimmed = segment.bottom.trim()
-                                val contextText = if (trimmed.startsWith("দোয়ার প্রেক্ষাপট") || trimmed.startsWith("দোয়ার প্রেক্ষাপট")) {
-                                    trimmed
-                                } else {
-                                    "দোয়ার প্রেক্ষাপট: ${segment.bottom}"
-                                }
-                                Text(
-                                    text = contextText,
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                                    lineHeight = 22.sp
-                                )
-                            }
-                        }
-                        
-                        // Reference - small, styled at the bottom
-                        if (segment.reference.isNotEmpty() && segment.reference != "null") {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = segment.reference,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Start
-                            )
+                            
+                            // Copy & Share Actions Row with App Credit
+                            DuaActionButtonsRow(dua = currentDua)
                         }
                     }
-
-                    // Copy & Share Actions Row with App Credit
-                    DuaActionButtonsRow(dua = currentDua)
                 }
             }
         }
@@ -2162,7 +2192,7 @@ fun DuaActionButtonsRow(
         
         Spacer(modifier = Modifier.height(14.dp))
         
-        // App Credit with Logo & Name: (logo) ❝কুরআন রিডার❞ অ্যাপ থেকে শেয়ারকৃত
+        // App Credit with Logo & Name: (logo) ❝কুরআন রিডার❞ অ্যাপ
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
@@ -2177,7 +2207,7 @@ fun DuaActionButtonsRow(
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "❝কুরআন রিডার❞ অ্যাপ থেকে শেয়ারকৃত",
+                text = "❝কুরআন রিডার❞ অ্যাপ",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)

@@ -8,10 +8,13 @@ import com.example.data.model.Surah
 import com.example.data.model.QuranComTafsirResponse
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
@@ -27,6 +30,7 @@ class QuranRepository(
     private val offlineDao: com.example.data.local.offline.OfflineQuranDao,
     val context: Context
 ) {
+    private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val downloadedSurahsCache = java.util.concurrent.ConcurrentHashMap<Int, Boolean>()
     fun isTafsirDownloaded(tafsirId: String): Boolean {
         val dir = File(context.filesDir, "tafsir_cache/$tafsirId")
@@ -445,12 +449,23 @@ class QuranRepository(
                 }
             }
 
-            // If no internet, return what we have (either file cache or sqlite)
-            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
-                cachedList?.let { 
-                    cachedSurahDetails[cacheKey] = it
-                    return@withContext it 
+            // If offline database or file cache has data, return it immediately without blocking on network
+            if (!cachedList.isNullOrEmpty()) {
+                cachedSurahDetails[cacheKey] = cachedList
+                if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                    val currentList = cachedList
+                    repositoryScope.launch {
+                        try {
+                            fetchAndCacheSurahFromNetwork(surahNumber, cacheKey, cacheFile, tafsirIdsStr, audioEdition, arabicEdition, currentList)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
                 }
+                return@withContext cachedList
+            }
+
+            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
                 throw com.example.util.NoInternetException()
             }
 
@@ -602,12 +617,22 @@ class QuranRepository(
                 }
             }
 
-            // If no internet, return what we have (either file cache or sqlite)
-            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
-                cachedList?.let { 
-                    cachedPageDetails[cacheKey] = it
-                    return@withContext it 
+            // If offline database or file cache has data, return it immediately without blocking on network
+            if (!cachedList.isNullOrEmpty()) {
+                cachedPageDetails[cacheKey] = cachedList
+                if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                    repositoryScope.launch {
+                        try {
+                            fetchAndCachePageFromNetwork(pageNumber, cacheKey, cacheFile, tafsirIdsStr, audioEdition)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
                 }
+                return@withContext cachedList
+            }
+
+            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
                 throw com.example.util.NoInternetException()
             }
 
@@ -759,12 +784,23 @@ class QuranRepository(
                 }
             }
 
-            // If no internet, return what we have (either file cache or sqlite)
-            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
-                cachedList?.let { 
-                    cachedJuzDetails[cacheKey] = it
-                    return@withContext it 
+            // If offline database or file cache has data, return it immediately without blocking on network
+            if (!cachedList.isNullOrEmpty()) {
+                cachedJuzDetails[cacheKey] = cachedList
+                if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                    val currentList = cachedList
+                    repositoryScope.launch {
+                        try {
+                            fetchAndCacheJuzFromNetwork(juzNumber, cacheKey, cacheFile, tafsirIdsStr, audioEdition, currentList)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
                 }
+                return@withContext cachedList
+            }
+
+            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
                 throw com.example.util.NoInternetException()
             }
 
@@ -860,6 +896,185 @@ class QuranRepository(
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
+        }
+    }
+
+    private suspend fun fetchAndCacheSurahFromNetwork(
+        surahNumber: Int,
+        cacheKey: String,
+        cacheFile: File,
+        tafsirIdsStr: String,
+        audioEdition: String,
+        arabicEdition: String,
+        fallbackList: List<CombinedAyah>?
+    ) {
+        val response = if (arabicEdition == "quran-uthmani") {
+            api.getSurahWithEditions(surahNumber, "quran-uthmani,bn.bengali,$audioEdition")
+        } else {
+            api.getSurahWithEditions(surahNumber, "$arabicEdition,bn.bengali,$audioEdition")
+        }
+        
+        val quranComResponse = try {
+            quranComApi.getSurahVerses(surahNumber)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+
+        val quranComTafsirResponse = getCombinedSurahTafsirs(surahNumber, tafsirIdsStr)
+
+        if (response.code == 200 && response.data.size >= 2) {
+            val arabicEditionObj = response.data.find { it.edition.identifier == arabicEdition }
+                ?: response.data.find { it.edition.language == "ar" && it.edition.format == "text" }
+            val bengaliEdition = response.data.find { it.edition.identifier == "bn.bengali" }
+            val audioEditionObj = response.data.find { it.edition.identifier == audioEdition }
+
+            if (arabicEditionObj != null && bengaliEdition != null) {
+                val arabicAyahs = arabicEditionObj.ayahs
+                val bengaliAyahs = bengaliEdition.ayahs
+                val audioAyahs = audioEditionObj?.ayahs
+
+                val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
+                    val quranComVerse = quranComResponse?.verses?.find { it.verseNumber == arabicAyah.numberInSurah }
+                    val verseKey = "$surahNumber:${arabicAyah.numberInSurah}"
+                    val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
+                    val cachedWords = fallbackList?.getOrNull(index)?.words ?: emptyList()
+                    CombinedAyah(
+                        number = arabicAyah.number,
+                        numberInSurah = arabicAyah.numberInSurah,
+                        page = arabicAyah.page,
+                        juz = arabicAyah.juz,
+                        surahNumber = surahNumber,
+                        arabicText = processArabicText(arabicAyah, surahNumber),
+                        bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
+                        tafsirText = tafsir,
+                        audioUrl = audioAyahs?.getOrNull(index)?.audio,
+                        words = if (quranComVerse != null && quranComVerse.words.isNotEmpty()) quranComVerse.words else cachedWords,
+                        textUthmaniTajweed = quranComVerse?.textUthmaniTajweed ?: fallbackList?.getOrNull(index)?.textUthmaniTajweed
+                    )
+                }
+                val cleaned = cleanCombinedAyahList(combined)
+                cachedSurahDetails[cacheKey] = cleaned
+                try {
+                    cacheFile.parentFile?.mkdirs()
+                    cacheFile.writeText(Gson().toJson(cleaned))
+                    downloadedSurahsCache[surahNumber] = true
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    private suspend fun fetchAndCachePageFromNetwork(
+        pageNumber: Int,
+        cacheKey: String,
+        cacheFile: File,
+        tafsirIdsStr: String,
+        audioEdition: String
+    ) {
+        val arabicResponse = api.getPageArabic(pageNumber)
+        val audioResponse = api.getPageEdition(pageNumber, audioEdition)
+        
+        val quranComResponse = try {
+            quranComApi.getPageVerses(pageNumber)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+
+        val quranComTafsirResponse = getCombinedPageTafsirs(pageNumber, tafsirIdsStr)
+
+        if (arabicResponse.code == 200 && audioResponse.code == 200) {
+            val arabicAyahs = arabicResponse.data.ayahs
+            val audioAyahs = audioResponse.data.ayahs
+            
+            val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
+                val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
+                val computedSurahNumber = arabicAyah.surah?.number?.takeIf { it > 0 } 
+                    ?: com.example.data.QuranData.getSurahAndAyahFromGlobal(arabicAyah.number).first
+                val verseKey = "$computedSurahNumber:${arabicAyah.numberInSurah}"
+                val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
+                CombinedAyah(
+                    number = arabicAyah.number,
+                    numberInSurah = arabicAyah.numberInSurah,
+                    page = arabicAyah.page,
+                    juz = arabicAyah.juz,
+                    surahNumber = computedSurahNumber,
+                    arabicText = processArabicText(arabicAyah),
+                    bengaliText = "",
+                    tafsirText = tafsir,
+                    audioUrl = audioAyahs.getOrNull(index)?.audio,
+                    words = quranComVerse?.words ?: emptyList(),
+                    textUthmaniTajweed = quranComVerse?.textUthmaniTajweed
+                )
+            }
+            val cleaned = cleanCombinedAyahList(combined)
+            cachedPageDetails[cacheKey] = cleaned
+            
+            try {
+                cacheFile.parentFile?.mkdirs()
+                cacheFile.writeText(Gson().toJson(cleaned))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private suspend fun fetchAndCacheJuzFromNetwork(
+        juzNumber: Int,
+        cacheKey: String,
+        cacheFile: File,
+        tafsirIdsStr: String,
+        audioEdition: String,
+        fallbackList: List<CombinedAyah>?
+    ) {
+        val arabicResponse = api.getJuzArabic(juzNumber)
+        val bengaliResponse = api.getJuzBengali(juzNumber)
+        val audioResponse = api.getJuzEdition(juzNumber, audioEdition)
+        
+        val quranComResponse = try {
+            quranComApi.getJuzVerses(juzNumber)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+
+        val quranComTafsirResponse = getCombinedJuzTafsirs(juzNumber, tafsirIdsStr)
+
+        if (arabicResponse.code == 200 && bengaliResponse.code == 200) {
+            val arabicAyahs = arabicResponse.data.ayahs
+            val bengaliAyahs = bengaliResponse.data.ayahs
+            val audioAyahs = audioResponse.data.ayahs
+            
+            val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
+                val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
+                val verseKey = "${arabicAyah.surah?.number ?: 0}:${arabicAyah.numberInSurah}"
+                val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
+                val cachedWords = fallbackList?.getOrNull(index)?.words ?: emptyList()
+                CombinedAyah(
+                    number = arabicAyah.number,
+                    numberInSurah = arabicAyah.numberInSurah,
+                    page = arabicAyah.page,
+                    juz = arabicAyah.juz,
+                    surahNumber = arabicAyah.surah?.number ?: 0,
+                    arabicText = processArabicText(arabicAyah),
+                    bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
+                    tafsirText = tafsir,
+                    audioUrl = audioAyahs.getOrNull(index)?.audio,
+                    words = if (quranComVerse != null && quranComVerse.words.isNotEmpty()) quranComVerse.words else cachedWords,
+                    textUthmaniTajweed = quranComVerse?.textUthmaniTajweed ?: fallbackList?.getOrNull(index)?.textUthmaniTajweed
+                )
+            }
+            val cleaned = cleanCombinedAyahList(combined)
+            cachedJuzDetails[cacheKey] = cleaned
+            
+            try {
+                cacheFile.parentFile?.mkdirs()
+                cacheFile.writeText(Gson().toJson(cleaned))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }

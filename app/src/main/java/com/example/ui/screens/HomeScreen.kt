@@ -2690,7 +2690,7 @@ fun DuaActionButtonsRow(
         
         Spacer(modifier = Modifier.height(14.dp))
         
-        // App Credit with Logo & Name: (logo) ❝কুরআন রিডার❞ অ্যাপ থেকে শেয়ারকৃত
+        // App Credit with Logo & Name: (logo) ❝কুরআন রিডার❞ অ্যাপ
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
@@ -2705,7 +2705,7 @@ fun DuaActionButtonsRow(
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "❝কুরআন রিডার❞ অ্যাপ থেকে শেয়ারকৃত",
+                text = "❝কুরআন রিডার❞ অ্যাপ",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)

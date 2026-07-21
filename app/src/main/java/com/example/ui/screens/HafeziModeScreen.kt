@@ -63,6 +63,11 @@ fun HafeziModeScreen(
     initialPage: Int,
     onNavigateBack: () -> Unit
 ) {
+    // Initialize the viewmodel's current page to initialPage on first composition
+    remember(initialPage) {
+        viewModel.updateActivePage(initialPage)
+    }
+
     val uiState by viewModel.uiState.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
     val isBookmarked by viewModel.isBookmarked.collectAsState()
@@ -96,28 +101,53 @@ fun HafeziModeScreen(
 
     if (scrollDirection == "Horizontal") {
         LaunchedEffect(pagerState.currentPage) {
-            val targetPage = pagerState.currentPage + 1
-            if (targetPage != currentPage) {
-                viewModel.updateActivePage(targetPage)
+            if (pagerState.isScrollInProgress) {
+                val targetPage = pagerState.currentPage + 1
+                if (targetPage != currentPage) {
+                    viewModel.updateActivePage(targetPage)
+                }
             }
         }
         LaunchedEffect(currentPage) {
             val targetIndex = currentPage - 1
-            if (pagerState.currentPage != targetIndex) {
+            if (targetIndex >= 0 && pagerState.currentPage != targetIndex) {
+                if (currentPage == 1 && initialPage != 1 && pagerState.currentPage == initialPage - 1) {
+                    return@LaunchedEffect
+                }
                 pagerState.scrollToPage(targetIndex)
             }
         }
     } else {
         LaunchedEffect(lazyListState.firstVisibleItemIndex) {
-            val targetPage = lazyListState.firstVisibleItemIndex + 1
-            if (targetPage != currentPage) {
-                viewModel.updateActivePage(targetPage)
+            if (lazyListState.isScrollInProgress) {
+                val targetPage = lazyListState.firstVisibleItemIndex + 1
+                if (targetPage != currentPage) {
+                    viewModel.updateActivePage(targetPage)
+                }
             }
         }
         LaunchedEffect(currentPage) {
             val targetIndex = currentPage - 1
-            if (lazyListState.firstVisibleItemIndex != targetIndex) {
+            if (targetIndex >= 0 && lazyListState.firstVisibleItemIndex != targetIndex) {
+                if (currentPage == 1 && initialPage != 1 && lazyListState.firstVisibleItemIndex == initialPage - 1) {
+                    return@LaunchedEffect
+                }
                 lazyListState.scrollToItem(targetIndex)
+            }
+        }
+    }
+
+    LaunchedEffect(scrollDirection) {
+        val targetIndex = currentPage - 1
+        if (targetIndex >= 0) {
+            if (scrollDirection == "Horizontal") {
+                if (pagerState.currentPage != targetIndex) {
+                    pagerState.scrollToPage(targetIndex)
+                }
+            } else {
+                if (lazyListState.firstVisibleItemIndex != targetIndex) {
+                    lazyListState.scrollToItem(targetIndex)
+                }
             }
         }
     }
@@ -278,32 +308,36 @@ fun HafeziModeScreen(
                         showWaqfSigns = showWaqfSigns,
                         arabicLineSpacing = arabicLineSpacing,
                         showTajweed = showTajweed,
+                        isVerticalScrollEnabled = false,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 600.dp),
                         onAyahClick = { viewModel.playAyah(it) }
                     )
                 }
             }
         } else {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .background(backgroundColor)
-                ) { pageIndex ->
-                    HafeziPageLoader(
-                        pageNumber = pageIndex + 1,
-                        viewModel = viewModel,
-                        playingAyahNumber = currentPlayingAyahNumber,
-                        arabicFontSize = arabicFontSize,
-                        arabicFontName = arabicFontName,
-                        theme = theme,
-                        showWaqfSigns = showWaqfSigns,
-                        arabicLineSpacing = arabicLineSpacing,
-                        showTajweed = showTajweed,
-                        onAyahClick = { viewModel.playAyah(it) }
-                    )
-                }
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(backgroundColor),
+                reverseLayout = true
+            ) { pageIndex ->
+                HafeziPageLoader(
+                    pageNumber = pageIndex + 1,
+                    viewModel = viewModel,
+                    playingAyahNumber = currentPlayingAyahNumber,
+                    arabicFontSize = arabicFontSize,
+                    arabicFontName = arabicFontName,
+                    theme = theme,
+                    showWaqfSigns = showWaqfSigns,
+                    arabicLineSpacing = arabicLineSpacing,
+                    showTajweed = showTajweed,
+                    isVerticalScrollEnabled = false,
+                    onAyahClick = { viewModel.playAyah(it) }
+                )
             }
         }
         
@@ -770,6 +804,7 @@ fun HafeziPageContent(
     showWaqfSigns: Boolean = true,
     arabicLineSpacing: Float = 2.0f,
     showTajweed: Boolean = false,
+    isVerticalScrollEnabled: Boolean = true,
     onAyahClick: (Int) -> Unit
 ) {
     val arabicFont = getArabicFont(arabicFontName)
@@ -781,10 +816,16 @@ fun HafeziPageContent(
     val juzNum = firstAyah?.juz ?: 1
     val juzName = "পারা ${juzNum.toBengaliNumerals()}"
 
+    val scrollModifier = if (isVerticalScrollEnabled) {
+        Modifier.verticalScroll(rememberScrollState())
+    } else {
+        Modifier
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .then(scrollModifier)
             .padding(16.dp)
     ) {
         TanzilMushafFrame(
@@ -1169,6 +1210,8 @@ fun HafeziPageLoader(
     showWaqfSigns: Boolean,
     arabicLineSpacing: Float,
     showTajweed: Boolean,
+    isVerticalScrollEnabled: Boolean = true,
+    modifier: Modifier = Modifier,
     onAyahClick: (Int) -> Unit
 ) {
     var pageData by remember(pageNumber) { mutableStateOf<List<CombinedAyah>?>(null) }
@@ -1190,7 +1233,10 @@ fun HafeziPageLoader(
 
     when {
         isLoading -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
                 com.example.ui.components.QuranLoadingAnimation(
                     text = "পৃষ্ঠা ${pageNumber.toBengaliNumerals()} লোড হচ্ছে...", 
                     color = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
@@ -1199,7 +1245,7 @@ fun HafeziPageLoader(
         }
         errorMsg != null -> {
             Column(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
+                modifier = modifier.fillMaxWidth().padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -1221,18 +1267,21 @@ fun HafeziPageLoader(
             }
         }
         pageData != null -> {
-            HafeziPageContent(
-                ayahs = pageData!!,
-                playingAyahNumber = playingAyahNumber,
-                arabicFontSize = arabicFontSize,
-                arabicFontName = arabicFontName,
-                theme = theme,
-                currentPage = pageNumber,
-                showWaqfSigns = showWaqfSigns,
-                arabicLineSpacing = arabicLineSpacing,
-                showTajweed = showTajweed,
-                onAyahClick = onAyahClick
-            )
+            Box(modifier = modifier) {
+                HafeziPageContent(
+                    ayahs = pageData!!,
+                    playingAyahNumber = playingAyahNumber,
+                    arabicFontSize = arabicFontSize,
+                    arabicFontName = arabicFontName,
+                    theme = theme,
+                    currentPage = pageNumber,
+                    showWaqfSigns = showWaqfSigns,
+                    arabicLineSpacing = arabicLineSpacing,
+                    showTajweed = showTajweed,
+                    isVerticalScrollEnabled = isVerticalScrollEnabled,
+                    onAyahClick = onAyahClick
+                )
+            }
         }
     }
 }

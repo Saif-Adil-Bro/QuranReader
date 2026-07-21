@@ -68,12 +68,12 @@ val arabicFontsList = listOf(
 fun getArabicFont(name: String): FontFamily {
     return when (name) {
         "Uthman Taha" -> uthmanTahaFont
+        "Amiri Quran" -> amiriQuranFont
         "Amiri" -> amiriFont
         "Scheherazade New" -> scheherazadeFont
         "Lateef" -> lateefFont
         "Almarai" -> almaraiFont
         "Tajawal" -> tajawalFont
-        "Amiri Quran" -> amiriQuranFont
         else -> uthmanTahaFont
     }
 }
