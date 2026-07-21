@@ -28,10 +28,10 @@ private fun String.toArabicNumerals(): String {
 
 fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
     return buildAnnotatedString {
-        // Preprocess <span class=end>...</span>
-        val regexEnd = "<span\\s+class=end>([^<]+)</span>".toRegex()
+        // Preprocess <span class=end>...</span> or <span class="end">...</span>
+        val regexEnd = "<span\\s+class=['\"]?end['\"]?>([^<]+)</span>".toRegex()
         val preprocessed = raw.replace(regexEnd) { matchResult ->
-            "﴿${matchResult.groupValues[1].toArabicNumerals()}﴾"
+            "<span class=\"end\">﴿${matchResult.groupValues[1].toArabicNumerals()}﴾</span>"
         }
 
         var currentIndex = 0
@@ -65,7 +65,7 @@ fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
             } else {
                 if (tag.startsWith("tajweed class=") || tag.startsWith("span class=")) {
                     val className = tag.substringAfter("class=").trim('\'', '"')
-                    val color = TajweedColors[className] ?: defaultColor
+                    val color = if (className == "end") defaultColor else (TajweedColors[className] ?: defaultColor)
                     pushStyle(SpanStyle(color = color))
                 }
             }

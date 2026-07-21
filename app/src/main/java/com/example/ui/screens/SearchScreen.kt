@@ -109,11 +109,15 @@ fun SearchScreen(
                     onValueChange = { viewModel.onQueryChange(it) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .widthIn(max = 500.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
                     placeholder = { 
                         Text(
                             "বাংলা, ইংরেজি বা আরবি শব্দ দিয়ে খুঁজুন...", 
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         ) 
                     },
                     leadingIcon = { 

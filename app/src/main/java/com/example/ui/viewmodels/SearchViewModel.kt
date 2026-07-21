@@ -56,7 +56,7 @@ class SearchViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = "Amiri Quran"
+            initialValue = "Scheherazade New"
         )
 
     init {

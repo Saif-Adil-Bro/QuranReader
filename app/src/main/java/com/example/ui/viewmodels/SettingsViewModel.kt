@@ -72,7 +72,7 @@ class SettingsViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = "Amiri Quran"
+            initialValue = "Scheherazade New"
         )
 
 

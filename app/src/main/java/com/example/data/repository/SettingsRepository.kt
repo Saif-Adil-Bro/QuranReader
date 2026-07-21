@@ -79,19 +79,19 @@ class SettingsRepository(val context: Context) {
         .map { preferences -> preferences[LAST_READ_AYAH_KEY] ?: 1 }
 
     val arabicFontSizeFlow: Flow<Float> = context.dataStore.data
-        .map { preferences -> preferences[ARABIC_FONT_SIZE_KEY] ?: 24f }
+        .map { preferences -> preferences[ARABIC_FONT_SIZE_KEY] ?: 18f }
 
     val bengaliFontSizeFlow: Flow<Float> = context.dataStore.data
         .map { preferences -> preferences[BENGALI_FONT_SIZE_KEY] ?: 16f }
 
     val arabicFontNameFlow: Flow<String> = context.dataStore.data
-        .map { preferences -> preferences[ARABIC_FONT_NAME_KEY] ?: "Amiri Quran" }
+        .map { preferences -> preferences[ARABIC_FONT_NAME_KEY] ?: "Scheherazade New" }
 
     val tanzilTextStyleFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] ?: "quran-simple" }
 
     val arabicLineSpacingFlow: Flow<Float> = context.dataStore.data
-        .map { preferences -> (preferences[ARABIC_LINE_SPACING_KEY] ?: 2.0f).coerceAtLeast(2.0f) }
+        .map { preferences -> (preferences[ARABIC_LINE_SPACING_KEY] ?: 2.50f).coerceAtLeast(2.0f) }
 
     val themeFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[THEME_KEY] ?: "System" }

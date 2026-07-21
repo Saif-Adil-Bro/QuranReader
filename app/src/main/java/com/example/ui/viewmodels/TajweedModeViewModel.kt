@@ -33,6 +33,9 @@ class TajweedModeViewModel(
     private val _currentPage = MutableStateFlow(1)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
+    val scrollDirection: StateFlow<String> = settingsRepository.mushafScrollDirectionFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Horizontal")
+
     private val _isPageMemorized = MutableStateFlow(false)
     val isPageMemorized: StateFlow<Boolean> = _isPageMemorized.asStateFlow()
 
@@ -49,10 +52,10 @@ class TajweedModeViewModel(
         .stateIn(viewModelScope, SharingStarted.Lazily, true) // Force true or use settings
 
     val arabicFontSize: StateFlow<Float> = settingsRepository.arabicFontSizeFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, 24f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 18f)
 
     val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "Amiri Quran")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Scheherazade New")
 
     val theme: StateFlow<String> = settingsRepository.themeFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, "Light")
@@ -61,7 +64,7 @@ class TajweedModeViewModel(
         .stateIn(viewModelScope, SharingStarted.Lazily, true)
 
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, 2.0f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 2.5f)
 
     private var playlist: List<CombinedAyah> = emptyList()
 
@@ -256,6 +259,44 @@ class TajweedModeViewModel(
     fun setShowTajweed(show: Boolean) {
         viewModelScope.launch {
             settingsRepository.setShowTajweed(show)
+        }
+    }
+
+    fun setScrollDirection(direction: String) {
+        viewModelScope.launch {
+            settingsRepository.setMushafScrollDirection(direction)
+        }
+    }
+
+    suspend fun getPageDetails(pageNumber: Int): List<CombinedAyah> {
+        return getPageDetailsUseCase(pageNumber)
+    }
+
+    fun updateActivePage(pageNumber: Int) {
+        if (pageNumber !in 1..604) return
+        _currentPage.value = pageNumber
+        viewModelScope.launch {
+            try {
+                val ayahs = getPageDetailsUseCase(pageNumber)
+                playlist = ayahs
+                
+                // Save last read page, surah and mode
+                settingsRepository.setLastReadPage(pageNumber)
+                ayahs.firstOrNull()?.let {
+                    settingsRepository.setLastReadSurah(it.surahNumber)
+                }
+                settingsRepository.setLastReadMode("TAJWEED")
+                
+                // Check if memorized
+                val memorizedEntity = memorizedPageDao.getMemorizedPage(pageNumber)
+                _isPageMemorized.value = memorizedEntity?.isMemorized == true
+
+                // Check if bookmarked
+                val bookmarkEntity = bookmarkDao.getBookmark("PAGE", pageNumber)
+                _isBookmarked.value = bookmarkEntity != null
+            } catch (e: Exception) {
+                // ignore
+            }
         }
     }
 }

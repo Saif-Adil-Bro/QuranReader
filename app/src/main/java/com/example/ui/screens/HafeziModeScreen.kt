@@ -51,6 +51,9 @@ import androidx.compose.foundation.text.ClickableText
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
 import com.example.ui.viewmodels.HafeziModeViewModel
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +81,28 @@ fun HafeziModeScreen(
     val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
     val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
     val showTajweed by viewModel.showTajweed.collectAsState()
+    val scrollDirection by viewModel.scrollDirection.collectAsState()
+
+    val pagerState = rememberPagerState(
+        initialPage = (initialPage - 1).coerceIn(0, 603),
+        pageCount = { 604 }
+    )
+
+    // Sync pager state with current page in view model
+    LaunchedEffect(pagerState.currentPage) {
+        val targetPage = pagerState.currentPage + 1
+        if (targetPage != currentPage) {
+            viewModel.updateActivePage(targetPage)
+        }
+    }
+
+    // Sync viewModel current page changes back to pager state
+    LaunchedEffect(currentPage) {
+        val targetIndex = currentPage - 1
+        if (pagerState.currentPage != targetIndex) {
+            pagerState.scrollToPage(targetIndex)
+        }
+    }
     
     var showSettings by remember { mutableStateOf(false) }
     var showJuzList by remember { mutableStateOf(false) }
@@ -178,11 +203,11 @@ fun HafeziModeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(
-                        onClick = { viewModel.previousPage() }, 
-                        enabled = currentPage > 1,
+                        onClick = { viewModel.nextPage() }, 
+                        enabled = currentPage < 604,
                         colors = ButtonDefaults.textButtonColors(contentColor = topBarContentColor)
                     ) {
-                        Text("পূর্ববর্তী", fontWeight = FontWeight.Bold)
+                        Text("পরবর্তী", fontWeight = FontWeight.Bold)
                     }
                     
                     FloatingActionButton(
@@ -208,62 +233,57 @@ fun HafeziModeScreen(
                     }
                     
                     TextButton(
-                        onClick = { viewModel.nextPage() }, 
-                        enabled = currentPage < 604,
+                        onClick = { viewModel.previousPage() }, 
+                        enabled = currentPage > 1,
                         colors = ButtonDefaults.textButtonColors(contentColor = topBarContentColor)
                     ) {
-                        Text("পরবর্তী", fontWeight = FontWeight.Bold)
+                        Text("পূর্ববর্তী", fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(backgroundColor)
-        ) {
-            when (val state = uiState) {
-                is UiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        com.example.ui.components.QuranLoadingAnimation(
-                            text = "পৃষ্ঠা লোড হচ্ছে...", 
-                            color = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
-                        )
-                    }
-                }
-                is UiState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { viewModel.loadPage(currentPage) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
-                            )
-                        ) {
-                            Text("আবার চেষ্টা করুন", color = Color.White)
-                        }
-                    }
-                }
-                is UiState.Success -> {
-                    HafeziPageContent(
-                        ayahs = state.data,
-                        playingAyahNumber = currentPlayingAyahNumber,
-                        arabicFontSize = arabicFontSize,
-                        arabicFontName = arabicFontName,
-                        theme = theme,
-                        currentPage = currentPage,
-                        showWaqfSigns = showWaqfSigns,
-                        arabicLineSpacing = arabicLineSpacing,
-                        showTajweed = showTajweed,
-                        onAyahClick = { viewModel.playAyah(it) }
-                    )
-                }
+        if (scrollDirection == "Vertical") {
+            VerticalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(backgroundColor)
+            ) { pageIndex ->
+                HafeziPageLoader(
+                    pageNumber = pageIndex + 1,
+                    viewModel = viewModel,
+                    playingAyahNumber = currentPlayingAyahNumber,
+                    arabicFontSize = arabicFontSize,
+                    arabicFontName = arabicFontName,
+                    theme = theme,
+                    showWaqfSigns = showWaqfSigns,
+                    arabicLineSpacing = arabicLineSpacing,
+                    showTajweed = showTajweed,
+                    onAyahClick = { viewModel.playAyah(it) }
+                )
+            }
+        } else {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(backgroundColor)
+            ) { pageIndex ->
+                HafeziPageLoader(
+                    pageNumber = pageIndex + 1,
+                    viewModel = viewModel,
+                    playingAyahNumber = currentPlayingAyahNumber,
+                    arabicFontSize = arabicFontSize,
+                    arabicFontName = arabicFontName,
+                    theme = theme,
+                    showWaqfSigns = showWaqfSigns,
+                    arabicLineSpacing = arabicLineSpacing,
+                    showTajweed = showTajweed,
+                    onAyahClick = { viewModel.playAyah(it) }
+                )
             }
         }
         
@@ -362,6 +382,41 @@ fun HafeziModeScreen(
                             ) {
                                 Text(
                                     text = tName,
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(vertical = 10.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Scroll direction selector
+                    Text(
+                        text = "পৃষ্ঠা পরিবর্তন পদ্ধতি", 
+                        style = MaterialTheme.typography.bodyMedium, 
+                        color = topBarContentColor,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Horizontal" to "ডানে-বামে", "Vertical" to "উপর-নিচ").forEach { (dKey, dName) ->
+                            val isSel = dKey == scrollDirection
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSel) (if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)) else containerColor.copy(alpha = 0.5f),
+                                contentColor = if (isSel) Color.White else topBarContentColor,
+                                border = BorderStroke(1.dp, topBarContentColor.copy(alpha = 0.2f)),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.setScrollDirection(dKey) }
+                            ) {
+                                Text(
+                                    text = dName,
                                     textAlign = TextAlign.Center,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
@@ -816,16 +871,14 @@ fun HafeziPageContent(
                                     var textToDisplay = ayah.arabicText.trim()
                                     
                                     val prefixes = listOf(
-                                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰনِ ٱلرَّحِيمِ ",
-                                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰনِ ٱلرَّحِيمِ",
+                                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ",
+                                        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
                                         "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ ",
                                         "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
-                                        "بِسْمِ اللَّهِ الرَّحْمَٰনِ الرَّحِيمِ ",
-                                        "بِسْمِ اللَّهِ الرَّحْمَٰনِ الرَّحِيمِ",
-                                        "بِسْمِ office.etc ",
-                                        "بِسْمِ office.etc",
-                                        "بِسْمِ اللهِ الرَّحْمٰনِ الرَّحِيْمِ ",
-                                        "بِسْمِ اللهِ الرَّحْمٰনِ الرَّحِيْمِ",
+                                        "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ",
+                                        "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+                                        "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ ",
+                                        "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ",
                                         "بسم الله الرحمن الرحيم ",
                                         "بسم الله الرحمن الرحيم"
                                     )
@@ -1083,4 +1136,83 @@ fun String.toEnglishNumerals(): String {
         val index = bengaliNumerals.indexOf(char)
         if (index != -1) englishNumerals[index] else char
     }.joinToString("")
+}
+
+@Composable
+fun HafeziPageLoader(
+    pageNumber: Int,
+    viewModel: HafeziModeViewModel,
+    playingAyahNumber: Int?,
+    arabicFontSize: Float,
+    arabicFontName: String,
+    theme: String,
+    showWaqfSigns: Boolean,
+    arabicLineSpacing: Float,
+    showTajweed: Boolean,
+    onAyahClick: (Int) -> Unit
+) {
+    var pageData by remember(pageNumber) { mutableStateOf<List<CombinedAyah>?>(null) }
+    var isLoading by remember(pageNumber) { mutableStateOf(true) }
+    var errorMsg by remember(pageNumber) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(pageNumber) {
+        isLoading = true
+        errorMsg = null
+        try {
+            val data = viewModel.getPageDetails(pageNumber)
+            pageData = data
+            isLoading = false
+        } catch (e: Exception) {
+            errorMsg = e.message ?: "Failed to load Page"
+            isLoading = false
+        }
+    }
+
+    when {
+        isLoading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                com.example.ui.components.QuranLoadingAnimation(
+                    text = "পৃষ্ঠা ${pageNumber.toBengaliNumerals()} লোড হচ্ছে...", 
+                    color = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
+                )
+            }
+        }
+        errorMsg != null -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(text = errorMsg!!, color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        // Retry loading
+                        pageData = null
+                        errorMsg = null
+                        isLoading = true
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (theme == "Dark") Color(0xFF6B5843) else Color(0xFF1E5631)
+                    )
+                ) {
+                    Text("আবার চেষ্টা করুন", color = Color.White)
+                }
+            }
+        }
+        pageData != null -> {
+            HafeziPageContent(
+                ayahs = pageData!!,
+                playingAyahNumber = playingAyahNumber,
+                arabicFontSize = arabicFontSize,
+                arabicFontName = arabicFontName,
+                theme = theme,
+                currentPage = pageNumber,
+                showWaqfSigns = showWaqfSigns,
+                arabicLineSpacing = arabicLineSpacing,
+                showTajweed = showTajweed,
+                onAyahClick = onAyahClick
+            )
+        }
+    }
 }

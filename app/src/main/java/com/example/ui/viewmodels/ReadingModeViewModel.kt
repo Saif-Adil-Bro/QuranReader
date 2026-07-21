@@ -23,10 +23,10 @@ class ReadingModeViewModel(
     val uiState: StateFlow<UiState<List<CombinedAyah>>> = _uiState.asStateFlow()
 
     val arabicFontSize: StateFlow<Float> = settingsRepository.arabicFontSizeFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, 24f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 18f)
 
     val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "Amiri Quran")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Scheherazade New")
 
     val bengaliFontSize: StateFlow<Float> = settingsRepository.bengaliFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 16f)
@@ -44,7 +44,7 @@ class ReadingModeViewModel(
         .stateIn(viewModelScope, SharingStarted.Lazily, true)
 
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, 2.0f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 2.5f)
 
     fun loadSurah(surahNumber: Int) {
         viewModelScope.launch {

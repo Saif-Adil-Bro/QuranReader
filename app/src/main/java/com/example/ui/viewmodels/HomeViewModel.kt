@@ -104,7 +104,7 @@ class HomeViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = "Amiri Quran"
+            initialValue = "Scheherazade New"
         )
 
     private val _isDownloading = MutableStateFlow(false)

@@ -133,7 +133,7 @@ class SurahDetailViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = 24f
+            initialValue = 18f
         )
 
     val bengaliFontSize: StateFlow<Float> = settingsRepository.bengaliFontSizeFlow
@@ -147,7 +147,7 @@ class SurahDetailViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = "Amiri Quran"
+            initialValue = "Scheherazade New"
         )
 
     val tanzilTextStyle: StateFlow<String> = settingsRepository.tanzilTextStyleFlow
@@ -161,7 +161,7 @@ class SurahDetailViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = 2.0f
+            initialValue = 2.5f
         )
 
     val showWaqfSigns: StateFlow<Boolean> = settingsRepository.showWaqfSignsFlow
