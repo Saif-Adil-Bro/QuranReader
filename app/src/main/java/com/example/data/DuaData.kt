@@ -20,9 +20,13 @@ data class DuaItem(
 
 object DuaData {
     private var loadedRichDuas: List<DuaItem>? = null
+    private var loadedMorningEveningDuas: List<DuaItem>? = null
 
     val richDuas: List<DuaItem>
         get() = loadedRichDuas ?: fallbackRichDuas
+
+    val morningEveningDuas: List<DuaItem>
+        get() = loadedMorningEveningDuas ?: emptyList()
 
     val dailyDuas: List<Pair<String, String>>
         get() = richDuas.map { item ->
@@ -133,8 +137,19 @@ object DuaData {
     )
 
     fun initialize(context: Context) {
+        val quranic = loadDuasFromAsset(context, "duas.json")
+        if (quranic.isNotEmpty()) {
+            loadedRichDuas = quranic
+        }
+        val morningEvening = loadDuasFromAsset(context, "morning_evening_duas.json")
+        if (morningEvening.isNotEmpty()) {
+            loadedMorningEveningDuas = morningEvening
+        }
+    }
+
+    private fun loadDuasFromAsset(context: Context, fileName: String): List<DuaItem> {
         try {
-            val jsonString = context.assets.open("duas.json").bufferedReader().use { it.readText() }.trim()
+            val jsonString = context.assets.open(fileName).bufferedReader().use { it.readText() }.trim()
             val richList = mutableListOf<DuaItem>()
             
             if (jsonString.startsWith("{")) {
@@ -199,12 +214,10 @@ object DuaData {
                     richList.add(DuaItem(id = i, title = title, segments = listOf(segment)))
                 }
             }
-            
-            if (richList.isNotEmpty()) {
-                loadedRichDuas = richList
-            }
+            return richList
         } catch (e: Exception) {
             e.printStackTrace()
+            return emptyList()
         }
     }
 

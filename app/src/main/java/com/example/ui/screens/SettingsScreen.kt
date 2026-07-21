@@ -93,6 +93,7 @@ fun SettingsScreen(
         MenuItem("planner", "কুরআন প্ল্যানার", Icons.Default.DateRange, Color(0xFF10B981)),
         MenuItem("subjectwise", "বিষয়ভিত্তিক কুরআন", Icons.Default.Category, Color(0xFF3B82F6)),
         MenuItem("dua", "কুরআনিক দুআ", Icons.Default.Schedule, Color(0xFF8B5CF6)),
+        MenuItem("morning_evening_dua", "সকাল সন্ধ্যার দুআ", Icons.Default.WbSunny, Color(0xFFF59E0B)),
         MenuItem("game", "কুরআনিক ওয়ার্ড গেম", Icons.Default.PlayCircle, Color(0xFFEC4899)),
         MenuItem("player", "কুরআন প্লেয়ার", Icons.Default.MusicNote, Color(0xFF06B6D4)),
         MenuItem("hifz", "কুরআন হিফজ", Icons.Default.CheckCircle, Color(0xFF6366F1)),
@@ -803,7 +804,7 @@ fun SettingsScreen(
             onNavigateToPage = onNavigateToPage,
             onNavigateToJuz = onNavigateToJuz,
             onNavigateToAyah = onNavigateToAyah,
-            initialDuaId = if (activeDialog == "dua") initialDuaId else null
+            initialDuaId = if (activeDialog == "dua" || activeDialog == "morning_evening_dua") initialDuaId else null
         )
     }
 }
@@ -828,7 +829,11 @@ fun MenuDetailDialog(
             if (initialDuaId != null && initialDuaId != -1) {
                 try {
                     com.example.data.DuaData.initialize(context)
-                    com.example.data.DuaData.richDuas.find { it.id == initialDuaId }
+                    if (type == "morning_evening_dua") {
+                        com.example.data.DuaData.morningEveningDuas.find { it.id == initialDuaId }
+                    } else {
+                        com.example.data.DuaData.richDuas.find { it.id == initialDuaId }
+                    }
                 } catch (e: Exception) {
                     null
                 }
@@ -837,7 +842,7 @@ fun MenuDetailDialog(
     }
     
     val handleBack = {
-        if (type == "dua" && selectedDuaForDuaTab != null) {
+        if ((type == "dua" || type == "morning_evening_dua") && selectedDuaForDuaTab != null) {
             selectedDuaForDuaTab = null
         } else {
             onDismiss()
@@ -863,6 +868,7 @@ fun MenuDetailDialog(
                     "planner" -> "কুরআন প্ল্যানার"
                     "subjectwise" -> "বিষয়ভিত্তিক কুরআন"
                     "dua" -> "কুরআনিক দুআ"
+                    "morning_evening_dua" -> "সকাল সন্ধ্যার দুআ"
                     "game" -> "কুরআনিক ওয়ার্ড গেম"
                     "player" -> "কুরআন অডিও প্লেয়ার"
                     "hifz" -> "হিফজ ট্র্যাকার"
@@ -930,7 +936,14 @@ fun MenuDetailDialog(
                         "dua" -> DuaDialogContent(
                             viewModel = viewModel,
                             selectedDua = selectedDuaForDuaTab,
-                            onSelectedDuaChange = { selectedDuaForDuaTab = it }
+                            onSelectedDuaChange = { selectedDuaForDuaTab = it },
+                            isMorningEvening = false
+                        )
+                        "morning_evening_dua" -> DuaDialogContent(
+                            viewModel = viewModel,
+                            selectedDua = selectedDuaForDuaTab,
+                            onSelectedDuaChange = { selectedDuaForDuaTab = it },
+                            isMorningEvening = true
                         )
                         "game" -> GameDialogContent(viewModel)
                         "player" -> PlayerDialogContent()
@@ -1681,11 +1694,12 @@ fun SubjectwiseDialogContent() {
 fun DuaDialogContent(
     viewModel: SettingsViewModel,
     selectedDua: com.example.data.DuaItem?,
-    onSelectedDuaChange: (com.example.data.DuaItem?) -> Unit
+    onSelectedDuaChange: (com.example.data.DuaItem?) -> Unit,
+    isMorningEvening: Boolean = false
 ) {
     val arabicFontName by viewModel.arabicFontName.collectAsState()
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
-    val allDuas = com.example.data.DuaData.richDuas
+    val allDuas = if (isMorningEvening) com.example.data.DuaData.morningEveningDuas else com.example.data.DuaData.richDuas
     var searchQuery by remember { mutableStateOf("") }
     
     fun formatToBanglaNumber(num: Int): String {

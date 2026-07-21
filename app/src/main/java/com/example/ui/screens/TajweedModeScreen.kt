@@ -35,6 +35,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,24 +71,41 @@ fun TajweedModeScreen(
     val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
     val scrollDirection by viewModel.scrollDirection.collectAsState()
 
+    val coroutineScope = rememberCoroutineScope()
+
     val pagerState = rememberPagerState(
         initialPage = (initialPage - 1).coerceIn(0, 603),
         pageCount = { 604 }
     )
+    val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState(
+        initialFirstVisibleItemIndex = (initialPage - 1).coerceIn(0, 603)
+    )
 
-    // Sync pager state with current page in view model
-    LaunchedEffect(pagerState.currentPage) {
-        val targetPage = pagerState.currentPage + 1
-        if (targetPage != currentPage) {
-            viewModel.updateActivePage(targetPage)
+    if (scrollDirection == "Horizontal") {
+        LaunchedEffect(pagerState.currentPage) {
+            val targetPage = pagerState.currentPage + 1
+            if (targetPage != currentPage) {
+                viewModel.updateActivePage(targetPage)
+            }
         }
-    }
-
-    // Sync viewModel current page changes back to pager state
-    LaunchedEffect(currentPage) {
-        val targetIndex = currentPage - 1
-        if (pagerState.currentPage != targetIndex) {
-            pagerState.scrollToPage(targetIndex)
+        LaunchedEffect(currentPage) {
+            val targetIndex = currentPage - 1
+            if (pagerState.currentPage != targetIndex) {
+                pagerState.scrollToPage(targetIndex)
+            }
+        }
+    } else {
+        LaunchedEffect(lazyListState.firstVisibleItemIndex) {
+            val targetPage = lazyListState.firstVisibleItemIndex + 1
+            if (targetPage != currentPage) {
+                viewModel.updateActivePage(targetPage)
+            }
+        }
+        LaunchedEffect(currentPage) {
+            val targetIndex = currentPage - 1
+            if (lazyListState.firstVisibleItemIndex != targetIndex) {
+                lazyListState.scrollToItem(targetIndex)
+            }
         }
     }
 
@@ -96,11 +114,6 @@ fun TajweedModeScreen(
     var showJuzList by remember { mutableStateOf(false) }
     var showJumpToPageDialog by remember { mutableStateOf(false) }
     var jumpPageInput by remember { mutableStateOf("") }
-
-    // First load
-    LaunchedEffect(initialPage) {
-        viewModel.loadPage(initialPage)
-    }
 
     // Colors mapping to custom Quran viewer themes
     val backgroundColor = when (theme) {
@@ -262,46 +275,52 @@ fun TajweedModeScreen(
         }
     ) { padding ->
         if (scrollDirection == "Vertical") {
-            VerticalPager(
-                state = pagerState,
+            LazyColumn(
+                state = lazyListState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .background(backgroundColor)
-            ) { pageIndex ->
-                TajweedPageLoader(
-                    pageNumber = pageIndex + 1,
-                    viewModel = viewModel,
-                    playingAyahNumber = currentPlayingAyahNumber,
-                    arabicFontSize = arabicFontSize,
-                    arabicFontName = arabicFontName,
-                    theme = theme,
-                    showWaqfSigns = showWaqfSigns,
-                    arabicLineSpacing = arabicLineSpacing,
-                    showTajweed = showTajweed,
-                    onAyahClick = { viewModel.playAyah(it) }
-                )
+                    .background(backgroundColor),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
+            ) {
+                items(604) { pageIndex ->
+                    TajweedPageLoader(
+                        pageNumber = pageIndex + 1,
+                        viewModel = viewModel,
+                        playingAyahNumber = currentPlayingAyahNumber,
+                        arabicFontSize = arabicFontSize,
+                        arabicFontName = arabicFontName,
+                        theme = theme,
+                        showWaqfSigns = showWaqfSigns,
+                        arabicLineSpacing = arabicLineSpacing,
+                        showTajweed = showTajweed,
+                        onAyahClick = { viewModel.playAyah(it) }
+                    )
+                }
             }
         } else {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .background(backgroundColor)
-            ) { pageIndex ->
-                TajweedPageLoader(
-                    pageNumber = pageIndex + 1,
-                    viewModel = viewModel,
-                    playingAyahNumber = currentPlayingAyahNumber,
-                    arabicFontSize = arabicFontSize,
-                    arabicFontName = arabicFontName,
-                    theme = theme,
-                    showWaqfSigns = showWaqfSigns,
-                    arabicLineSpacing = arabicLineSpacing,
-                    showTajweed = showTajweed,
-                    onAyahClick = { viewModel.playAyah(it) }
-                )
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .background(backgroundColor)
+                ) { pageIndex ->
+                    TajweedPageLoader(
+                        pageNumber = pageIndex + 1,
+                        viewModel = viewModel,
+                        playingAyahNumber = currentPlayingAyahNumber,
+                        arabicFontSize = arabicFontSize,
+                        arabicFontName = arabicFontName,
+                        theme = theme,
+                        showWaqfSigns = showWaqfSigns,
+                        arabicLineSpacing = arabicLineSpacing,
+                        showTajweed = showTajweed,
+                        onAyahClick = { viewModel.playAyah(it) }
+                    )
+                }
             }
         }
 

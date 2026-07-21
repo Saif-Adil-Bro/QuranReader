@@ -2,6 +2,7 @@ package com.example.ui.screens.mushaf
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -251,59 +252,184 @@ fun MushafViewerScreen(
                         }
                     }
             ) {
-                Text(
-                    text = "দ্রুত নেভিগেশন",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = Color(0xFF10B981),
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
+                var selectedParaIndex by remember { mutableStateOf(0) }
+                var pageInput by remember { mutableStateOf("") }
+                var expandedPara by remember { mutableStateOf(false) }
 
-                // Scroll settings row
+                val paras = remember {
+                    (1..30).map { paraNum ->
+                        val paraName = "${com.example.utils.DateUtil.toBengaliNumerals(paraNum)} পারা"
+                        Pair(paraNum, paraName)
+                    }
+                }
+
+                fun getParaPageCount(para: Int): Int {
+                    return when (para) {
+                        1 -> 21
+                        29 -> 24
+                        30 -> 25
+                        else -> 20
+                    }
+                }
+
+                fun getParaStartPage(para: Int): Int {
+                    var startPage = 1
+                    for (i in 1 until para) {
+                        startPage += getParaPageCount(i)
+                    }
+                    return startPage
+                }
+
+                val selectedParaNum = paras[selectedParaIndex].first
+                val maxPagesInPara = getParaPageCount(selectedParaNum)
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .padding(bottom = 12.dp)
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            showSelectorSheet = false
+                            onBack()
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "পরিচিতি",
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "পাতা পরিবর্তন পদ্ধতি:",
+                        text = "দ্রুত নেভিগেশন",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = Color(0xFF10B981)
+                    )
+                }
+
+                // Jump to page setting row in place of scroll settings
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Text(
+                        text = "নির্দিষ্ট পৃষ্ঠায় যান:",
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        color = if (isDark) Color.White else Color.Black
+                        color = if (isDark) Color.White else Color.Black,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            onClick = { viewModel.setScrollDirection("Horizontal") },
-                            shape = RoundedCornerShape(20.dp),
-                            color = if (!isVertical) Color(0xFF10B981) else (if (isDark) Color(0xFF2D2D2D) else Color(0xFFF3F4F6)),
-                            contentColor = if (!isVertical) Color.White else (if (isDark) Color.LightGray else Color.DarkGray),
-                            modifier = Modifier.testTag("scroll_horizontal_option")
-                        ) {
-                            Text(
-                                text = "ডানে-বামে",
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
+                        // Para Selector
+                        Box(modifier = Modifier.weight(0.45f)) {
+                            OutlinedButton(
+                                onClick = { expandedPara = true },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, if (isDark) Color(0xFF2D2D2D) else Color(0xFFE5E7EB)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isDark) Color.White else Color.Black),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = paras[selectedParaIndex].second,
+                                        color = if (isDark) Color.White else Color.Black,
+                                        fontSize = 13.sp,
+                                        maxLines = 1
+                                    )
+                                    Icon(
+                                        Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = Color(0xFF10B981),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = expandedPara,
+                                onDismissRequest = { expandedPara = false },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.5f)
+                                    .heightIn(max = 200.dp)
+                                    .background(if (isDark) Color(0xFF1C1C1E) else Color.White)
+                            ) {
+                                paras.forEachIndexed { idx, item ->
+                                    DropdownMenuItem(
+                                        text = { Text(item.second, color = if (isDark) Color.White else Color.Black, fontSize = 13.sp) },
+                                        onClick = {
+                                            selectedParaIndex = idx
+                                            pageInput = ""
+                                            expandedPara = false
+                                        }
+                                    )
+                                }
+                            }
                         }
-                        
-                        Surface(
-                            onClick = { viewModel.setScrollDirection("Vertical") },
-                            shape = RoundedCornerShape(20.dp),
-                            color = if (isVertical) Color(0xFF10B981) else (if (isDark) Color(0xFF2D2D2D) else Color(0xFFF3F4F6)),
-                            contentColor = if (isVertical) Color.White else (if (isDark) Color.LightGray else Color.DarkGray),
-                            modifier = Modifier.testTag("scroll_vertical_option")
-                        ) {
-                            Text(
-                                text = "উপর-নিচে",
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
+
+                        // Page Input
+                        OutlinedTextField(
+                            value = pageInput,
+                            onValueChange = { input ->
+                                val filtered = input.filter { it.isDigit() || it in '০'..'৯' }
+                                if (filtered.length <= 2) {
+                                    val converted = filtered.map { char ->
+                                        if (char in '0'..'9') (char - '0' + '০'.code).toChar() else char
+                                    }.joinToString("")
+                                    pageInput = converted
+                                }
+                            },
+                            placeholder = { Text("১-${com.example.utils.DateUtil.toBengaliNumerals(maxPagesInPara)} পৃষ্ঠা", color = Color.Gray, fontSize = 12.sp) },
+                            modifier = Modifier.weight(0.35f).height(48.dp),
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF10B981),
+                                unfocusedBorderColor = if (isDark) Color(0xFF2D2D2D) else Color(0xFFE5E7EB),
+                                focusedTextColor = if (isDark) Color.White else Color.Black,
+                                unfocusedTextColor = if (isDark) Color.White else Color.Black
                             )
+                        )
+
+                        // Go Button
+                        Button(
+                            onClick = {
+                                val cleanInputVal = pageInput.map { char ->
+                                    if (char in '০'..'৯') (char - '০' + '0'.code).toChar() else char
+                                }.joinToString("")
+                                val targetParaPage = cleanInputVal.toIntOrNull()
+                                if (targetParaPage != null && targetParaPage in 1..maxPagesInPara) {
+                                    val targetPage = getParaStartPage(selectedParaNum) + targetParaPage - 1
+                                    if (targetPage in 1..totalPages) {
+                                        showSelectorSheet = false
+                                        viewModel.jumpToPage(targetPage)
+                                    } else {
+                                        android.widget.Toast.makeText(context, "সঠিক পৃষ্ঠা নম্বর লিখুন", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    val maxPagesBengali = com.example.utils.DateUtil.toBengaliNumerals(maxPagesInPara)
+                                    android.widget.Toast.makeText(context, "১ থেকে $maxPagesBengali এর মধ্যে পৃষ্ঠা নম্বর লিখুন", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            modifier = Modifier.weight(0.2f).height(48.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("যাও", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
