@@ -99,7 +99,8 @@ class MainActivity : ComponentActivity() {
             aiRepository = appContainer.aiRepository,
             bookmarkDao = appContainer.bookmarkDao,
             memorizedPageDao = appContainer.memorizedPageDao,
-            mushafRepository = appContainer.mushafRepository
+            mushafRepository = appContainer.mushafRepository,
+            postsRepository = appContainer.postsRepository
           )
           
           val homeViewModel: HomeViewModel = viewModel(factory = viewModelFactory)
@@ -111,16 +112,19 @@ class MainActivity : ComponentActivity() {
           
           LaunchedEffect(intent, currentRoute) {
               if (currentRoute != "splash" && currentRoute != null) {
-                  intent?.getStringExtra("target_screen")?.let { target ->
-                      if (target == "dua") {
-                          val duaId = intent.getIntExtra("dua_id", -1)
-                          navController.navigate("settings?subScreen=dua&duaId=$duaId")
-                          intent.removeExtra("target_screen")
-                          intent.removeExtra("dua_id")
-                      } else if (target == "planner") {
-                          navController.navigate("settings?subScreen=planner")
-                          intent.removeExtra("target_screen")
-                      }
+                  val navigateTo = intent?.getStringExtra("navigate_to") ?: intent?.getStringExtra("target_screen")
+                  if (navigateTo == "posts") {
+                      navController.navigate("posts")
+                      intent.removeExtra("navigate_to")
+                      intent.removeExtra("target_screen")
+                  } else if (navigateTo == "dua") {
+                      val duaId = intent?.getIntExtra("dua_id", -1) ?: -1
+                      navController.navigate("settings?subScreen=dua&duaId=$duaId")
+                      intent.removeExtra("target_screen")
+                      intent.removeExtra("dua_id")
+                  } else if (navigateTo == "planner") {
+                      navController.navigate("settings?subScreen=planner")
+                      intent.removeExtra("target_screen")
                   }
               }
           }

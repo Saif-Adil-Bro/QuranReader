@@ -175,7 +175,18 @@ fun AppNavGraph(
                     } else {
                         navController.navigate("recitation/index")
                     }
+                },
+                onNavigateToPosts = {
+                    navController.navigate("posts")
                 }
+            )
+        }
+
+        composable("posts") {
+            val postsViewModel: com.example.ui.viewmodels.PostsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = viewModelFactory)
+            com.example.ui.screens.PostsScreen(
+                viewModel = postsViewModel,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -413,6 +424,9 @@ fun AppNavGraph(
                     } else {
                         navController.navigate("recitation/index")
                     }
+                },
+                onNavigateToPosts = {
+                    navController.navigate("posts")
                 },
                 initialSubScreen = subScreen,
                 initialDuaId = if (duaIdVal != -1) duaIdVal else null

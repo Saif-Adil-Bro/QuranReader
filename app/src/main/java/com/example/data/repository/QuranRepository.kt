@@ -66,7 +66,16 @@ class QuranRepository(
             }
         }
         return try {
-            quranComApi.getSurahTafsirs(surahNumber, tafsirId)
+            val response = quranComApi.getSurahTafsirs(surahNumber, tafsirId)
+            if (response != null && !response.tafsirs.isNullOrEmpty()) {
+                try {
+                    file.parentFile?.mkdirs()
+                    file.writeText(Gson().toJson(response))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            response
         } catch (e: Exception) {
             null
         }
@@ -388,7 +397,8 @@ class QuranRepository(
                     word.translation?.text?.any { it in '\u0980'..'\u09FF' } == true
                 }
             }
-            if (hasBengaliWords && hasTajweed) {
+            val hasTafsir = if (tafsirIdsStr.isNotEmpty()) inMemory.any { !it.tafsirText.isNullOrEmpty() } else true
+            if (hasBengaliWords && hasTajweed && hasTafsir) {
                 return inMemory
             }
         }
@@ -404,7 +414,7 @@ class QuranRepository(
                         val cleanedList = cleanCombinedAyahList(list)
                         cachedList = cleanedList
                         
-                        // If it has words for some ayahs and has Bengali translations, return it immediately
+                        // If it has words for some ayahs, Bengali translations, and tafsir, return it immediately
                         val hasWords = list.any { it.words.isNotEmpty() }
                         val hasTajweed = list.any { !it.textUthmaniTajweed.isNullOrEmpty() }
                         val hasBengaliWords = hasWords && list.any { ayah ->
@@ -412,7 +422,8 @@ class QuranRepository(
                                 word.translation?.text?.any { it in '\u0980'..'\u09FF' } == true
                             }
                         }
-                        if (hasBengaliWords && hasTajweed) {
+                        val hasTafsir = if (tafsirIdsStr.isNotEmpty()) list.any { !it.tafsirText.isNullOrEmpty() } else true
+                        if (hasBengaliWords && hasTajweed && hasTafsir) {
                             cachedSurahDetails[cacheKey] = cleanedList
                             return@withContext cleanedList
                         }
@@ -449,20 +460,36 @@ class QuranRepository(
                 }
             }
 
-            // If offline database or file cache has data, return it immediately without blocking on network
+            // If offline database or file cache has data:
             if (!cachedList.isNullOrEmpty()) {
-                cachedSurahDetails[cacheKey] = cachedList
-                if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
-                    val currentList = cachedList
-                    repositoryScope.launch {
-                        try {
-                            fetchAndCacheSurahFromNetwork(surahNumber, cacheKey, cacheFile, tafsirIdsStr, audioEdition, arabicEdition, currentList)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                val hasTafsir = if (tafsirIdsStr.isNotEmpty()) cachedList.any { !it.tafsirText.isNullOrEmpty() } else true
+                if (hasTafsir || !com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                    cachedSurahDetails[cacheKey] = cachedList
+                    return@withContext cachedList
+                } else if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                    // Fast-path: fetch online tafsir and merge into cached ayahs so UI gets tafsir immediately
+                    try {
+                        val quranComTafsirResponse = getCombinedSurahTafsirs(surahNumber, tafsirIdsStr)
+                        if (quranComTafsirResponse != null && !quranComTafsirResponse.tafsirs.isNullOrEmpty()) {
+                            val mergedList = cachedList.map { ayah ->
+                                val verseKey = "$surahNumber:${ayah.numberInSurah}"
+                                val tafsir = buildCombinedTafsirText(quranComTafsirResponse.tafsirs, verseKey)
+                                ayah.copy(tafsirText = tafsir)
+                            }
+                            val cleaned = cleanCombinedAyahList(mergedList)
+                            cachedSurahDetails[cacheKey] = cleaned
+                            try {
+                                cacheFile.parentFile?.mkdirs()
+                                cacheFile.writeText(Gson().toJson(cleaned))
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                            return@withContext cleaned
                         }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
-                return@withContext cachedList
             }
 
             if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
@@ -617,19 +644,35 @@ class QuranRepository(
                 }
             }
 
-            // If offline database or file cache has data, return it immediately without blocking on network
+            // If offline database or file cache has data:
             if (!cachedList.isNullOrEmpty()) {
-                cachedPageDetails[cacheKey] = cachedList
-                if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
-                    repositoryScope.launch {
-                        try {
-                            fetchAndCachePageFromNetwork(pageNumber, cacheKey, cacheFile, tafsirIdsStr, audioEdition)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                val hasTafsir = if (tafsirIdsStr.isNotEmpty()) cachedList.any { !it.tafsirText.isNullOrEmpty() } else true
+                if (hasTafsir || !com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                    cachedPageDetails[cacheKey] = cachedList
+                    return@withContext cachedList
+                } else if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                    try {
+                        val quranComTafsirResponse = getCombinedPageTafsirs(pageNumber, tafsirIdsStr)
+                        if (quranComTafsirResponse != null && !quranComTafsirResponse.tafsirs.isNullOrEmpty()) {
+                            val mergedList = cachedList.map { ayah ->
+                                val verseKey = "${ayah.surahNumber}:${ayah.numberInSurah}"
+                                val tafsir = buildCombinedTafsirText(quranComTafsirResponse.tafsirs, verseKey)
+                                ayah.copy(tafsirText = tafsir)
+                            }
+                            val cleaned = cleanCombinedAyahList(mergedList)
+                            cachedPageDetails[cacheKey] = cleaned
+                            try {
+                                cacheFile.parentFile?.mkdirs()
+                                cacheFile.writeText(Gson().toJson(cleaned))
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                            return@withContext cleaned
                         }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
-                return@withContext cachedList
             }
 
             if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
@@ -784,20 +827,35 @@ class QuranRepository(
                 }
             }
 
-            // If offline database or file cache has data, return it immediately without blocking on network
+            // If offline database or file cache has data:
             if (!cachedList.isNullOrEmpty()) {
-                cachedJuzDetails[cacheKey] = cachedList
-                if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
-                    val currentList = cachedList
-                    repositoryScope.launch {
-                        try {
-                            fetchAndCacheJuzFromNetwork(juzNumber, cacheKey, cacheFile, tafsirIdsStr, audioEdition, currentList)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                val hasTafsir = if (tafsirIdsStr.isNotEmpty()) cachedList.any { !it.tafsirText.isNullOrEmpty() } else true
+                if (hasTafsir || !com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                    cachedJuzDetails[cacheKey] = cachedList
+                    return@withContext cachedList
+                } else if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                    try {
+                        val quranComTafsirResponse = getCombinedJuzTafsirs(juzNumber, tafsirIdsStr)
+                        if (quranComTafsirResponse != null && !quranComTafsirResponse.tafsirs.isNullOrEmpty()) {
+                            val mergedList = cachedList.map { ayah ->
+                                val verseKey = "${ayah.surahNumber}:${ayah.numberInSurah}"
+                                val tafsir = buildCombinedTafsirText(quranComTafsirResponse.tafsirs, verseKey)
+                                ayah.copy(tafsirText = tafsir)
+                            }
+                            val cleaned = cleanCombinedAyahList(mergedList)
+                            cachedJuzDetails[cacheKey] = cleaned
+                            try {
+                                cacheFile.parentFile?.mkdirs()
+                                cacheFile.writeText(Gson().toJson(cleaned))
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                            return@withContext cleaned
                         }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
-                return@withContext cachedList
             }
 
             if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {

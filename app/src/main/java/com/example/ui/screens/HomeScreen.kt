@@ -144,7 +144,8 @@ fun HomeScreen(
     onNavigateToSurahWithAyah: (Int, String, Int) -> Unit,
     onNavigateToTajweedIndex: () -> Unit,
     onNavigateToTajweedMode: (Int) -> Unit,
-    onNavigateToPlayer: () -> Unit
+    onNavigateToPlayer: () -> Unit,
+    onNavigateToPosts: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lastReadSurah by viewModel.lastReadSurah.collectAsState()
@@ -507,7 +508,8 @@ fun HomeScreen(
                         },
                         onTajweedClick = onNavigateToTajweedIndex,
                         onTranslationClick = onNavigateToNormalMode,
-                        onPlayerClick = onNavigateToPlayer
+                        onPlayerClick = onNavigateToPlayer,
+                        onPostsClick = onNavigateToPosts
                     )
                 }
             }
@@ -1717,7 +1719,8 @@ fun ModesGridSection(
     onHafeziPdfClick: () -> Unit,
     onTajweedClick: () -> Unit,
     onTranslationClick: () -> Unit,
-    onPlayerClick: () -> Unit
+    onPlayerClick: () -> Unit,
+    onPostsClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier

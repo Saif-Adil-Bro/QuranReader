@@ -71,11 +71,13 @@ fun SettingsScreen(
     onNavigateToJuz: (Int) -> Unit = {},
     onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> },
     onNavigateToPlayer: () -> Unit = {},
+    onNavigateToPosts: () -> Unit = {},
     initialSubScreen: String? = null,
     initialDuaId: Int? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     
     val showTranslation by viewModel.showTranslation.collectAsState()
     val showTransliteration by viewModel.showTransliteration.collectAsState()
@@ -252,6 +254,86 @@ fun SettingsScreen(
                             tint = PrimaryGreen,
                             modifier = Modifier.size(20.dp)
                         )
+                    }
+                }
+            }
+
+            // Islamic Posts & Photo Cards Banner Card (Below Profile Card)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .clickable { onNavigateToPosts() },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) Color(0xFF064E3B) else Color(0xFFECFDF5)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF10B981)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "ইসলামিক ব্লগ ও ফটো কার্ড",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) Color.White else Color(0xFF064E3B)
+                            )
+                            Text(
+                                text = "অনলাইন আপডেট, নসীহত ও কাস্টম ফটো কার্ড",
+                                fontSize = 12.sp,
+                                color = if (isDark) Color(0xFFA7F3D0) else Color(0xFF047857)
+                            )
+                        }
+                    }
+
+                    Surface(
+                        color = Color(0xFF10B981).copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "নতুন",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) Color(0xFFA7F3D0) else Color(0xFF047857)
+                            )
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = if (isDark) Color(0xFFA7F3D0) else Color(0xFF047857),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }

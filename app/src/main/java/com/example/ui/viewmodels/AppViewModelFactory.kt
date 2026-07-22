@@ -21,7 +21,8 @@ class AppViewModelFactory(
     private val aiRepository: AiRepository,
     private val bookmarkDao: BookmarkDao,
     private val memorizedPageDao: MemorizedPageDao,
-    private val mushafRepository: com.example.data.repository.MushafRepository
+    private val mushafRepository: com.example.data.repository.MushafRepository,
+    private val postsRepository: com.example.data.repository.PostsRepository? = null
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -77,6 +78,10 @@ class AppViewModelFactory(
             }
             modelClass.isAssignableFrom(SplashViewModel::class.java) -> {
                 SplashViewModel(quranRepository) as T
+            }
+            modelClass.isAssignableFrom(PostsViewModel::class.java) -> {
+                val repo = postsRepository ?: throw IllegalArgumentException("postsRepository must not be null for PostsViewModel")
+                PostsViewModel(repo) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

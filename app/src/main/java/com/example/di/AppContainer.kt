@@ -148,4 +148,8 @@ class AppContainer(private val context: Context) {
     val mushafRepository: com.example.data.repository.MushafRepository by lazy {
         com.example.data.repository.MushafRepository(mushafDownloader, storageManager)
     }
+
+    val postsRepository: com.example.data.repository.PostsRepository by lazy {
+        com.example.data.repository.PostsRepository(context)
+    }
 }

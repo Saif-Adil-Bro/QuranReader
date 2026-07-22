@@ -55,6 +55,14 @@ val solaimanLipiFont = FontFamily(
     ResourceFont(R.font.solaimanlipi_bold, FontWeight.Bold)
 )
 
+val hindSiliguriFont = FontFamily(
+    ResourceFont(R.font.hind_siliguri, FontWeight.Normal)
+)
+
+val shorifShishirFont = FontFamily(
+    ResourceFont(R.font.shorif_shishir, FontWeight.Normal)
+)
+
 val arabicFontsList = listOf(
     "Uthman Taha",
     "Amiri Quran",
