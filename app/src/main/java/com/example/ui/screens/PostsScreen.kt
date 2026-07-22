@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.security.MessageDigest
 import com.example.data.model.BlogPost
 import com.example.data.model.ShortPost
@@ -64,6 +65,8 @@ fun PostsScreen(
     var selectedShortPostForCard by remember { mutableStateOf<ShortPost?>(null) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showAddPostDialog by remember { mutableStateOf(false) }
+    var adminClickCount by remember { mutableIntStateOf(0) }
+    var lastClickTime by remember { mutableLongStateOf(0L) }
 
     val categories = listOf("সকল", "কুরআন ও জীবন", "নফল ইবাদত", "দৈনিক নসীহত", "মাসনুন জিকির", "আত্মশুদ্ধি", "সাধারণ")
 
@@ -86,6 +89,20 @@ fun PostsScreen(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.pointerInput(Unit) {
                                 detectTapGestures(
+                                    onTap = {
+                                        val now = System.currentTimeMillis()
+                                        if (now - lastClickTime < 1000) {
+                                            adminClickCount++
+                                        } else {
+                                            adminClickCount = 1
+                                        }
+                                        lastClickTime = now
+
+                                        if (adminClickCount >= 5) {
+                                            adminClickCount = 0
+                                            showPasswordDialog = true
+                                        }
+                                    },
                                     onLongPress = {
                                         showPasswordDialog = true
                                     }
@@ -1163,10 +1180,13 @@ fun AddPostDialog(
 
     val quickCategories = listOf("কুরআন ও জীবন", "নফল ইবাদত", "দৈনিক নসীহত", "মাসনুন জিকির", "আত্মশুদ্ধি", "সাধারণ")
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.94f)
                 .padding(vertical = 12.dp),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1511,7 +1531,7 @@ fun AddPostDialog(
                                 tint = Color.White,
                                 modifier = Modifier.size(16.dp)
                             )
-                            Text("পাবলিশ করুন", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("পাবলিশ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 }
