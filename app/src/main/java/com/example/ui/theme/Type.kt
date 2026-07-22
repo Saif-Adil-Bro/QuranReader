@@ -88,8 +88,8 @@ fun getArabicFont(name: String): FontFamily {
 
 // Set of Material typography styles to start with
 private val defaultTextStyle = TextStyle(
-    // fontFamily = solaimanLipiFont
-    fontFamily = FontFamily.Default
+    fontFamily = solaimanLipiFont
+    // fontFamily = FontFamily.Default
 )
 
 val Typography = Typography(
