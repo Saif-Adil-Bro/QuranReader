@@ -79,6 +79,21 @@ class AudioRepository(private val context: Context) {
                             onPlaybackEnded?.invoke()
                         }
                     }
+
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        _isPlaying.value = false
+                        _currentPlayingAyahNumber.value = null
+                        _currentPlayingWordUrl.value = null
+                        if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "নেটওয়ার্ক ত্রুটি! অডিও প্লে করতে ইন্টারনেট সংযোগ প্রয়োজন।",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
                 })
             }
         }
@@ -94,7 +109,20 @@ class AudioRepository(private val context: Context) {
         }
         
         val localFile = getLocalAudioFile(url)
-        val uri = if (localFile.exists() && localFile.length() > 0) {
+        val isLocal = localFile.exists() && localFile.length() > 0
+
+        if (!isLocal && !com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(
+                    context,
+                    "আপনি অফলাইনে আছেন! অডিও প্লে করতে ইন্টারনেট সংযোগ প্রয়োজন অথবা ডাউনলোড করা থাকতে হবে।",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+            return
+        }
+
+        val uri = if (isLocal) {
             android.net.Uri.fromFile(localFile)
         } else {
             android.net.Uri.parse(url)
@@ -108,8 +136,8 @@ class AudioRepository(private val context: Context) {
             _currentPlayingAyahNumber.value = ayahNumber
         }
 
-        // Download asynchronously in the background if not already downloaded
-        if (!localFile.exists() || localFile.length() == 0L) {
+        // Download asynchronously in the background if not already downloaded and network is available
+        if (!isLocal && com.example.util.NetworkUtils.isNetworkAvailable(context)) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val tempFile = File(localFile.parent, localFile.name + ".temp")

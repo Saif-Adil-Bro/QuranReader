@@ -3552,6 +3552,197 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
             }
         }
 
+        // 4. Offline Features Info Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.25f)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(PrimaryGreen.copy(alpha = 0.12f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WifiOff,
+                            contentDescription = null,
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "অফলাইনে কি কি সুবিধা পাবেন?",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "ইন্টারনেট ছাড়াই অ্যাপের সকল প্রধান ফিচার ব্যবহার করতে পারবেন",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                val offlineFeatures = listOf(
+                    Triple(Icons.Default.MenuBook, "কুরআন টেক্সট ও অনুবাদ", "১১৪টি সুরার সুপাঠ্য আরবি টেক্সট, বাংলা অনুবাদ ও তাজবীদ কালার সম্পূর্ণ অফলাইনে দেখতে ও পড়তে পারবেন।"),
+                    Triple(Icons.Default.Translate, "শব্দে শব্দে অর্থ (Word by Word)", "একবার লোড বা ডাউনলোড করে নিলে প্রতিটি সুরার শব্দে শব্দে অর্থ ও উচ্চারণ অফলাইনে দেখতে পাবেন।"),
+                    Triple(Icons.Default.Headphones, "অডিও তিলাওয়াত", "পূর্বে ব্যাকগ্রাউন্ডে ক্যাশ হওয়া বা আগে থেকে ডাউনলোড করা সুরার অডিও ইন্টারনেট ছাড়াই অফলাইনে শুনতে পারবেন।"),
+                    Triple(Icons.Default.LibraryBooks, "তাফসীর ও বিষয়ভিত্তিক কুরআন", "ডাউনলোড করে রাখা তাফসীর এবং বিষয়ভিত্তিক কুরআনের সকল ক্যাটাগরি ও আয়াত অফলাইনে পড়তে পারবেন।"),
+                    Triple(Icons.Default.Favorite, "দুআ, বুকমার্ক ও হিফজ ট্র্যাকার", "কুরআনিক দুআ, দৈনিক মাসনুন দুআ, প্রিয় আয়াত বুকমার্ক ও হিফজ ট্র্যাকিং অফলাইনে ব্যবহার করতে পারবেন।"),
+                    Triple(Icons.Default.Sync, "স্বয়ংক্রিয় ব্যাকগ্রাউন্ড সিংক", "ইন্টারনেট সংযোগ এলে নতুন কোনো তথ্য থাকলে তা ব্যাকগ্রাউন্ডে স্বয়ংক্রিয়ভাবে আপডেট হবে।")
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    offlineFeatures.forEach { (icon, title, desc) ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 2.dp)
+                                    .size(26.dp)
+                                    .background(PrimaryGreen.copy(alpha = 0.08f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = title,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = desc,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Online Features Info Card
+        val onlineAccentColor = Color(0xFF0EA5E9)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, onlineAccentColor.copy(alpha = 0.25f)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(onlineAccentColor.copy(alpha = 0.12f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Wifi,
+                            contentDescription = null,
+                            tint = onlineAccentColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "অনলাইন কানেকশনে কি কি পাবেন?",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "ইন্টারনেট থাকলে যেসব সুবিধা পাওয়া যাবে ও নতুন তথ্য আপডেট হবে",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                val onlineFeatures = listOf(
+                    Triple(Icons.Default.CloudDownload, "অন-ডিমান্ড অডিও স্ট্রিমিং", "যেসব আয়াতের অডিও পূর্বে ডাউনলোড করা থাকবে না, অনলাইনে প্লে করলে তা সাথে সাথে শুনতে পাবেন এবং অফলাইনের জন্য সেভ হবে।"),
+                    Triple(Icons.Default.MenuBook, "মুসহাফ পেজ ডাউনলোড", "বিভিন্ন স্টাইলের প্রিন্টেড মুসহাফের পেজ ও উচ্চমানের স্ক্যান প্রথমবারের মত অনলাইন থেকে ডাউনলোড করতে হবে।"),
+                    Triple(Icons.Default.Update, "সর্বশেষ তাফসীর ও অনুবাদ সিংক", "সেটিংস থেকে নতুন কোনো তাফসীর বা অনুবাদ নির্বাচন করলে তা সার্ভার থেকে ইনস্ট্যান্ট লোড হবে।"),
+                    Triple(Icons.Default.Sync, "ব্যাকগ্রাউন্ড অটো সিংক", "অনলাইনে থাকলে অ্যাপ ব্যাকগ্রাউন্ডে স্বয়ংক্রিয়ভাবে নতুন তথ্য সিংক করে রাখবে।")
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    onlineFeatures.forEach { (icon, title, desc) ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 2.dp)
+                                    .size(26.dp)
+                                    .background(onlineAccentColor.copy(alpha = 0.08f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = onlineAccentColor,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = title,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = desc,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
     }
 
