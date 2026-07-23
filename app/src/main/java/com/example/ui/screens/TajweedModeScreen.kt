@@ -359,7 +359,7 @@ fun TajweedModeScreen(
                         showWaqfSigns = showWaqfSigns,
                         arabicLineSpacing = arabicLineSpacing,
                         showTajweed = showTajweed,
-                        isVerticalScrollEnabled = false,
+                        isVerticalScrollEnabled = true,
                         onAyahClick = { viewModel.playAyah(it) }
                     )
                 }
@@ -1193,6 +1193,7 @@ fun TajweedPageContent(
                                     }
                                 }
                         )
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }

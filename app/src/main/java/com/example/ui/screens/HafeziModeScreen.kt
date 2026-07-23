@@ -342,7 +342,7 @@ fun HafeziModeScreen(
                         showWaqfSigns = showWaqfSigns,
                         arabicLineSpacing = arabicLineSpacing,
                         showTajweed = showTajweed,
-                        isVerticalScrollEnabled = false,
+                        isVerticalScrollEnabled = true,
                         onAyahClick = { viewModel.playAyah(it) }
                     )
                 }
@@ -1066,6 +1066,7 @@ fun HafeziPageContent(
                                     }
                                 }
                         )
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }
