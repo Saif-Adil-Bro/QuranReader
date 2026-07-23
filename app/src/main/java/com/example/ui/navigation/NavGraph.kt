@@ -1,5 +1,11 @@
 package com.example.ui.navigation
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
@@ -43,6 +49,7 @@ import com.example.ui.viewmodels.AppViewModelFactory
 import com.example.ui.viewmodels.HafeziModeViewModel
 import com.example.ui.viewmodels.TajweedModeViewModel
 import com.example.ui.viewmodels.HomeViewModel
+import com.example.ui.viewmodels.PostsViewModel
 import com.example.ui.viewmodels.QuranListViewModel
 import com.example.ui.viewmodels.ReadingModeViewModel
 import com.example.ui.viewmodels.SettingsViewModel
@@ -85,9 +92,38 @@ fun AppNavGraph(
     navController: NavHostController,
     viewModelFactory: AppViewModelFactory,
     homeViewModel: HomeViewModel,
+    postsViewModel: PostsViewModel,
     modifier: Modifier = Modifier
 ) {
-    NavHost(navController = navController, startDestination = "splash", modifier = modifier) {
+    NavHost(
+        navController = navController,
+        startDestination = "splash",
+        modifier = modifier,
+        enterTransition = {
+            slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(durationMillis = 320))
+        },
+        exitTransition = {
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> -fullWidth / 4 },
+                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(durationMillis = 320))
+        },
+        popEnterTransition = {
+            slideInHorizontally(
+                initialOffsetX = { fullWidth -> -fullWidth / 4 },
+                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(durationMillis = 320))
+        },
+        popExitTransition = {
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(durationMillis = 320))
+        }
+    ) {
         
         composable("splash") {
             val splashViewModel: SplashViewModel = viewModel(factory = viewModelFactory)
@@ -183,7 +219,6 @@ fun AppNavGraph(
         }
 
         composable("posts") {
-            val postsViewModel: com.example.ui.viewmodels.PostsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = viewModelFactory)
             com.example.ui.screens.PostsScreen(
                 viewModel = postsViewModel,
                 onBackClick = { navController.popBackStack() }

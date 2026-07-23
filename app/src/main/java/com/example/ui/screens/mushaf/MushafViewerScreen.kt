@@ -1,5 +1,6 @@
 package com.example.ui.screens.mushaf
 
+import com.example.ui.components.quranPageSlideTransition
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -204,13 +205,19 @@ fun MushafViewerScreen(
                     
                 ) { page ->
                     val pageNum = page + 1
-                    OnDemandPageViewer(
-                        mushafId = mushafId,
-                        pageNumber = pageNum,
-                        pdfPageOffset = pdfPageOffset,
-                        isDark = isDark,
-                        viewModel = viewModel
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .quranPageSlideTransition(pagerState, page)
+                    ) {
+                        OnDemandPageViewer(
+                            mushafId = mushafId,
+                            pageNumber = pageNum,
+                            pdfPageOffset = pdfPageOffset,
+                            isDark = isDark,
+                            viewModel = viewModel
+                        )
+                    }
                 }
             }
         }

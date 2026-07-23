@@ -44,11 +44,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             CoroutineScope(Dispatchers.IO).launch {
                 val bitmap = fetchBitmap(imageUrl)
                 withContext(Dispatchers.Main) {
-                    sendNotification(title, body, bitmap)
+                    sendNotification(title, body, bitmap, remoteMessage.data)
                 }
             }
         } else {
-            sendNotification(title, body, null)
+            sendNotification(title, body, null, remoteMessage.data)
         }
     }
 
@@ -76,11 +76,23 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun sendNotification(title: String, messageBody: String, bitmap: Bitmap?) {
-        val intent = Intent(this, MainActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    private fun sendNotification(
+        title: String, 
+        messageBody: String, 
+        bitmap: Bitmap?,
+        dataMap: Map<String, String> = emptyMap()
+    ) {
+        val postId = dataMap["post_id"] ?: dataMap["blog_post_id"] ?: ""
+        val reqId = if (postId.isNotBlank()) postId.hashCode() else (title + messageBody).hashCode()
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("navigate_to", dataMap["navigate_to"] ?: "posts")
+            for ((key, value) in dataMap) {
+                putExtra(key, value)
+            }
+        }
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
+            this, reqId, intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -115,6 +127,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        notificationManager.notify(3001, notificationBuilder.build())
+        notificationManager.notify(reqId, notificationBuilder.build())
     }
 }

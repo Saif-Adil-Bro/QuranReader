@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.components.quranPageSlideTransition
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -342,19 +344,25 @@ fun TajweedModeScreen(
                     .background(backgroundColor),
                 reverseLayout = true
             ) { pageIndex ->
-                TajweedPageLoader(
-                    pageNumber = pageIndex + 1,
-                    viewModel = viewModel,
-                    playingAyahNumber = currentPlayingAyahNumber,
-                    arabicFontSize = arabicFontSize,
-                    arabicFontName = arabicFontName,
-                    theme = theme,
-                    showWaqfSigns = showWaqfSigns,
-                    arabicLineSpacing = arabicLineSpacing,
-                    showTajweed = showTajweed,
-                    isVerticalScrollEnabled = false,
-                    onAyahClick = { viewModel.playAyah(it) }
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .quranPageSlideTransition(pagerState, pageIndex)
+                ) {
+                    TajweedPageLoader(
+                        pageNumber = pageIndex + 1,
+                        viewModel = viewModel,
+                        playingAyahNumber = currentPlayingAyahNumber,
+                        arabicFontSize = arabicFontSize,
+                        arabicFontName = arabicFontName,
+                        theme = theme,
+                        showWaqfSigns = showWaqfSigns,
+                        arabicLineSpacing = arabicLineSpacing,
+                        showTajweed = showTajweed,
+                        isVerticalScrollEnabled = false,
+                        onAyahClick = { viewModel.playAyah(it) }
+                    )
+                }
             }
         }
 

@@ -56,7 +56,7 @@ object PostNotificationHelper {
                     showWatermark = true
                 )
 
-                val reqId = (System.currentTimeMillis() % 10000).toInt()
+                val reqId = if (post.id.isNotBlank()) post.id.hashCode() else (post.category + post.text).hashCode()
 
                 // Intent for Opening Customizer (used by Notification Click, Share, and Edit)
                 val openCustomizerIntent = Intent(context, MainActivity::class.java).apply {
@@ -118,7 +118,7 @@ object PostNotificationHelper {
     fun showBlogPostNotification(context: Context, post: BlogPost) {
         createNotificationChannel(context)
 
-        val reqId = (System.currentTimeMillis() % 10000).toInt()
+        val reqId = if (post.id.isNotBlank()) post.id.hashCode() else (post.title + post.content).hashCode()
 
         val openDetailIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -177,9 +177,10 @@ object PostNotificationHelper {
             putExtra("post_id", postId)
         }
 
+        val notificationId = if (postId.isNotBlank()) postId.hashCode() else (title + message).hashCode()
         val pendingIntent = PendingIntent.getActivity(
             context,
-            System.currentTimeMillis().toInt(),
+            notificationId,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -194,7 +195,6 @@ object PostNotificationHelper {
             .setContentIntent(pendingIntent)
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notificationId = (System.currentTimeMillis() % 10000).toInt()
         notificationManager.notify(notificationId, builder.build())
     }
 }

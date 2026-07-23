@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.components.quranPageSlideTransition
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -325,19 +327,25 @@ fun HafeziModeScreen(
                     .background(backgroundColor),
                 reverseLayout = true
             ) { pageIndex ->
-                HafeziPageLoader(
-                    pageNumber = pageIndex + 1,
-                    viewModel = viewModel,
-                    playingAyahNumber = currentPlayingAyahNumber,
-                    arabicFontSize = arabicFontSize,
-                    arabicFontName = arabicFontName,
-                    theme = theme,
-                    showWaqfSigns = showWaqfSigns,
-                    arabicLineSpacing = arabicLineSpacing,
-                    showTajweed = showTajweed,
-                    isVerticalScrollEnabled = false,
-                    onAyahClick = { viewModel.playAyah(it) }
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .quranPageSlideTransition(pagerState, pageIndex)
+                ) {
+                    HafeziPageLoader(
+                        pageNumber = pageIndex + 1,
+                        viewModel = viewModel,
+                        playingAyahNumber = currentPlayingAyahNumber,
+                        arabicFontSize = arabicFontSize,
+                        arabicFontName = arabicFontName,
+                        theme = theme,
+                        showWaqfSigns = showWaqfSigns,
+                        arabicLineSpacing = arabicLineSpacing,
+                        showTajweed = showTajweed,
+                        isVerticalScrollEnabled = false,
+                        onAyahClick = { viewModel.playAyah(it) }
+                    )
+                }
             }
         }
         

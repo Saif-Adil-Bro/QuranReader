@@ -68,6 +68,7 @@ fun PostsScreen(
 
     LaunchedEffect(pendingCardPost) {
         pendingCardPost?.let { post ->
+            selectedBlogPostForReader = null
             selectedTabIndex = 1
             selectedShortPostForCard = post
             viewModel.setPendingPhotoCardPost(null)
@@ -76,6 +77,7 @@ fun PostsScreen(
 
     LaunchedEffect(pendingBlogPost) {
         pendingBlogPost?.let { post ->
+            selectedShortPostForCard = null
             selectedTabIndex = 0
             selectedBlogPostForReader = post
             viewModel.setPendingBlogPost(null)

@@ -27,13 +27,18 @@ class DataSyncWorker(
             val lastSync = prefs.getLong("last_sync_timestamp", 0L)
             val currentMills = System.currentTimeMillis()
 
-            val effectiveLastSync = if (lastSync == 0L) {
-                currentMills - (3600 * 1000L) // Default 1 hour ago for new install
-            } else {
-                lastSync
+            // On initial run (first app start/sync), initialize lastSync to current time
+            // to avoid sending bulk notifications for existing historical posts.
+            if (lastSync == 0L) {
+                prefs.edit().putLong("last_sync_timestamp", currentMills).apply()
+                return Result.success()
             }
 
+            val effectiveLastSync = lastSync
             var maxTimestampSeen = effectiveLastSync
+
+            val processedIds = mutableSetOf<String>()
+            val processedTitles = mutableSetOf<String>()
 
             // 1. Sync new blog_posts
             val blogSnapshot = firestore.collection("blog_posts")
@@ -45,7 +50,10 @@ class DataSyncWorker(
                 if (ts > effectiveLastSync) {
                     val title = doc.getString("title") ?: doc.getString("name") ?: ""
                     val content = doc.getString("content") ?: doc.getString("text") ?: doc.getString("body") ?: ""
-                    if (title.isNotBlank() || content.isNotBlank()) {
+                    if ((title.isNotBlank() || content.isNotBlank()) && !processedIds.contains(doc.id) && !processedTitles.contains(title)) {
+                        processedIds.add(doc.id)
+                        if (title.isNotBlank()) processedTitles.add(title)
+
                         val blogPost = BlogPost(
                             id = doc.id,
                             title = title.ifBlank { "নতুন ইসলামিক পোস্ট" },
@@ -62,7 +70,7 @@ class DataSyncWorker(
                 }
             }
 
-            // 2. Sync new articles
+            // 2. Sync new articles (skip if already processed)
             val articleSnapshot = firestore.collection("articles")
                 .get()
                 .await()
@@ -72,7 +80,10 @@ class DataSyncWorker(
                 if (ts > effectiveLastSync) {
                     val title = doc.getString("title") ?: doc.getString("name") ?: ""
                     val content = doc.getString("content") ?: doc.getString("text") ?: doc.getString("body") ?: ""
-                    if (title.isNotBlank() || content.isNotBlank()) {
+                    if ((title.isNotBlank() || content.isNotBlank()) && !processedIds.contains(doc.id) && !processedTitles.contains(title)) {
+                        processedIds.add(doc.id)
+                        if (title.isNotBlank()) processedTitles.add(title)
+
                         val blogPost = BlogPost(
                             id = doc.id,
                             title = title.ifBlank { "নতুন নিবন্ধ" },
@@ -98,7 +109,10 @@ class DataSyncWorker(
                 val ts = extractTimestamp(doc)
                 if (ts > effectiveLastSync) {
                     val text = doc.getString("text") ?: doc.getString("content") ?: doc.getString("title") ?: ""
-                    if (text.isNotBlank()) {
+                    if (text.isNotBlank() && !processedIds.contains(doc.id) && !processedTitles.contains(text)) {
+                        processedIds.add(doc.id)
+                        processedTitles.add(text)
+
                         val shortPost = ShortPost(
                             id = doc.id,
                             text = text,
