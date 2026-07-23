@@ -102,9 +102,6 @@ fun PostsScreen(
                                             adminClickCount = 0
                                             showPasswordDialog = true
                                         }
-                                    },
-                                    onLongPress = {
-                                        showPasswordDialog = true
                                     }
                                 )
                             }
@@ -986,7 +983,7 @@ fun PhotoCardCustomizerDialog(
                             val fontsList = listOf(
                                 "SolaimanLipi" to "সোলাইমান লিপি",
                                 "Hind Siliguri" to "হিন্দ শিলিগুড়ি",
-                                "Shorif Shishir Unicode" to "শরীফ শিশির ইউনিকোড",
+                                "Shorif Shishir Unicode" to "শরীফ শিশির",
                                 "Default" to "ডিফল্ট ফন্ট"
                             )
 
@@ -1025,24 +1022,57 @@ fun PhotoCardCustomizerDialog(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 FilterChip(
-                                    selected = textAlignName == "CENTER",
-                                    onClick = { textAlignName = "CENTER" },
-                                    label = { Text("CENTER") },
-                                    leadingIcon = { Icon(Icons.Default.FormatAlignCenter, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                    selected = textAlignName == "LEFT",
+                                    onClick = { textAlignName = "LEFT" },
+                                    label = {
+                                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Default.FormatAlignLeft,
+                                                contentDescription = "বাম",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = PrimaryGreen,
+                                        selectedLabelColor = Color.White
+                                    ),
                                     modifier = Modifier.weight(1f)
                                 )
                                 FilterChip(
-                                    selected = textAlignName == "LEFT",
-                                    onClick = { textAlignName = "LEFT" },
-                                    label = { Text("LEFT") },
-                                    leadingIcon = { Icon(Icons.Default.FormatAlignLeft, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                    selected = textAlignName == "CENTER",
+                                    onClick = { textAlignName = "CENTER" },
+                                    label = {
+                                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Default.FormatAlignCenter,
+                                                contentDescription = "মাঝখানে",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = PrimaryGreen,
+                                        selectedLabelColor = Color.White
+                                    ),
                                     modifier = Modifier.weight(1f)
                                 )
                                 FilterChip(
                                     selected = textAlignName == "RIGHT",
                                     onClick = { textAlignName = "RIGHT" },
-                                    label = { Text("RIGHT") },
-                                    leadingIcon = { Icon(Icons.Default.FormatAlignRight, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                    label = {
+                                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Default.FormatAlignRight,
+                                                contentDescription = "ডান",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = PrimaryGreen,
+                                        selectedLabelColor = Color.White
+                                    ),
                                     modifier = Modifier.weight(1f)
                                 )
                             }

@@ -6,8 +6,11 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.*
 import android.text.Layout
+import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.style.MetricAffectingSpan
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
@@ -89,13 +92,22 @@ object PostShareUtil {
         val displayText: String = customText?.takeIf { it.isNotBlank() } ?: post.text
         val displayRef: String = customRef?.takeIf { it.isNotBlank() } ?: post.reference
 
-        // Load custom font based on selection
+        // Load Shahrazad font for Arabic script
+        val shahrazadFont = try {
+            ResourcesCompat.getFont(context, R.font.scheherazade_new) ?: Typeface.DEFAULT
+        } catch (e: Exception) {
+            Typeface.DEFAULT
+        }
+
+        // Load custom Bangla font based on selection
         val chosenFont = try {
             when (fontName) {
-                "Scheherazade New", "Scheherazade" -> ResourcesCompat.getFont(context, R.font.scheherazade_new)
+                "Scheherazade New", "Scheherazade", "Shahrazad", "শাহরাজাদ" -> shahrazadFont
+                "Amiri" -> ResourcesCompat.getFont(context, R.font.amiri_regular) ?: shahrazadFont
                 "Hind Siliguri" -> ResourcesCompat.getFont(context, R.font.hind_siliguri)
                 "Shorif Shishir Unicode", "Shorif Shishir" -> ResourcesCompat.getFont(context, R.font.shorif_shishir)
                 "SolaimanLipi" -> ResourcesCompat.getFont(context, R.font.solaimanlipi)
+                "Default" -> Typeface.DEFAULT
                 else -> ResourcesCompat.getFont(context, R.font.solaimanlipi)
             } ?: Typeface.DEFAULT
         } catch (e: Exception) {
@@ -124,10 +136,11 @@ object PostShareUtil {
             else -> Layout.Alignment.ALIGN_CENTER
         }
 
+        val hasArabicCategory = displayCategory.any { isArabicChar(it) }
         val categoryPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor(theme.accentColor)
             textSize = 34f
-            typeface = chosenBoldFont
+            typeface = if (hasArabicCategory) shahrazadFont else chosenBoldFont
             textAlign = paintAlign
         }
 
@@ -138,10 +151,11 @@ object PostShareUtil {
             textAlign = Paint.Align.LEFT // CRITICAL: StaticLayout requires Align.LEFT; alignment is handled by StaticLayout.Alignment
         }
 
+        val hasArabicRef = displayRef.any { isArabicChar(it) }
         val refPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor(theme.accentColor)
             textSize = 32f
-            typeface = chosenFont
+            typeface = if (hasArabicRef) shahrazadFont else chosenFont
             textAlign = paintAlign
         }
 
@@ -154,9 +168,12 @@ object PostShareUtil {
             textAlign = Paint.Align.CENTER
         }
 
+        // Apply Shahrazad font automatically to Arabic characters/text
+        val formattedDisplayText = formatTextWithArabicFont(displayText, shahrazadFont)
+
         // Measure text layout
         val textLayout = StaticLayout.Builder.obtain(
-            displayText, 0, displayText.length, textPaint, contentWidth
+            formattedDisplayText, 0, formattedDisplayText.length, textPaint, contentWidth
         ).setAlignment(staticLayoutAlign).setLineSpacing(12f, 1.15f).build()
 
         val categoryText = if (displayCategory.isNotBlank()) "— $displayCategory —" else ""
@@ -353,5 +370,72 @@ object PostShareUtil {
     }
 
     private fun String?.isNullByBlank(): Boolean = this == null || this.isBlank()
+
+    private class CustomTypefaceSpan(private val newType: Typeface) : MetricAffectingSpan() {
+        override fun updateDrawState(ds: TextPaint) {
+            applyCustomTypeFace(ds, newType)
+        }
+
+        override fun updateMeasureState(paint: TextPaint) {
+            applyCustomTypeFace(paint, newType)
+        }
+
+        private fun applyCustomTypeFace(paint: Paint, tf: Typeface) {
+            paint.typeface = tf
+        }
+    }
+
+    private fun isArabicChar(c: Char): Boolean {
+        val block = Character.UnicodeBlock.of(c)
+        return block == Character.UnicodeBlock.ARABIC ||
+               block == Character.UnicodeBlock.ARABIC_SUPPLEMENT ||
+               block == Character.UnicodeBlock.ARABIC_EXTENDED_A ||
+               block == Character.UnicodeBlock.ARABIC_PRESENTATION_FORMS_A ||
+               block == Character.UnicodeBlock.ARABIC_PRESENTATION_FORMS_B ||
+               c in '\u0600'..'\u06FF' || c in '\u0750'..'\u077F' || c in '\u08A0'..'\u08FF' || c in '\uFB50'..'\uFDFF' || c in '\uFE70'..'\uFEFF'
+    }
+
+    private fun formatTextWithArabicFont(text: CharSequence, shahrazadFont: Typeface): CharSequence {
+        if (text.isEmpty()) return text
+        var hasArabic = false
+        for (i in 0 until text.length) {
+            if (isArabicChar(text[i])) {
+                hasArabic = true
+                break
+            }
+        }
+        if (!hasArabic) return text
+
+        val ssb = SpannableStringBuilder(text)
+        var start = -1
+        for (i in 0 until ssb.length) {
+            val c = ssb[i]
+            val isAr = isArabicChar(c) || (start != -1 && (c == ' ' || c == '\n' || c == '۩' || c == '۝' || c in '0'..'9'))
+            if (isAr) {
+                if (start == -1) start = i
+            } else {
+                if (start != -1) {
+                    var end = i
+                    while (end > start && (ssb[end - 1] == ' ' || ssb[end - 1] == '\n' || ssb[end - 1] in '0'..'9')) {
+                        end--
+                    }
+                    if (end > start) {
+                        ssb.setSpan(CustomTypefaceSpan(shahrazadFont), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                    start = -1
+                }
+            }
+        }
+        if (start != -1) {
+            var end = ssb.length
+            while (end > start && (ssb[end - 1] == ' ' || ssb[end - 1] == '\n' || ssb[end - 1] in '0'..'9')) {
+                end--
+            }
+            if (end > start) {
+                ssb.setSpan(CustomTypefaceSpan(shahrazadFont), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+        return ssb
+    }
 }
 
