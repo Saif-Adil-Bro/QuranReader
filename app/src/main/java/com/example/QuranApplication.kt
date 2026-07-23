@@ -15,6 +15,7 @@ class QuranApplication : Application(), ImageLoaderFactory {
         super.onCreate()
         container = AppContainer(this)
         com.example.data.DuaData.initialize(this)
+        com.example.sync.NetworkSyncManager.initialize(this)
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val channelId = "quran_planner_reminder"

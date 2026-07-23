@@ -53,6 +53,15 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".receiver.PostNotificationShareReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.ACTION_SHARE_PHOTO_CARD" />
+            </intent-filter>
+        </receiver>
         <service
             android:name=".receiver.MyFirebaseMessagingService"
             android:exported="true">

@@ -69,8 +69,13 @@ class PostsRepository(private val context: Context) {
 
     @Synchronized
     private fun updateMergedBlogPosts() {
-        val combined = (postsFromBlog + postsFromArticles + _blogPosts.value)
-            .distinctBy { if (it.id.startsWith("local_")) "${it.title}_${it.timestamp}" else it.id }
+        val allRemote = (postsFromBlog + postsFromArticles).distinctBy { it.id }
+        val remainingLocals = _blogPosts.value
+            .filter { it.id.startsWith("local_") }
+            .filter { local -> allRemote.none { remote -> remote.title.trim() == local.title.trim() && remote.content.trim() == local.content.trim() } }
+
+        val combined = (allRemote + remainingLocals)
+            .distinctBy { "${it.title.trim()}_${it.content.trim()}" }
             .sortedByDescending { it.timestamp }
         _blogPosts.value = combined
     }
@@ -144,8 +149,13 @@ class PostsRepository(private val context: Context) {
                                 null
                             }
                         }
-                        val combined = (remotePosts + _shortPosts.value)
-                            .distinctBy { if (it.id.startsWith("local_")) "${it.text}_${it.timestamp}" else it.id }
+                        val remoteDeduplicated = remotePosts.distinctBy { it.id }
+                        val remainingLocals = _shortPosts.value
+                            .filter { it.id.startsWith("local_") }
+                            .filter { local -> remoteDeduplicated.none { remote -> remote.text.trim() == local.text.trim() && remote.reference.trim() == local.reference.trim() } }
+
+                        val combined = (remoteDeduplicated + remainingLocals)
+                            .distinctBy { "${it.text.trim()}_${it.reference.trim()}" }
                             .sortedByDescending { it.timestamp }
                         _shortPosts.value = combined
                     }
@@ -169,6 +179,13 @@ class PostsRepository(private val context: Context) {
 
         // Optimistic UI update
         _blogPosts.value = listOf(localPost) + _blogPosts.value.filter { it.id != localPost.id }
+
+        // Trigger push notification with title and Read/Share buttons
+        try {
+            PostNotificationHelper.showBlogPostNotification(context, localPost)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         val newPost = hashMapOf<String, Any>(
             "title" to title,
@@ -212,6 +229,13 @@ class PostsRepository(private val context: Context) {
 
         // Optimistic UI update
         _shortPosts.value = listOf(localShort) + _shortPosts.value.filter { it.id != localShort.id }
+
+        // Show Rich Photo Card Notification
+        try {
+            PostNotificationHelper.showPhotoCardNotification(context, localShort)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         val newShort = hashMapOf<String, Any>(
             "text" to text,

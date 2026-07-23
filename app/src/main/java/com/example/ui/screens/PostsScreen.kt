@@ -59,10 +59,28 @@ fun PostsScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val pendingCardPost by viewModel.pendingPhotoCardPost.collectAsState()
+    val pendingBlogPost by viewModel.pendingBlogPost.collectAsState()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var selectedBlogPostForReader by remember { mutableStateOf<BlogPost?>(null) }
     var selectedShortPostForCard by remember { mutableStateOf<ShortPost?>(null) }
+
+    LaunchedEffect(pendingCardPost) {
+        pendingCardPost?.let { post ->
+            selectedTabIndex = 1
+            selectedShortPostForCard = post
+            viewModel.setPendingPhotoCardPost(null)
+        }
+    }
+
+    LaunchedEffect(pendingBlogPost) {
+        pendingBlogPost?.let { post ->
+            selectedTabIndex = 0
+            selectedBlogPostForReader = post
+            viewModel.setPendingBlogPost(null)
+        }
+    }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showAddPostDialog by remember { mutableStateOf(false) }
     var adminClickCount by remember { mutableIntStateOf(0) }

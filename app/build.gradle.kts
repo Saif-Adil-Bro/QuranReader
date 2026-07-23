@@ -152,6 +152,7 @@ dependencies {
   implementation(libs.generativeai)
   implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
   implementation(libs.androidx.core.splashscreen)
+  implementation(libs.androidx.work.runtime.ktx)
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }

@@ -19,6 +19,16 @@ class PostsViewModel(private val postsRepository: PostsRepository) : ViewModel()
 
     val searchQuery = MutableStateFlow("")
     val selectedCategory = MutableStateFlow("সকল")
+    val pendingPhotoCardPost = MutableStateFlow<ShortPost?>(null)
+    val pendingBlogPost = MutableStateFlow<BlogPost?>(null)
+
+    fun setPendingPhotoCardPost(post: ShortPost?) {
+        pendingPhotoCardPost.value = post
+    }
+
+    fun setPendingBlogPost(post: BlogPost?) {
+        pendingBlogPost.value = post
+    }
 
     val filteredBlogPosts: StateFlow<List<BlogPost>> = combine(
         rawBlogPosts,

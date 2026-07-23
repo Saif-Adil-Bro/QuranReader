@@ -104,6 +104,7 @@ class MainActivity : ComponentActivity() {
           )
           
           val homeViewModel: HomeViewModel = viewModel(factory = viewModelFactory)
+          val postsViewModel: com.example.ui.viewmodels.PostsViewModel = viewModel(factory = viewModelFactory)
           val navController = rememberNavController()
           val navBackStackEntry by navController.currentBackStackEntryAsState()
           val currentRoute = navBackStackEntry?.destination?.route
@@ -114,6 +115,53 @@ class MainActivity : ComponentActivity() {
               if (currentRoute != "splash" && currentRoute != null) {
                   val navigateTo = intent?.getStringExtra("navigate_to") ?: intent?.getStringExtra("target_screen")
                   if (navigateTo == "posts") {
+                      val openBlogDetail = intent?.getBooleanExtra("open_blog_post_detail", false) ?: false
+                      if (openBlogDetail) {
+                          val id = intent?.getStringExtra("blog_post_id") ?: ""
+                          val title = intent?.getStringExtra("blog_post_title") ?: ""
+                          val content = intent?.getStringExtra("blog_post_content") ?: ""
+                          val category = intent?.getStringExtra("blog_post_category") ?: ""
+                          val author = intent?.getStringExtra("blog_post_author") ?: ""
+                          val readTime = intent?.getStringExtra("blog_post_read_time") ?: ""
+                          val imageUrl = intent?.getStringExtra("blog_post_image_url") ?: ""
+                          val timestamp = intent?.getLongExtra("blog_post_timestamp", System.currentTimeMillis()) ?: System.currentTimeMillis()
+
+                          if (title.isNotBlank()) {
+                              val blogPost = com.example.data.model.BlogPost(
+                                  id = id,
+                                  title = title,
+                                  content = content,
+                                  category = category,
+                                  author = author,
+                                  readTime = readTime,
+                                  imageUrl = imageUrl,
+                                  timestamp = timestamp
+                              )
+                              postsViewModel.setPendingBlogPost(blogPost)
+                          }
+                          intent.removeExtra("open_blog_post_detail")
+                      }
+
+                      val openEdit = intent?.getBooleanExtra("open_photo_card_edit", false) ?: false
+                      if (openEdit) {
+                          val postId = intent?.getStringExtra("post_id") ?: ""
+                          val postText = intent?.getStringExtra("post_text") ?: ""
+                          val postRef = intent?.getStringExtra("post_ref") ?: ""
+                          val postCategory = intent?.getStringExtra("post_category") ?: ""
+                          val postAuthor = intent?.getStringExtra("post_author") ?: ""
+
+                          if (postText.isNotBlank()) {
+                              val shortPost = com.example.data.model.ShortPost(
+                                  id = postId,
+                                  text = postText,
+                                  reference = postRef,
+                                  category = postCategory,
+                                  author = postAuthor
+                              )
+                              postsViewModel.setPendingPhotoCardPost(shortPost)
+                          }
+                          intent.removeExtra("open_photo_card_edit")
+                      }
                       navController.navigate("posts")
                       intent.removeExtra("navigate_to")
                       intent.removeExtra("target_screen")
