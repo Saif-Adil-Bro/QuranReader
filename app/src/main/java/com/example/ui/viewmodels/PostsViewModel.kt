@@ -67,4 +67,8 @@ class PostsViewModel(private val postsRepository: PostsRepository) : ViewModel()
     fun addShortPost(text: String, reference: String, category: String, author: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         postsRepository.addShortPost(text, reference, category, author, onSuccess, onError)
     }
+
+    fun refresh(onComplete: (() -> Unit)? = null) {
+        postsRepository.refresh(onComplete)
+    }
 }

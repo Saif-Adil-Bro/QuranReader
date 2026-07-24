@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.graphics.Bitmap
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -21,20 +23,29 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.window.Dialog
@@ -62,6 +73,62 @@ fun PostsScreen(
     val pendingCardPost by viewModel.pendingPhotoCardPost.collectAsState()
     val pendingBlogPost by viewModel.pendingBlogPost.collectAsState()
 
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullOffset = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val thresholdPx = with(density) { 75.dp.toPx() }
+    val holdOffsetPx = with(density) { 48.dp.toPx() }
+
+    val nestedScrollConnection = remember(thresholdPx) {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (source == NestedScrollSource.UserInput && available.y > 0) {
+                    val newOffset = (pullOffset.value + available.y * 0.5f).coerceIn(0f, thresholdPx * 1.35f)
+                    val delta = newOffset - pullOffset.value
+                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
+                    return Offset(0f, delta)
+                }
+                return Offset.Zero
+            }
+
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source == NestedScrollSource.UserInput && available.y < 0 && pullOffset.value > 0f) {
+                    val newOffset = (pullOffset.value + available.y).coerceAtLeast(0f)
+                    val delta = newOffset - pullOffset.value
+                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
+                    return Offset(0f, delta)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (pullOffset.value >= thresholdPx && !isRefreshing) {
+                    isRefreshing = true
+                    coroutineScope.launch {
+                        pullOffset.animateTo(holdOffsetPx, spring(dampingRatio = 0.8f))
+                    }
+                    viewModel.refresh {
+                        isRefreshing = false
+                        coroutineScope.launch {
+                            pullOffset.animateTo(0f, spring(dampingRatio = 0.8f))
+                        }
+                        Toast.makeText(context, "পোস্টগুলো আপডেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                    }
+                } else if (!isRefreshing) {
+                    coroutineScope.launch {
+                        pullOffset.animateTo(0f, spring(dampingRatio = 0.8f))
+                    }
+                }
+                return Velocity.Zero
+            }
+        }
+    }
+
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var selectedBlogPostForReader by remember { mutableStateOf<BlogPost?>(null) }
     var selectedShortPostForCard by remember { mutableStateOf<ShortPost?>(null) }
@@ -81,6 +148,22 @@ fun PostsScreen(
             selectedTabIndex = 0
             selectedBlogPostForReader = post
             viewModel.setPendingBlogPost(null)
+        }
+    }
+
+    LaunchedEffect(blogPosts) {
+        selectedBlogPostForReader?.let { current ->
+            if (blogPosts.none { it.id == current.id || (it.title.trim() == current.title.trim() && it.content.trim() == current.content.trim()) }) {
+                selectedBlogPostForReader = null
+            }
+        }
+    }
+
+    LaunchedEffect(shortPosts) {
+        selectedShortPostForCard?.let { current ->
+            if (shortPosts.none { it.id == current.id || (it.text.trim() == current.text.trim() && it.reference.trim() == current.reference.trim()) }) {
+                selectedShortPostForCard = null
+            }
         }
     }
     var showPasswordDialog by remember { mutableStateOf(false) }
@@ -220,46 +303,122 @@ fun PostsScreen(
                     )
                 }
 
-                if (isLoading) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = PrimaryGreen)
-                    }
-                } else {
-                    if (selectedTabIndex == 0) {
-                        // Blog List
-                        if (blogPosts.isEmpty()) {
-                            EmptyStateView("কোন ইসলামিক ব্লগ পোস্ট পাওয়া যায়নি")
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(nestedScrollConnection)
+                ) {
+                    if (pullOffset.value > 0f || isRefreshing) {
+                        val isDeepEnough = pullOffset.value >= thresholdPx
+                        val currentDp = with(density) { pullOffset.value.toDp() }
+
+                        Card(
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isDeepEnough || isRefreshing) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .offset(y = (currentDp * 0.6f).coerceAtMost(24.dp))
+                                .zIndex(10f)
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                items(blogPosts, key = { it.id.ifEmpty { it.title } }) { post ->
-                                    BlogPostCard(
-                                        post = post,
-                                        onClick = { selectedBlogPostForReader = post }
+                                if (isRefreshing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Text(
+                                        "পোস্ট রিফ্রেশ হচ্ছে...",
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                } else if (isDeepEnough) {
+                                    Icon(
+                                        Icons.Default.ArrowDownward,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = Color.White
+                                    )
+                                    Text(
+                                        "রিফ্রেশ করতে ছেড়ে দিন",
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.South,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = PrimaryGreen
+                                    )
+                                    Text(
+                                        "আরও নিচে টানুন...",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Normal
                                     )
                                 }
                             }
                         }
-                    } else {
-                        // Short Posts List
-                        if (shortPosts.isEmpty()) {
-                            EmptyStateView("কোন সংক্ষিপ্ত নসীহত পাওয়া যায়নি")
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .offset(y = with(density) { pullOffset.value.toDp() })
+                    ) {
+                        if (isLoading && blogPosts.isEmpty() && shortPosts.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = PrimaryGreen)
+                            }
                         } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                items(shortPosts, key = { it.id.ifEmpty { it.text } }) { post ->
-                                    ShortPostCard(
-                                        post = post,
-                                        onCopyClick = { PostShareUtil.copyToClipboard(context, post) },
-                                        onTextShareClick = { PostShareUtil.shareAsText(context, post) },
-                                        onPhotoCardClick = { selectedShortPostForCard = post }
-                                    )
+                            if (selectedTabIndex == 0) {
+                                // Blog List
+                                if (blogPosts.isEmpty()) {
+                                    EmptyStateView("কোন ইসলামিক ব্লগ পোস্ট পাওয়া যায়নি")
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        itemsIndexed(blogPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.title}_$index" }) { _, post ->
+                                            BlogPostCard(
+                                                post = post,
+                                                onClick = { selectedBlogPostForReader = post }
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Short Posts List
+                                if (shortPosts.isEmpty()) {
+                                    EmptyStateView("কোন সংক্ষিপ্ত নসীহত পাওয়া যায়নি")
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                                    ) {
+                                        itemsIndexed(shortPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.text}_$index" }) { _, post ->
+                                            ShortPostCard(
+                                                post = post,
+                                                onCopyClick = { PostShareUtil.copyToClipboard(context, post) },
+                                                onTextShareClick = { PostShareUtil.shareAsText(context, post) },
+                                                onPhotoCardClick = { selectedShortPostForCard = post }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1220,6 +1379,7 @@ fun AddPostDialog(
     viewModel: PostsViewModel,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     var isBlogType by remember { mutableStateOf(true) }
     var title by remember { mutableStateOf("") }
     var contentText by remember { mutableStateOf("") }
@@ -1549,7 +1709,10 @@ fun AddPostDialog(
                                     content = contentText,
                                     category = category,
                                     author = author,
-                                    onSuccess = onDismiss,
+                                    onSuccess = {
+                                        Toast.makeText(context, "ব্লগ পোস্ট সফলভাবে পাবলিশ হয়েছে!", Toast.LENGTH_SHORT).show()
+                                        onDismiss()
+                                    },
                                     onError = { errorMessage = it }
                                 )
                             } else {
@@ -1562,7 +1725,10 @@ fun AddPostDialog(
                                     reference = reference,
                                     category = category,
                                     author = author,
-                                    onSuccess = onDismiss,
+                                    onSuccess = {
+                                        Toast.makeText(context, "নসীহত কার্ড সফলভাবে পাবলিশ হয়েছে!", Toast.LENGTH_SHORT).show()
+                                        onDismiss()
+                                    },
                                     onError = { errorMessage = it }
                                 )
                             }
@@ -1595,6 +1761,7 @@ fun EmptyStateView(message: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {

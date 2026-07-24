@@ -181,12 +181,16 @@ class MainActivity : ComponentActivity() {
                       currentIntentState.value = null
                   } else if (navigateTo == "dua") {
                       val duaId = targetIntent.getIntExtra("dua_id", -1)
-                      navController.navigate("settings?subScreen=dua&duaId=$duaId")
+                      navController.navigate("settings?subScreen=dua&duaId=$duaId") {
+                          launchSingleTop = true
+                      }
                       targetIntent.removeExtra("target_screen")
                       targetIntent.removeExtra("dua_id")
                       currentIntentState.value = null
                   } else if (navigateTo == "planner") {
-                      navController.navigate("settings?subScreen=planner")
+                      navController.navigate("settings?subScreen=planner") {
+                          launchSingleTop = true
+                      }
                       targetIntent.removeExtra("target_screen")
                       currentIntentState.value = null
                   }

@@ -89,7 +89,7 @@ fun SettingsScreen(
     val readingTime by viewModel.readingTimeMinutes.collectAsState()
     val bookmarkList by viewModel.bookmarks.collectAsState(initial = emptyList())
     
-    var activeDialog by remember { mutableStateOf<String?>(initialSubScreen) }
+    var activeDialog by remember(initialSubScreen) { mutableStateOf<String?>(initialSubScreen) }
     
     val menuItems = listOf(
         MenuItem("bookmark", "বুকমার্ক", Icons.Default.Bookmark, Color(0xFFEF4444)),
@@ -908,7 +908,7 @@ fun MenuDetailDialog(
     val scope = rememberCoroutineScope()
     
     // Hold selected dua state for back click handling
-    var selectedDuaForDuaTab by remember { 
+    var selectedDuaForDuaTab by remember(initialDuaId, type) { 
         mutableStateOf<com.example.data.DuaItem?>(
             if (initialDuaId != null && initialDuaId != -1) {
                 try {
@@ -1953,21 +1953,30 @@ fun DuaDialogContent(
             }
         } else {
             // DUA DETAILS PAGE WITH HORIZONTAL SWIPE
-            val initialIndex = remember(selectedDua) {
+            val targetIndex = remember(selectedDua, filteredDuas) {
                 if (selectedDua != null) {
                     val idx = filteredDuas.indexOf(selectedDua)
                     if (idx >= 0) idx else 0
                 } else 0
             }
+
             val pagerState = rememberPagerState(
-                initialPage = initialIndex,
+                initialPage = targetIndex,
                 pageCount = { filteredDuas.size }
             )
 
-            LaunchedEffect(pagerState.currentPage) {
-                val currentDuaFromPager = filteredDuas.getOrNull(pagerState.currentPage)
-                if (currentDuaFromPager != null && currentDuaFromPager != selectedDua) {
-                    onSelectedDuaChange(currentDuaFromPager)
+            LaunchedEffect(targetIndex) {
+                if (pagerState.currentPage != targetIndex && targetIndex in 0 until filteredDuas.size) {
+                    pagerState.scrollToPage(targetIndex)
+                }
+            }
+
+            LaunchedEffect(pagerState) {
+                androidx.compose.runtime.snapshotFlow { pagerState.currentPage }.collect { page ->
+                    val currentDuaFromPager = filteredDuas.getOrNull(page)
+                    if (currentDuaFromPager != null && currentDuaFromPager != selectedDua) {
+                        onSelectedDuaChange(currentDuaFromPager)
+                    }
                 }
             }
 
