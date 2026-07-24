@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class PostsViewModel(private val postsRepository: PostsRepository) : ViewModel() {
 
@@ -69,6 +70,22 @@ class PostsViewModel(private val postsRepository: PostsRepository) : ViewModel()
     }
 
     fun refresh(onComplete: (() -> Unit)? = null) {
-        postsRepository.refresh(onComplete)
+        viewModelScope.launch {
+            try {
+                kotlinx.coroutines.withTimeoutOrNull(3500L) {
+                    kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
+                        postsRepository.refresh {
+                            if (cont.isActive) cont.resume(Unit) {}
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    onComplete?.invoke()
+                }
+            }
+        }
     }
 }

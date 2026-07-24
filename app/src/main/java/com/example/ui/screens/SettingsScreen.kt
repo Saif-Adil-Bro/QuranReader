@@ -1953,7 +1953,7 @@ fun DuaDialogContent(
             }
         } else {
             // DUA DETAILS PAGE WITH HORIZONTAL SWIPE
-            val targetIndex = remember(selectedDua, filteredDuas) {
+            val initialPageIndex = remember {
                 if (selectedDua != null) {
                     val idx = filteredDuas.indexOf(selectedDua)
                     if (idx >= 0) idx else 0
@@ -1961,13 +1961,16 @@ fun DuaDialogContent(
             }
 
             val pagerState = rememberPagerState(
-                initialPage = targetIndex,
+                initialPage = initialPageIndex,
                 pageCount = { filteredDuas.size }
             )
 
-            LaunchedEffect(targetIndex) {
-                if (pagerState.currentPage != targetIndex && targetIndex in 0 until filteredDuas.size) {
-                    pagerState.scrollToPage(targetIndex)
+            LaunchedEffect(selectedDua) {
+                if (selectedDua != null) {
+                    val idx = filteredDuas.indexOf(selectedDua)
+                    if (idx in 0 until filteredDuas.size && pagerState.currentPage != idx) {
+                        pagerState.scrollToPage(idx)
+                    }
                 }
             }
 

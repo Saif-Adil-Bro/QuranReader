@@ -77,8 +77,6 @@ fun PostsScreen(
     val pendingBlogPost by viewModel.pendingBlogPost.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
-    @OptIn(ExperimentalMaterial3Api::class)
-    val pullToRefreshState = rememberPullToRefreshState()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var selectedBlogPostForReader by remember { mutableStateOf<BlogPost?>(null) }
@@ -264,17 +262,7 @@ fun PostsScreen(
                             Toast.makeText(context, "পোস্টগুলো আপডেট করা হয়েছে", Toast.LENGTH_SHORT).show()
                         }
                     },
-                    state = pullToRefreshState,
-                    modifier = Modifier.fillMaxSize(),
-                    indicator = {
-                        PullToRefreshDefaults.Indicator(
-                            state = pullToRefreshState,
-                            isRefreshing = isRefreshing,
-                            modifier = Modifier.align(Alignment.TopCenter),
-                            color = PrimaryGreen,
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                    }
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     if (isLoading && blogPosts.isEmpty() && shortPosts.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

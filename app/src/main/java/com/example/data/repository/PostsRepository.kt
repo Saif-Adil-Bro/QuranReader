@@ -352,10 +352,9 @@ class PostsRepository(private val context: Context) {
     }
 
     fun refresh(onComplete: (() -> Unit)? = null) {
-        var pendingCount = 3
+        val pendingCount = java.util.concurrent.atomic.AtomicInteger(3)
         fun checkDone() {
-            pendingCount--
-            if (pendingCount <= 0) {
+            if (pendingCount.decrementAndGet() <= 0) {
                 _isLoading.value = false
                 onComplete?.invoke()
             }
@@ -376,7 +375,12 @@ class PostsRepository(private val context: Context) {
                 updateMergedBlogPosts()
                 checkDone()
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            checkDone()
+        }
 
+        try {
             firestore.collection("articles").get().addOnCompleteListener { task ->
                 try {
                     if (task.isSuccessful && task.result != null) {
@@ -390,7 +394,12 @@ class PostsRepository(private val context: Context) {
                 updateMergedBlogPosts()
                 checkDone()
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            checkDone()
+        }
 
+        try {
             firestore.collection("short_posts").get().addOnCompleteListener { task ->
                 try {
                     if (task.isSuccessful && task.result != null) {
@@ -429,8 +438,7 @@ class PostsRepository(private val context: Context) {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            _isLoading.value = false
-            onComplete?.invoke()
+            checkDone()
         }
     }
 
