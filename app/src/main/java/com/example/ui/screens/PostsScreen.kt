@@ -26,6 +26,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,60 +77,8 @@ fun PostsScreen(
     val pendingBlogPost by viewModel.pendingBlogPost.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
-    val pullOffset = remember { Animatable(0f) }
-    val coroutineScope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val thresholdPx = with(density) { 75.dp.toPx() }
-    val holdOffsetPx = with(density) { 48.dp.toPx() }
-
-    val nestedScrollConnection = remember(thresholdPx) {
-        object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource
-            ): Offset {
-                if (source == NestedScrollSource.UserInput && available.y > 0) {
-                    val newOffset = (pullOffset.value + available.y * 0.5f).coerceIn(0f, thresholdPx * 1.35f)
-                    val delta = newOffset - pullOffset.value
-                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
-                    return Offset(0f, delta)
-                }
-                return Offset.Zero
-            }
-
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (source == NestedScrollSource.UserInput && available.y < 0 && pullOffset.value > 0f) {
-                    val newOffset = (pullOffset.value + available.y).coerceAtLeast(0f)
-                    val delta = newOffset - pullOffset.value
-                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
-                    return Offset(0f, delta)
-                }
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (pullOffset.value >= thresholdPx && !isRefreshing) {
-                    isRefreshing = true
-                    coroutineScope.launch {
-                        pullOffset.animateTo(holdOffsetPx, spring(dampingRatio = 0.8f))
-                    }
-                    viewModel.refresh {
-                        isRefreshing = false
-                        coroutineScope.launch {
-                            pullOffset.animateTo(0f, spring(dampingRatio = 0.8f))
-                        }
-                        Toast.makeText(context, "পোস্টগুলো আপডেট করা হয়েছে", Toast.LENGTH_SHORT).show()
-                    }
-                } else if (!isRefreshing) {
-                    coroutineScope.launch {
-                        pullOffset.animateTo(0f, spring(dampingRatio = 0.8f))
-                    }
-                }
-                return Velocity.Zero
-            }
-        }
-    }
+    @OptIn(ExperimentalMaterial3Api::class)
+    val pullToRefreshState = rememberPullToRefreshState()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var selectedBlogPostForReader by remember { mutableStateOf<BlogPost?>(null) }
@@ -303,121 +254,68 @@ fun PostsScreen(
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(nestedScrollConnection)
-                ) {
-                    if (pullOffset.value > 0f || isRefreshing) {
-                        val isDeepEnough = pullOffset.value >= thresholdPx
-                        val currentDp = with(density) { pullOffset.value.toDp() }
-
-                        Card(
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isDeepEnough || isRefreshing) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .offset(y = (currentDp * 0.6f).coerceAtMost(24.dp))
-                                .zIndex(10f)
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                if (isRefreshing) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        color = Color.White,
-                                        strokeWidth = 2.dp
-                                    )
-                                    Text(
-                                        "পোস্ট রিফ্রেশ হচ্ছে...",
-                                        color = Color.White,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                } else if (isDeepEnough) {
-                                    Icon(
-                                        Icons.Default.ArrowDownward,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = Color.White
-                                    )
-                                    Text(
-                                        "রিফ্রেশ করতে ছেড়ে দিন",
-                                        color = Color.White,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.South,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = PrimaryGreen
-                                    )
-                                    Text(
-                                        "আরও নিচে টানুন...",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Normal
-                                    )
-                                }
-                            }
+                @OptIn(ExperimentalMaterial3Api::class)
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        isRefreshing = true
+                        viewModel.refresh {
+                            isRefreshing = false
+                            Toast.makeText(context, "পোস্টগুলো আপডেট করা হয়েছে", Toast.LENGTH_SHORT).show()
                         }
+                    },
+                    state = pullToRefreshState,
+                    modifier = Modifier.fillMaxSize(),
+                    indicator = {
+                        PullToRefreshDefaults.Indicator(
+                            state = pullToRefreshState,
+                            isRefreshing = isRefreshing,
+                            modifier = Modifier.align(Alignment.TopCenter),
+                            color = PrimaryGreen,
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .offset(y = with(density) { pullOffset.value.toDp() })
-                    ) {
-                        if (isLoading && blogPosts.isEmpty() && shortPosts.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = PrimaryGreen)
-                            }
-                        } else {
-                            if (selectedTabIndex == 0) {
-                                // Blog List
-                                if (blogPosts.isEmpty()) {
-                                    EmptyStateView("কোন ইসলামিক ব্লগ পোস্ট পাওয়া যায়নি")
-                                } else {
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        itemsIndexed(blogPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.title}_$index" }) { _, post ->
-                                            BlogPostCard(
-                                                post = post,
-                                                onClick = { selectedBlogPostForReader = post }
-                                            )
-                                        }
+                ) {
+                    if (isLoading && blogPosts.isEmpty() && shortPosts.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = PrimaryGreen)
+                        }
+                    } else {
+                        if (selectedTabIndex == 0) {
+                            // Blog List
+                            if (blogPosts.isEmpty()) {
+                                EmptyStateView("কোন ইসলামিক ব্লগ পোস্ট পাওয়া যায়নি")
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    itemsIndexed(blogPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.title}_$index" }) { _, post ->
+                                        BlogPostCard(
+                                            post = post,
+                                            onClick = { selectedBlogPostForReader = post }
+                                        )
                                     }
                                 }
+                            }
+                        } else {
+                            // Short Posts List
+                            if (shortPosts.isEmpty()) {
+                                EmptyStateView("কোন সংক্ষিপ্ত নসীহত পাওয়া যায়নি")
                             } else {
-                                // Short Posts List
-                                if (shortPosts.isEmpty()) {
-                                    EmptyStateView("কোন সংক্ষিপ্ত নসীহত পাওয়া যায়নি")
-                                } else {
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                                    ) {
-                                        itemsIndexed(shortPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.text}_$index" }) { _, post ->
-                                            ShortPostCard(
-                                                post = post,
-                                                onCopyClick = { PostShareUtil.copyToClipboard(context, post) },
-                                                onTextShareClick = { PostShareUtil.shareAsText(context, post) },
-                                                onPhotoCardClick = { selectedShortPostForCard = post }
-                                            )
-                                        }
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    itemsIndexed(shortPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.text}_$index" }) { _, post ->
+                                        ShortPostCard(
+                                            post = post,
+                                            onCopyClick = { PostShareUtil.copyToClipboard(context, post) },
+                                            onTextShareClick = { PostShareUtil.shareAsText(context, post) },
+                                            onPhotoCardClick = { selectedShortPostForCard = post }
+                                        )
                                     }
                                 }
                             }
