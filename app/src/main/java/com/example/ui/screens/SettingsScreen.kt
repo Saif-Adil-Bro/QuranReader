@@ -930,9 +930,13 @@ fun MenuDetailDialog(
         )
     }
     
-    val handleBack = {
+    var subjectwiseBackAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    val handleBack: () -> Unit = {
         if ((type == "dua" || type == "morning_evening_dua") && selectedDuaForDuaTab != null) {
             selectedDuaForDuaTab = null
+        } else if ((type == "subjectwise" || type == "manzil") && subjectwiseBackAction != null) {
+            subjectwiseBackAction?.invoke()
         } else {
             onDismiss()
         }
@@ -1022,8 +1026,15 @@ fun MenuDetailDialog(
                         )
                         "note" -> NotepadDialogContent(viewModel)
                         "planner" -> PlannerDialogContent(viewModel)
-                        "subjectwise" -> SubjectwiseDialogContent()
-                        "manzil" -> SubjectwiseDialogContent(initialCategoryName = "মানযিল")
+                        "subjectwise" -> SubjectwiseDialogContent(
+                            onDismiss = onDismiss,
+                            onRegisterBackAction = { subjectwiseBackAction = it }
+                        )
+                        "manzil" -> SubjectwiseDialogContent(
+                            initialCategoryName = "মানযিল",
+                            onDismiss = onDismiss,
+                            onRegisterBackAction = { subjectwiseBackAction = it }
+                        )
                         "dua" -> DuaDialogContent(
                             viewModel = viewModel,
                             selectedDua = selectedDuaForDuaTab,
@@ -1738,7 +1749,11 @@ fun PlannerDialogContent(viewModel: SettingsViewModel) {
 // --- 5. SUBJECTWISE DIALOG ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SubjectwiseDialogContent(initialCategoryName: String? = null) {
+fun SubjectwiseDialogContent(
+    initialCategoryName: String? = null,
+    onDismiss: () -> Unit = {},
+    onRegisterBackAction: (((() -> Unit)?) -> Unit) = {}
+) {
     val context = LocalContext.current
     var selectedCategory by remember { mutableStateOf<com.example.data.SubjectwiseCategory?>(null) }
     var selectedTopic by remember { mutableStateOf<com.example.data.SubjectwiseTopic?>(null) }
@@ -1746,6 +1761,27 @@ fun SubjectwiseDialogContent(initialCategoryName: String? = null) {
     var allCategories by remember { mutableStateOf<List<com.example.data.SubjectwiseCategory>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var showTranslation by remember { mutableStateOf(true) }
+
+    val handleInternalBack = {
+        if (selectedTopic != null && initialCategoryName == null) {
+            selectedTopic = null
+        } else if (selectedCategory != null && initialCategoryName == null) {
+            selectedCategory = null
+        } else {
+            onDismiss()
+        }
+    }
+
+    DisposableEffect(selectedCategory, selectedTopic, initialCategoryName) {
+        onRegisterBackAction(handleInternalBack)
+        onDispose {
+            onRegisterBackAction(null)
+        }
+    }
+
+    androidx.activity.compose.BackHandler {
+        handleInternalBack()
+    }
 
     LaunchedEffect(initialCategoryName) {
         val loaded = com.example.data.SubjectwiseQuranRepository.getCategories(context)
@@ -2050,55 +2086,62 @@ fun SubjectwiseDialogContent(initialCategoryName: String? = null) {
         val isManzilMode = initialCategoryName != null || category.categoryNameBn == "মানযিল"
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header
+            // Header / Sub-controls
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 if (!isManzilMode) {
-                    IconButton(
-                        onClick = { selectedTopic = null },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                shape = CircleShape
-                            )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "ফিরে যান",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                        IconButton(
+                            onClick = { selectedTopic = null },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    shape = CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "ফিরে যান",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+
+                        Column {
+                            Text(
+                                text = topic.titleBn,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${category.categoryNameBn} • ${topic.verses.size}টি কার্ড (অফলাইন কুরআন থেকে)",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "মানযিল • ${topic.verses.size}টি কার্ড (অফলাইন কুরআন থেকে)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
-                    if (!isManzilMode) {
-                        Text(
-                            text = topic.titleBn,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "${category.categoryNameBn} • ${topic.verses.size}টি কার্ড (অফলাইন কুরআন থেকে)",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        Text(
-                            text = "${topic.verses.size}টি কার্ড (অফলাইন কুরআন থেকে)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.width(8.dp))
 
                 // Translation ON/OFF Toggle
                 Surface(

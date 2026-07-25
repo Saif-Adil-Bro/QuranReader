@@ -128,12 +128,7 @@ fun MushafViewerScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (showSelectorSheet) {
-                            showSelectorSheet = false
-                            onBack()
-                        } else {
-                            showSelectorSheet = true
-                        }
+                        showSelectorSheet = true
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
@@ -224,10 +219,9 @@ fun MushafViewerScreen(
     }
 
     if (showSelectorSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showSelectorSheet = false },
-            containerColor = if (isDark) Color(0xFF1C1C1E) else Color.White,
-            dragHandle = { BottomSheetDefaults.DragHandle() }
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = if (isDark) Color(0xFF1C1C1E) else Color.White
         ) {
             val focusRequester = remember { FocusRequester() }
             LaunchedEffect(showSelectorSheet) {
@@ -244,9 +238,9 @@ fun MushafViewerScreen(
             
             Column(
                 modifier = Modifier
-                    .fillMaxHeight(0.85f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                    .fillMaxSize()
+                    .systemBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
                     .focusRequester(focusRequester)
                     .focusable()
                     .onPreviewKeyEvent { keyEvent ->

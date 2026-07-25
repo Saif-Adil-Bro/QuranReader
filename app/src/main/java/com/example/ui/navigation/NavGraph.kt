@@ -267,13 +267,7 @@ fun AppNavGraph(
             TajweedModeScreen(
                 viewModel = viewModel,
                 initialPage = page,
-                onNavigateBack = {
-                    if (!navController.popBackStack("tajweed/index", false)) {
-                        navController.navigate("tajweed/index") {
-                            popUpTo("home")
-                        }
-                    }
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -364,13 +358,7 @@ fun AppNavGraph(
                 initialViewMode = viewMode,
                 initialAyah = initialAyah,
                 viewModel = viewModel,
-                onNavigateBack = {
-                    if (!navController.popBackStack("list/normal", false)) {
-                        navController.navigate("list/normal") {
-                            popUpTo("home")
-                        }
-                    }
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -397,13 +385,7 @@ fun AppNavGraph(
             ReadingModeScreen(
                 surahNumber = surahNumber,
                 viewModel = viewModel,
-                onNavigateBack = { 
-                    if (!navController.popBackStack("list/reading", false)) {
-                        navController.navigate("list/reading") {
-                            popUpTo("home")
-                        }
-                    }
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

@@ -1,8 +1,11 @@
 package com.example.ui.screens
 
 import android.graphics.Bitmap
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -862,6 +865,24 @@ fun PhotoCardCustomizerDialog(
     var isGeneratingPreview by remember { mutableStateOf(false) }
     var isSharing by remember { mutableStateOf(false) }
 
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            bgImageUrl = uri.toString()
+        }
+    }
+
+    var customFontName by remember { mutableStateOf<String?>(null) }
+    val fontPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            fontName = uri.toString()
+            customFontName = "কাস্টম ফন্ট (.ttf/.otf)"
+        }
+    }
+
     // Sample background image presets
     val presetBgUrls = remember {
         listOf(
@@ -995,7 +1016,7 @@ fun PhotoCardCustomizerDialog(
                             )
                         }
 
-                        if (isGeneratingPreview) {
+                        if (isGeneratingPreview && cardBitmap == null) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -1062,10 +1083,10 @@ fun PhotoCardCustomizerDialog(
 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 
-                        // 2. Background Image URL & Presets
+                        // 2. Background Image URL & Presets & Local Storage
                         Column {
                             Text(
-                                text = "🖼️ ব্যাকগ্রাউন্ড পিকচার (URL ও প্রিসেট)",
+                                text = "🖼️ ব্যাকগ্রাউন্ড পিকচার (গ্যালারি, URL ও প্রিসেট)",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -1095,16 +1116,35 @@ fun PhotoCardCustomizerDialog(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
+                            val isLocalImage = bgImageUrl.startsWith("content://") || bgImageUrl.startsWith("file://")
+
                             OutlinedTextField(
-                                value = bgImageUrl,
-                                onValueChange = { bgImageUrl = it },
+                                value = if (isLocalImage) "📁 লোকাল গ্যালারির কাস্টম ছবি" else bgImageUrl,
+                                onValueChange = { newValue ->
+                                    if (!isLocalImage) {
+                                        bgImageUrl = newValue
+                                    } else {
+                                        bgImageUrl = newValue
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("ছবির URL লিংক লিখুন (https://...)", fontSize = 13.sp) },
+                                placeholder = { Text("ছবির URL লিংক দিন অথবা ডানপাশের আইকনে ক্লিক করুন", fontSize = 13.sp) },
                                 singleLine = true,
                                 trailingIcon = {
-                                    if (bgImageUrl.isNotEmpty()) {
-                                        IconButton(onClick = { bgImageUrl = "" }) {
-                                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (bgImageUrl.isNotEmpty()) {
+                                            IconButton(onClick = { bgImageUrl = "" }) {
+                                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                            }
+                                        }
+                                        IconButton(
+                                            onClick = { imagePickerLauncher.launch("image/*") }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.AddPhotoAlternate,
+                                                contentDescription = "গ্যালারি থেকে ছবি সিলেক্ট করুন",
+                                                tint = PrimaryGreen
+                                            )
                                         }
                                     }
                                 },
@@ -1145,7 +1185,7 @@ fun PhotoCardCustomizerDialog(
                         // 3. Bangla Fonts Selection
                         Column {
                             Text(
-                                text = "🔤 বাংলা ফন্ট সিলেক্ট করুন",
+                                text = "🔤 বাংলা ফন্ট সিলেক্ট করুন (প্রিসেট ও কাস্টম)",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -1163,6 +1203,20 @@ fun PhotoCardCustomizerDialog(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
+                                if (fontName.startsWith("content://") || fontName.startsWith("file://")) {
+                                    item {
+                                        FilterChip(
+                                            selected = true,
+                                            onClick = { },
+                                            label = { Text("📁 কাস্টম ফন্ট", fontWeight = FontWeight.Bold) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = PrimaryGreen,
+                                                selectedLabelColor = Color.White
+                                            )
+                                        )
+                                    }
+                                }
+
                                 items(fontsList) { (key, label) ->
                                     FilterChip(
                                         selected = fontName == key,
@@ -1174,6 +1228,26 @@ fun PhotoCardCustomizerDialog(
                                         )
                                     )
                                 }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedButton(
+                                onClick = { fontPickerLauncher.launch("*/*") },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryGreen),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    if (fontName.startsWith("content://") || fontName.startsWith("file://"))
+                                        "📁 কাস্টম ফন্ট ফাইল ফাইল সংযুক্ত (অন্যটি পরিবর্তন করুন)"
+                                    else
+                                        "📁 মেমোরি / স্টোরেজ থেকে ফন্ট ফাইল (.ttf / .otf) নির্বাচন করুন",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
 

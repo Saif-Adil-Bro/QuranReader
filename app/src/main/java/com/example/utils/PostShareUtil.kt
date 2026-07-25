@@ -24,6 +24,48 @@ import java.net.URL
 
 object PostShareUtil {
 
+    private val bgImageCache = object : android.util.LruCache<String, Bitmap>(20 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int {
+            return value.byteCount
+        }
+    }
+
+    private val fontCache = java.util.concurrent.ConcurrentHashMap<Int, Typeface>()
+
+    private fun getCachedFont(context: Context, resId: Int): Typeface? {
+        return fontCache.getOrPut(resId) {
+            try {
+                ResourcesCompat.getFont(context, resId) ?: Typeface.DEFAULT
+            } catch (e: Exception) {
+                Typeface.DEFAULT
+            }
+        }
+    }
+
+    private fun getCustomFontFromUri(context: Context, uriString: String): Typeface? {
+        val key = uriString.hashCode()
+        val cached = fontCache[key]
+        if (cached != null) return cached
+
+        return try {
+            val uri = android.net.Uri.parse(uriString)
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+            val tempFile = File(context.cacheDir, "temp_custom_font_${uriString.hashCode()}.ttf")
+            tempFile.outputStream().use { output ->
+                inputStream.copyTo(output)
+            }
+            inputStream.close()
+            val typeface = Typeface.createFromFile(tempFile)
+            if (typeface != null) {
+                fontCache[key] = typeface
+            }
+            typeface
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     enum class CardTheme(
         val title: String,
         val bgColors: Pair<String, String>,
@@ -93,30 +135,30 @@ object PostShareUtil {
         val displayRef: String = customRef?.takeIf { it.isNotBlank() } ?: post.reference
 
         // Load Shahrazad font for Arabic script
-        val shahrazadFont = try {
-            ResourcesCompat.getFont(context, R.font.scheherazade_new) ?: Typeface.DEFAULT
-        } catch (e: Exception) {
-            Typeface.DEFAULT
-        }
+        val shahrazadFont = getCachedFont(context, R.font.scheherazade_new) ?: Typeface.DEFAULT
 
         // Load custom Bangla font based on selection
         val chosenFont = try {
-            when (fontName) {
-                "Scheherazade New", "Scheherazade", "Shahrazad", "শাহরাজাদ" -> shahrazadFont
-                "Amiri" -> ResourcesCompat.getFont(context, R.font.amiri_regular) ?: shahrazadFont
-                "Hind Siliguri" -> ResourcesCompat.getFont(context, R.font.hind_siliguri)
-                "Shorif Shishir Unicode", "Shorif Shishir" -> ResourcesCompat.getFont(context, R.font.shorif_shishir)
-                "SolaimanLipi" -> ResourcesCompat.getFont(context, R.font.solaimanlipi)
-                "Default" -> Typeface.DEFAULT
-                else -> ResourcesCompat.getFont(context, R.font.solaimanlipi)
-            } ?: Typeface.DEFAULT
+            if (fontName.startsWith("content://") || fontName.startsWith("file://")) {
+                getCustomFontFromUri(context, fontName) ?: shahrazadFont
+            } else {
+                when (fontName) {
+                    "Scheherazade New", "Scheherazade", "Shahrazad", "শাহরাজাদ" -> shahrazadFont
+                    "Amiri" -> getCachedFont(context, R.font.amiri_regular) ?: shahrazadFont
+                    "Hind Siliguri" -> getCachedFont(context, R.font.hind_siliguri)
+                    "Shorif Shishir Unicode", "Shorif Shishir" -> getCachedFont(context, R.font.shorif_shishir)
+                    "SolaimanLipi" -> getCachedFont(context, R.font.solaimanlipi)
+                    "Default" -> Typeface.DEFAULT
+                    else -> getCachedFont(context, R.font.solaimanlipi)
+                } ?: Typeface.DEFAULT
+            }
         } catch (e: Exception) {
             Typeface.DEFAULT
         }
 
         val chosenBoldFont = try {
             when (fontName) {
-                "SolaimanLipi" -> ResourcesCompat.getFont(context, R.font.solaimanlipi_bold) ?: chosenFont
+                "SolaimanLipi" -> getCachedFont(context, R.font.solaimanlipi_bold) ?: chosenFont
                 else -> chosenFont
             }
         } catch (e: Exception) {
@@ -203,10 +245,19 @@ object PostShareUtil {
         var bgBitmapDrawn = false
         if (!bgImageUrl.isNullOrBlank()) {
             try {
-                val input = URL(bgImageUrl).openStream()
-                val loadedBg = BitmapFactory.decodeStream(input)
-                input.close()
-                if (loadedBg != null) {
+                val cached = bgImageCache.get(bgImageUrl)
+                val loadedBg = if (cached != null && !cached.isRecycled) {
+                    cached
+                } else {
+                    val input = URL(bgImageUrl).openStream()
+                    val decoded = BitmapFactory.decodeStream(input)
+                    input.close()
+                    if (decoded != null) {
+                        bgImageCache.put(bgImageUrl, decoded)
+                    }
+                    decoded
+                }
+                if (loadedBg != null && !loadedBg.isRecycled) {
                     val srcRect = Rect(0, 0, loadedBg.width, loadedBg.height)
                     val dstRect = Rect(0, 0, width, finalHeight)
                     canvas.drawBitmap(loadedBg, srcRect, dstRect, Paint(Paint.FILTER_BITMAP_FLAG))
