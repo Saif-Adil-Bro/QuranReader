@@ -11,6 +11,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -1729,43 +1731,506 @@ fun PlannerDialogContent(viewModel: SettingsViewModel) {
 }
 
 // --- 5. SUBJECTWISE DIALOG ---
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubjectwiseDialogContent() {
-    val topics = listOf(
-        Pair("ঈমান ও বিশ্বাস", "সূরা আল-মুমিনুন: ১-২ • \"নিশ্চয়ই মুমিনরা সফলকাম হয়েছে, যারা নিজেদের নামাজে নম্র ও বিনয়ী...\""),
-        Pair("সালাত ও ইবাদত", "সূরা আল-আনকাবুত: ৪৫ • \"নিশ্চয়ই নামাজ মানুষকে অশ্লীল ও মন্দ কাজ থেকে বিরত রাখে...\""),
-        Pair("সবর ও ধৈর্য", "সূরা আল-বাকারা: ১৫৩ • \"হে মুমিনগণ! তোমরা ধৈর্য ও সালাতের মাধ্যমে সাহায্য প্রার্থনা করো। নিশ্চয়ই আল্লাহ ধৈর্যশীলদের সাথে আছেন।\""),
-        Pair("নৈতিকতা ও চরিত্র", "সূরা আল-বাকারা: ৮৩ • \"তোমরা মানুষের সাথে উত্তম ও নম্রভাবে কথা বলো এবং সালাত কায়েম করো...\"")
-    )
-    
-    var expandedTopic by remember { mutableStateOf<String?>(null) }
-    
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
-        items(topics) { (title, verse) ->
-            val isExp = expandedTopic == title
-            Card(
+    val context = LocalContext.current
+    var selectedCategory by remember { mutableStateOf<com.example.data.SubjectwiseCategory?>(null) }
+    var selectedTopic by remember { mutableStateOf<com.example.data.SubjectwiseTopic?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    var allCategories by remember { mutableStateOf<List<com.example.data.SubjectwiseCategory>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        val loaded = com.example.data.SubjectwiseQuranRepository.getCategories(context)
+        allCategories = loaded
+        isLoading = false
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = PrimaryGreen)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "অফলাইন ডাটাবেজ থেকে বিষয়ভিত্তিক আয়াত লোড হচ্ছে...",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
+    if (selectedCategory == null) {
+        // --- PAGE 1: CATEGORIES LIST (বিষয়ভিত্তিক বিভাগসমূহ) ---
+        Column(modifier = Modifier.fillMaxSize()) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("বিষয়, সূরা বা আয়াত অনুসন্ধান করুন...", fontSize = 13.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = PrimaryGreen) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PrimaryGreen,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { expandedTopic = if (isExp) null else title },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Icon(
-                            imageVector = if (isExp) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
-                            tint = PrimaryGreen
-                        )
+                    .padding(bottom = 12.dp)
+            )
+
+            val filteredCategories = remember(searchQuery, allCategories) {
+                val query = searchQuery.trim().lowercase()
+                if (query.isEmpty()) allCategories
+                else {
+                    allCategories.filter { cat ->
+                        cat.categoryNameBn.lowercase().contains(query) ||
+                        cat.topics.any { topic ->
+                            topic.titleBn.lowercase().contains(query) ||
+                            topic.verses.any { v ->
+                                v.surahName.lowercase().contains(query) ||
+                                v.banglaTranslation.lowercase().contains(query)
+                            }
+                        }
                     }
-                    if (isExp) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(verse, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, lineHeight = 18.sp)
+                }
+            }
+
+            if (filteredCategories.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "কোনো বিষয় পাওয়া যায়নি",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    itemsIndexed(filteredCategories, key = { _, cat -> cat.categoryId }) { index, category ->
+                        Card(
+                            onClick = { selectedCategory = category },
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                            shape = RoundedCornerShape(14.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    color = PrimaryGreen.copy(alpha = 0.12f),
+                                    shape = CircleShape,
+                                    modifier = Modifier.size(44.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "${index + 1}",
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryGreen,
+                                            fontSize = 16.sp
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(14.dp))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = category.categoryNameBn,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Surface(
+                                            color = PrimaryGreen.copy(alpha = 0.1f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text(
+                                                text = "${category.topics.size}টি বিষয়",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = PrimaryGreen,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    val totalAyahs = category.topics.sumOf { it.verses.size }
+                                    Text(
+                                        text = "মোট $totalAyahs টি কুরআনের আয়াত সংকলিত",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else if (selectedTopic == null) {
+        // --- PAGE 2: TOPICS LIST IN SELECTED CATEGORY (ক্যাটাগরির অন্তর্ভুক্ত বিষয়সমূহ) ---
+        val category = selectedCategory!!
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header with Back Button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { selectedCategory = null },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "ফিরে যান",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = category.categoryNameBn,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "মোট ${category.topics.size}টি বিষয়ের তালিকা",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                itemsIndexed(category.topics, key = { _, topic -> topic.topicId }) { index, topic ->
+                    Card(
+                        onClick = { selectedTopic = topic },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                color = PrimaryGreen.copy(alpha = 0.12f),
+                                shape = CircleShape,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Category,
+                                        contentDescription = null,
+                                        tint = PrimaryGreen,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = topic.titleBn,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "${topic.verses.size}টি সম্পর্কিত আয়াত",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // --- PAGE 3: VERSE CARDS FOR SELECTED TOPIC (বিষয়ের সমস্ত আয়াত) ---
+        val category = selectedCategory!!
+        val topic = selectedTopic!!
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header with Back Button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { selectedTopic = null },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "ফিরে যান",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = topic.titleBn,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${category.categoryNameBn} • ${topic.verses.size}টি আয়াত (অফলাইন কুরআন থেকে)",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                itemsIndexed(topic.verses, key = { _, v -> v.id }) { index, verse ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                        shape = RoundedCornerShape(14.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            // Header Badges
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    color = PrimaryGreen.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = "আয়াত #${index + 1}",
+                                        color = PrimaryGreen,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+
+                                Text(
+                                    text = "${verse.surahName} • আয়াত ${verse.verseNo}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Arabic Text from Offline quran.db
+                            if (verse.arabicText.isNotEmpty()) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 12.dp)
+                                ) {
+                                    Text(
+                                        text = verse.arabicText,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = PrimaryGreen,
+                                        lineHeight = 30.sp,
+                                        textAlign = TextAlign.Right,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp)
+                                    )
+                                }
+                            }
+
+                            // Bangla Translation from Offline quran.db
+                            Text(
+                                text = "বাংলা অনুবাদ:",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                            Text(
+                                text = verse.banglaTranslation,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = 22.sp
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Bottom Action Buttons: Copy, Share (Text & Image)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Copy Button
+                                OutlinedButton(
+                                    onClick = {
+                                        com.example.utils.SubjectwiseShareUtil.copyToClipboard(
+                                            context,
+                                            verse,
+                                            topic.titleBn
+                                        )
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                    shape = RoundedCornerShape(20.dp),
+                                    border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.4f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryGreen)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ContentCopy,
+                                        contentDescription = "কপি",
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("কপি", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                }
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    // Text Share Button
+                                    FilledTonalButton(
+                                        onClick = {
+                                            com.example.utils.SubjectwiseShareUtil.shareAsText(
+                                                context,
+                                                verse,
+                                                topic.titleBn
+                                            )
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        shape = RoundedCornerShape(20.dp),
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = PrimaryGreen.copy(alpha = 0.12f),
+                                            contentColor = PrimaryGreen
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Share,
+                                            contentDescription = "টেক্সট শেয়ার",
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("টেক্সট", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                    }
+
+                                    // Image Share Button
+                                    Button(
+                                        onClick = {
+                                            com.example.utils.SubjectwiseShareUtil.shareAsImage(
+                                                context,
+                                                verse,
+                                                topic.titleBn
+                                            )
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        shape = RoundedCornerShape(20.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = PrimaryGreen,
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Image,
+                                            contentDescription = "ছবি শেয়ার",
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("ছবি", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

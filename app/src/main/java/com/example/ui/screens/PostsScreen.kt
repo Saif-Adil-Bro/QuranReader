@@ -23,8 +23,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.zIndex
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -77,6 +78,62 @@ fun PostsScreen(
     val pendingBlogPost by viewModel.pendingBlogPost.collectAsState()
 
     var isRefreshing by remember { mutableStateOf(false) }
+    val pullOffset = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val thresholdPx = with(density) { 64.dp.toPx() }
+    val holdOffsetPx = with(density) { 50.dp.toPx() }
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            pullOffset.animateTo(holdOffsetPx, spring(dampingRatio = 0.8f))
+        } else {
+            pullOffset.animateTo(0f, spring(dampingRatio = 0.8f))
+        }
+    }
+
+    val nestedScrollConnection = remember(thresholdPx, isRefreshing) {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (source == NestedScrollSource.UserInput && available.y > 0) {
+                    val newOffset = (pullOffset.value + available.y * 0.45f).coerceIn(0f, thresholdPx * 1.3f)
+                    val delta = newOffset - pullOffset.value
+                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
+                    return Offset(0f, delta)
+                }
+                return Offset.Zero
+            }
+
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source == NestedScrollSource.UserInput && available.y < 0 && pullOffset.value > 0f) {
+                    val newOffset = (pullOffset.value + available.y).coerceAtLeast(0f)
+                    val delta = newOffset - pullOffset.value
+                    coroutineScope.launch { pullOffset.snapTo(newOffset) }
+                    return Offset(0f, delta)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (pullOffset.value >= thresholdPx && !isRefreshing) {
+                    isRefreshing = true
+                    viewModel.refresh {
+                        isRefreshing = false
+                        Toast.makeText(context, "পোস্টগুলো আপডেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                    }
+                } else if (!isRefreshing) {
+                    coroutineScope.launch {
+                        pullOffset.animateTo(0f, spring(dampingRatio = 0.8f))
+                    }
+                }
+                return Velocity.Zero
+            }
+        }
+    }
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var selectedBlogPostForReader by remember { mutableStateOf<BlogPost?>(null) }
@@ -252,58 +309,108 @@ fun PostsScreen(
                     )
                 }
 
-                @OptIn(ExperimentalMaterial3Api::class)
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = {
-                        isRefreshing = true
-                        viewModel.refresh {
-                            isRefreshing = false
-                            Toast.makeText(context, "পোস্টগুলো আপডেট করা হয়েছে", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
+                val infiniteTransition = rememberInfiniteTransition(label = "refresh_spin")
+                val spinningAngle by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(750, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "spin_angle"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(nestedScrollConnection)
                 ) {
-                    if (isLoading && blogPosts.isEmpty() && shortPosts.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = PrimaryGreen)
-                        }
-                    } else {
-                        if (selectedTabIndex == 0) {
-                            // Blog List
-                            if (blogPosts.isEmpty()) {
-                                EmptyStateView("কোন ইসলামিক ব্লগ পোস্ট পাওয়া যায়নি")
-                            } else {
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    itemsIndexed(blogPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.title}_$index" }) { _, post ->
-                                        BlogPostCard(
-                                            post = post,
-                                            onClick = { selectedBlogPostForReader = post }
-                                        )
-                                    }
+                    if (pullOffset.value > 0f || isRefreshing) {
+                        val currentDp = with(density) { pullOffset.value.toDp() }
+                        val isDeepEnough = pullOffset.value >= thresholdPx
+
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            tonalElevation = 6.dp,
+                            shadowElevation = 6.dp,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .offset(y = (currentDp * 0.7f).coerceAtMost(52.dp))
+                                .zIndex(10f)
+                                .size(42.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                if (isRefreshing) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "রিফ্রেশ হচ্ছে",
+                                        tint = PrimaryGreen,
+                                        modifier = Modifier
+                                            .size(22.dp)
+                                            .rotate(spinningAngle)
+                                    )
+                                } else {
+                                    val pullProgress = (pullOffset.value / thresholdPx).coerceIn(0f, 1f)
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "রিফ্রেশ করতে টানুন",
+                                        tint = if (isDeepEnough) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier
+                                            .size(22.dp)
+                                            .rotate(pullProgress * 180f)
+                                    )
                                 }
                             }
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .offset(y = with(density) { pullOffset.value.toDp() })
+                    ) {
+                        if (isLoading && blogPosts.isEmpty() && shortPosts.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = PrimaryGreen)
+                            }
                         } else {
-                            // Short Posts List
-                            if (shortPosts.isEmpty()) {
-                                EmptyStateView("কোন সংক্ষিপ্ত নসীহত পাওয়া যায়নি")
+                            if (selectedTabIndex == 0) {
+                                // Blog List
+                                if (blogPosts.isEmpty()) {
+                                    EmptyStateView("কোন ইসলামিক ব্লগ পোস্ট পাওয়া যায়নি")
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        itemsIndexed(blogPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.title}_$index" }) { _, post ->
+                                            BlogPostCard(
+                                                post = post,
+                                                onClick = { selectedBlogPostForReader = post }
+                                            )
+                                        }
+                                    }
+                                }
                             } else {
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                                ) {
-                                    itemsIndexed(shortPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.text}_$index" }) { _, post ->
-                                        ShortPostCard(
-                                            post = post,
-                                            onCopyClick = { PostShareUtil.copyToClipboard(context, post) },
-                                            onTextShareClick = { PostShareUtil.shareAsText(context, post) },
-                                            onPhotoCardClick = { selectedShortPostForCard = post }
-                                        )
+                                // Short Posts List
+                                if (shortPosts.isEmpty()) {
+                                    EmptyStateView("কোন সংক্ষিপ্ত নসীহত পাওয়া যায়নি")
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                                    ) {
+                                        itemsIndexed(shortPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.text}_$index" }) { _, post ->
+                                            ShortPostCard(
+                                                post = post,
+                                                onCopyClick = { PostShareUtil.copyToClipboard(context, post) },
+                                                onTextShareClick = { PostShareUtil.shareAsText(context, post) },
+                                                onPhotoCardClick = { selectedShortPostForCard = post }
+                                            )
+                                        }
                                     }
                                 }
                             }

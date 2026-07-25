@@ -11,5 +11,6 @@ data class AyahEntity(
     val juz: Int,
     val page: Int,
     val arabicText: String,
+    val englishText: String,
     val bengaliText: String
 )

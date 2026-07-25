@@ -22,4 +22,10 @@ interface OfflineQuranDao {
 
     @Query("SELECT * FROM ayah WHERE globalNumber = :globalNumber")
     suspend fun getAyahByGlobalNumber(globalNumber: Int): AyahEntity?
+
+    @Query("SELECT * FROM ayah WHERE surahNumber = :surahNumber AND numberInSurah = :numberInSurah")
+    suspend fun getAyahBySurahAndNumber(surahNumber: Int, numberInSurah: Int): AyahEntity?
+
+    @Query("SELECT * FROM ayah WHERE surahNumber = :surahNumber AND numberInSurah BETWEEN :startVerse AND :endVerse ORDER BY numberInSurah ASC")
+    suspend fun getAyahsBySurahRange(surahNumber: Int, startVerse: Int, endVerse: Int): List<AyahEntity>
 }
