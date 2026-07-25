@@ -362,6 +362,10 @@ fun InitialSearchLayout(
                             )
                         }
                     }
+                    val emptySpots = 4 - row.size
+                    repeat(emptySpots) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }

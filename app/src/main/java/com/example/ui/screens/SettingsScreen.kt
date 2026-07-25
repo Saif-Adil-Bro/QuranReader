@@ -35,6 +35,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -98,6 +100,7 @@ fun SettingsScreen(
         MenuItem("note", "নোট", Icons.Default.Edit, Color(0xFF0D9488)),
         MenuItem("planner", "কুরআন প্ল্যানার", Icons.Default.DateRange, Color(0xFF10B981)),
         MenuItem("subjectwise", "বিষয়ভিত্তিক কুরআন", Icons.Default.Category, Color(0xFF3B82F6)),
+        MenuItem("manzil", "মানযিল", Icons.Default.AutoAwesome, Color(0xFF10B981)),
         MenuItem("dua", "কুরআনিক দুআ", Icons.Default.Schedule, Color(0xFF8B5CF6)),
         MenuItem("morning_evening_dua", "সকাল সন্ধ্যার দুআ", Icons.Default.WbSunny, Color(0xFFF59E0B)),
         MenuItem("game", "ওয়ার্ড গেম", Icons.Default.PlayCircle, Color(0xFFEC4899)),
@@ -953,6 +956,7 @@ fun MenuDetailDialog(
                     "note" -> "আমার নোটপ্যাড"
                     "planner" -> "কুরআন প্ল্যানার"
                     "subjectwise" -> "বিষয়ভিত্তিক কুরআন"
+                    "manzil" -> "মানযিল"
                     "dua" -> "কুরআনিক দুআ"
                     "morning_evening_dua" -> "সকাল সন্ধ্যার দুআ"
                     "game" -> "ওয়ার্ড গেম"
@@ -1019,6 +1023,7 @@ fun MenuDetailDialog(
                         "note" -> NotepadDialogContent(viewModel)
                         "planner" -> PlannerDialogContent(viewModel)
                         "subjectwise" -> SubjectwiseDialogContent()
+                        "manzil" -> SubjectwiseDialogContent(initialCategoryName = "মানযিল")
                         "dua" -> DuaDialogContent(
                             viewModel = viewModel,
                             selectedDua = selectedDuaForDuaTab,
@@ -1733,18 +1738,28 @@ fun PlannerDialogContent(viewModel: SettingsViewModel) {
 // --- 5. SUBJECTWISE DIALOG ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SubjectwiseDialogContent() {
+fun SubjectwiseDialogContent(initialCategoryName: String? = null) {
     val context = LocalContext.current
     var selectedCategory by remember { mutableStateOf<com.example.data.SubjectwiseCategory?>(null) }
     var selectedTopic by remember { mutableStateOf<com.example.data.SubjectwiseTopic?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var allCategories by remember { mutableStateOf<List<com.example.data.SubjectwiseCategory>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var showTranslation by remember { mutableStateOf(true) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(initialCategoryName) {
         val loaded = com.example.data.SubjectwiseQuranRepository.getCategories(context)
         allCategories = loaded
         isLoading = false
+        if (!initialCategoryName.isNullOrEmpty() && selectedCategory == null) {
+            val matchedCategory = loaded.find { it.categoryNameBn == initialCategoryName || it.categoryNameBn.contains(initialCategoryName) }
+            if (matchedCategory != null) {
+                selectedCategory = matchedCategory
+                if (matchedCategory.topics.isNotEmpty()) {
+                    selectedTopic = matchedCategory.topics[0]
+                }
+            }
+        }
     }
 
     if (isLoading) {
@@ -1793,11 +1808,19 @@ fun SubjectwiseDialogContent() {
                     .padding(bottom = 12.dp)
             )
 
-            val filteredCategories = remember(searchQuery, allCategories) {
+            val baseCategories = remember(allCategories, initialCategoryName) {
+                if (initialCategoryName == null) {
+                    allCategories.filter { it.categoryNameBn != "মানযিল" && it.categoryId != 9 }
+                } else {
+                    allCategories
+                }
+            }
+
+            val filteredCategories = remember(searchQuery, baseCategories) {
                 val query = searchQuery.trim().lowercase()
-                if (query.isEmpty()) allCategories
+                if (query.isEmpty()) baseCategories
                 else {
-                    allCategories.filter { cat ->
+                    baseCategories.filter { cat ->
                         cat.categoryNameBn.lowercase().contains(query) ||
                         cat.topics.any { topic ->
                             topic.titleBn.lowercase().contains(query) ||
@@ -1864,15 +1887,18 @@ fun SubjectwiseDialogContent() {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
                                             text = category.categoryNameBn,
-                                            fontSize = 15.sp,
+                                            fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
                                         )
+                                        Spacer(modifier = Modifier.width(6.dp))
                                         Surface(
                                             color = PrimaryGreen.copy(alpha = 0.1f),
                                             shape = RoundedCornerShape(12.dp)
@@ -2021,45 +2047,83 @@ fun SubjectwiseDialogContent() {
         // --- PAGE 3: VERSE CARDS FOR SELECTED TOPIC (বিষয়ের সমস্ত আয়াত) ---
         val category = selectedCategory!!
         val topic = selectedTopic!!
+        val isManzilMode = initialCategoryName != null || category.categoryNameBn == "মানযিল"
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header with Back Button
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = { selectedTopic = null },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = CircleShape
+                if (!isManzilMode) {
+                    IconButton(
+                        onClick = { selectedTopic = null },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                shape = CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "ফিরে যান",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "ফিরে যান",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
-
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = topic.titleBn,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "${category.categoryNameBn} • ${topic.verses.size}টি আয়াত (অফলাইন কুরআন থেকে)",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (!isManzilMode) {
+                        Text(
+                            text = topic.titleBn,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${category.categoryNameBn} • ${topic.verses.size}টি কার্ড (অফলাইন কুরআন থেকে)",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = "${topic.verses.size}টি কার্ড (অফলাইন কুরআন থেকে)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Translation ON/OFF Toggle
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (showTranslation) PrimaryGreen.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.clickable { showTranslation = !showTranslation }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (showTranslation) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = null,
+                            tint = if (showTranslation) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (showTranslation) "অনুবাদ ON" else "অনুবাদ OFF",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (showTranslation) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -2089,7 +2153,7 @@ fun SubjectwiseDialogContent() {
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
-                                        text = "আয়াত #${index + 1}",
+                                        text = if (verse.verseNo.contains("-") || verse.verseNo.contains(",")) "আয়াত ${verse.verseNo}" else "আয়াত #${verse.verseNo}",
                                         color = PrimaryGreen,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
@@ -2116,34 +2180,38 @@ fun SubjectwiseDialogContent() {
                                         .fillMaxWidth()
                                         .padding(bottom = 12.dp)
                                 ) {
-                                    Text(
-                                        text = verse.arabicText,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = PrimaryGreen,
-                                        lineHeight = 30.sp,
-                                        textAlign = TextAlign.Right,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp)
-                                    )
+                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                        Text(
+                                            text = verse.arabicText,
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = PrimaryGreen,
+                                            lineHeight = 36.sp,
+                                            textAlign = TextAlign.Right,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(14.dp)
+                                        )
+                                    }
                                 }
                             }
 
                             // Bangla Translation from Offline quran.db
-                            Text(
-                                text = "বাংলা অনুবাদ:",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            Text(
-                                text = verse.banglaTranslation,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 22.sp
-                            )
+                            if (showTranslation && verse.banglaTranslation.isNotEmpty()) {
+                                Text(
+                                    text = "বাংলা অনুবাদ:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                Text(
+                                    text = verse.banglaTranslation,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    lineHeight = 22.sp
+                                )
+                            }
 
                             Spacer(modifier = Modifier.height(14.dp))
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))

@@ -5,6 +5,7 @@ import com.example.data.local.offline.OfflineQuranDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 
 object SubjectwiseQuranRepository {
 
@@ -14,6 +15,15 @@ object SubjectwiseQuranRepository {
         return this.toString().map { char ->
             val index = englishDigits.indexOf(char)
             if (index != -1) banglaDigits[index] else char
+        }.joinToString("")
+    }
+
+    fun Int.toArabicNumerals(): String {
+        val englishDigits = listOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+        val arabicDigits = listOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
+        return this.toString().map { char ->
+            val index = englishDigits.indexOf(char)
+            if (index != -1) arabicDigits[index] else char
         }.joinToString("")
     }
 
@@ -51,15 +61,30 @@ object SubjectwiseQuranRepository {
         }
 
         try {
-            val jsonString = context.assets.open("subjectwise_topics.json").bufferedReader().use { it.readText() }
-            val jsonArray = JSONArray(jsonString)
+            val jsonObjects = mutableListOf<JSONObject>()
+            try {
+                val jsonString = context.assets.open("subjectwise_topics.json").bufferedReader().use { it.readText() }
+                val jsonArray = JSONArray(jsonString)
+                for (i in 0 until jsonArray.length()) {
+                    jsonObjects.add(jsonArray.getJSONObject(i))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            try {
+                val manzilString = context.assets.open("manzil.json").bufferedReader().use { it.readText() }
+                jsonObjects.add(JSONObject(manzilString))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             val dao = OfflineQuranDatabase.getDatabase(context).offlineQuranDao()
 
             val categoryList = mutableListOf<SubjectwiseCategory>()
             var globalVerseCounter = 1
 
-            for (i in 0 until jsonArray.length()) {
-                val catObj = jsonArray.getJSONObject(i)
+            for (catObj in jsonObjects) {
                 val categoryId = catObj.getInt("category_id")
                 val categoryNameBn = catObj.getString("category_name_bn")
                 val icon = catObj.optString("icon", "")
@@ -73,7 +98,7 @@ object SubjectwiseQuranRepository {
                     val titleBn = topicObj.getString("title_bn")
                     val versesArray = topicObj.getJSONArray("verses")
 
-                    val verseList = mutableListOf<SubjectwiseVerse>()
+                    val rawVerseList = mutableListOf<SubjectwiseVerse>()
 
                     for (v in 0 until versesArray.length()) {
                         val verseObj = versesArray.getJSONObject(v)
@@ -87,20 +112,28 @@ object SubjectwiseQuranRepository {
                             val surahName = surahBanglaNames[surahNumber] ?: "সূরা $surahNumber"
                             val verseNoBangla = ayahNumber.toBanglaDigits()
 
-                            verseList.add(
+                            val cleanedArabic = cleanArabicText(
+                                rawText = ayahEntity.arabicText,
+                                surahNumber = surahNumber,
+                                numberInSurah = ayahNumber
+                            )
+
+                            rawVerseList.add(
                                 SubjectwiseVerse(
                                     id = globalVerseCounter++,
                                     surahNumber = surahNumber,
                                     ayahNumber = ayahNumber,
                                     surahName = surahName,
                                     verseNo = verseNoBangla,
-                                    arabicText = ayahEntity.arabicText,
+                                    arabicText = cleanedArabic,
                                     banglaTranslation = ayahEntity.bengaliText,
                                     lesson = ""
                                 )
                             )
                         }
                     }
+
+                    val verseList = groupConsecutiveVerses(rawVerseList)
 
                     if (verseList.isNotEmpty()) {
                         topicList.add(
@@ -131,5 +164,101 @@ object SubjectwiseQuranRepository {
             e.printStackTrace()
             return@withContext emptyList()
         }
+    }
+
+    private fun cleanArabicText(rawText: String, surahNumber: Int, numberInSurah: Int): String {
+        var text = rawText.removePrefix("\uFEFF").trim()
+        if (numberInSurah == 1 && surahNumber != 1 && surahNumber != 9) {
+            val bismillahPrefixes = listOf(
+                "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                "بِّسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
+                "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+                "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ",
+                "بسم الله الرحمن الرحيم"
+            )
+            for (prefix in bismillahPrefixes) {
+                if (text.startsWith(prefix)) {
+                    text = text.removePrefix(prefix).trimStart()
+                    break
+                }
+            }
+        }
+        return text
+    }
+
+    private fun groupConsecutiveVerses(rawVerses: List<SubjectwiseVerse>): List<SubjectwiseVerse> {
+        if (rawVerses.isEmpty()) return emptyList()
+
+        val grouped = mutableListOf<SubjectwiseVerse>()
+        var currentGroup = mutableListOf<SubjectwiseVerse>()
+
+        for (v in rawVerses) {
+            if (currentGroup.isEmpty()) {
+                currentGroup.add(v)
+            } else {
+                val last = currentGroup.last()
+                if (last.surahNumber == v.surahNumber && v.ayahNumber == last.ayahNumber + 1) {
+                    currentGroup.add(v)
+                } else {
+                    grouped.add(combineVerses(currentGroup))
+                    currentGroup = mutableListOf(v)
+                }
+            }
+        }
+        if (currentGroup.isNotEmpty()) {
+            grouped.add(combineVerses(currentGroup))
+        }
+
+        return grouped
+    }
+
+    private fun combineVerses(group: List<SubjectwiseVerse>): SubjectwiseVerse {
+        if (group.isEmpty()) return SubjectwiseVerse(0, 0, 0, "", "", "", "", "")
+
+        if (group.size == 1) {
+            val single = group[0]
+            val arText = single.arabicText.trim()
+            val formattedAr = if (arText.isNotEmpty() && !arText.contains("﴿")) {
+                "$arText ﴿${single.ayahNumber.toArabicNumerals()}﴾"
+            } else arText
+            return single.copy(arabicText = formattedAr)
+        }
+
+        val first = group[0]
+        val surahNumber = first.surahNumber
+        val surahName = first.surahName
+        val startAyah = first.ayahNumber
+        val endAyah = group.last().ayahNumber
+
+        val isConsecutive = group.zipWithNext().all { (a, b) -> b.ayahNumber == a.ayahNumber + 1 }
+        val verseNo = if (isConsecutive) {
+            "${startAyah.toBanglaDigits()}-${endAyah.toBanglaDigits()}"
+        } else {
+            group.joinToString(", ") { it.ayahNumber.toBanglaDigits() }
+        }
+
+        val combinedArabic = group.joinToString(" ") { v ->
+            val arText = v.arabicText.trim()
+            if (arText.isNotEmpty()) {
+                val cleanAr = if (arText.contains("﴿")) arText.substringBefore("﴿").trim() else arText
+                "$cleanAr ﴿${v.ayahNumber.toArabicNumerals()}﴾"
+            } else ""
+        }.trim()
+
+        val combinedBangla = group.joinToString("\n") { v ->
+            "(${v.ayahNumber.toBanglaDigits()}) ${v.banglaTranslation}"
+        }
+
+        return SubjectwiseVerse(
+            id = first.id,
+            surahNumber = surahNumber,
+            ayahNumber = startAyah,
+            surahName = surahName,
+            verseNo = verseNo,
+            arabicText = combinedArabic,
+            banglaTranslation = combinedBangla,
+            lesson = first.lesson
+        )
     }
 }
