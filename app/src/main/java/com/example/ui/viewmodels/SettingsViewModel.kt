@@ -519,6 +519,13 @@ class SettingsViewModel(
     private val _gamePhase = MutableStateFlow(GamePhase.SETUP)
     val gamePhase: StateFlow<GamePhase> = _gamePhase.asStateFlow()
 
+    private val _gameErrorMessage = MutableStateFlow<String?>(null)
+    val gameErrorMessage: StateFlow<String?> = _gameErrorMessage.asStateFlow()
+
+    fun clearGameErrorMessage() {
+        _gameErrorMessage.value = null
+    }
+
     private val _gameConfig = MutableStateFlow(WordGameConfig())
     val gameConfig: StateFlow<WordGameConfig> = _gameConfig.asStateFlow()
 
@@ -558,16 +565,15 @@ class SettingsViewModel(
                     while (seenKeys.size < config.totalQuestions && attempts < 15) {
                         attempts++
                         val randomSurah = (1..114).random()
-                        val ayahs = quranRepository.getSurahDetailsCombined(randomSurah)
-                        for (ayah in ayahs) {
-                            val filtered = ayah.words.filter { 
-                                it.charTypeName == "word" && 
-                                it.translation?.text != null && 
-                                it.textUthmani != null && 
-                                it.translation.text.isNotBlank() && 
-                                it.textUthmani.isNotBlank() 
-                            }
-                            for (w in filtered) {
+                        val words = quranRepository.getSurahWords(randomSurah)
+                        val filtered = words.filter { 
+                            it.charTypeName == "word" && 
+                            it.translation?.text != null && 
+                            it.textUthmani != null && 
+                            it.translation.text.isNotBlank() && 
+                            it.textUthmani.isNotBlank() 
+                        }
+                        for (w in filtered) {
                                 val cleanAr = w.textUthmani?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
                                 val cleanBn = w.translation?.text?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
                                 if (cleanAr.isNotEmpty() && cleanBn.isNotEmpty()) {
@@ -578,19 +584,17 @@ class SettingsViewModel(
                                     }
                                 }
                             }
-                        }
                     }
                 } else {
-                    val ayahs = quranRepository.getSurahDetailsCombined(config.selectedSurah)
-                    for (ayah in ayahs) {
-                        val filtered = ayah.words.filter { 
-                            it.charTypeName == "word" && 
-                            it.translation?.text != null && 
-                            it.textUthmani != null && 
-                            it.translation.text.isNotBlank() && 
-                            it.textUthmani.isNotBlank() 
-                        }
-                        for (w in filtered) {
+                    val words = quranRepository.getSurahWords(config.selectedSurah)
+                    val filtered = words.filter { 
+                        it.charTypeName == "word" && 
+                        it.translation?.text != null && 
+                        it.textUthmani != null && 
+                        it.translation.text.isNotBlank() && 
+                        it.textUthmani.isNotBlank() 
+                    }
+                    for (w in filtered) {
                             val cleanAr = w.textUthmani?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
                             val cleanBn = w.translation?.text?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
                             if (cleanAr.isNotEmpty() && cleanBn.isNotEmpty()) {
@@ -601,21 +605,18 @@ class SettingsViewModel(
                                 }
                             }
                         }
-                    }
                     
                     // Supplement with Surah Al-Baqarah if not enough unique words in the selected surah
                     if (allWords.size < config.totalQuestions) {
-                        val fallbackAyahs = quranRepository.getSurahDetailsCombined(2)
-                        for (ayah in fallbackAyahs) {
-                            if (allWords.size >= config.totalQuestions) break
-                            val filtered = ayah.words.filter { 
-                                it.charTypeName == "word" && 
-                                it.translation?.text != null && 
-                                it.textUthmani != null && 
-                                it.translation.text.isNotBlank() && 
-                                it.textUthmani.isNotBlank() 
-                            }
-                            for (w in filtered) {
+                        val fallbackWords = quranRepository.getSurahWords(2)
+                        val filtered = fallbackWords.filter { 
+                            it.charTypeName == "word" && 
+                            it.translation?.text != null && 
+                            it.textUthmani != null && 
+                            it.translation.text.isNotBlank() && 
+                            it.textUthmani.isNotBlank() 
+                        }
+                        for (w in filtered) {
                                 if (allWords.size >= config.totalQuestions) break
                                 val cleanAr = w.textUthmani?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
                                 val cleanBn = w.translation?.text?.replace(numRegex, "")?.trim()?.lowercase() ?: ""
@@ -627,7 +628,6 @@ class SettingsViewModel(
                                     }
                                 }
                             }
-                        }
                     }
                 }
                 
@@ -678,6 +678,12 @@ class SettingsViewModel(
                     }
                     
                     WordQuestion(questionText, options.shuffled(), correctAns)
+                }
+                
+                if (generatedQuestions.isEmpty()) {
+                    _gameErrorMessage.value = "গেম শুরু করা যাচ্ছে না। অনুগ্রহ করে নিশ্চিত করুন যে আপনি ইন্টারনেটে যুক্ত আছেন বা অফলাইন ডাটা ডাউনলোড করেছেন।"
+                    _gamePhase.value = GamePhase.SETUP
+                    return@launch
                 }
                 
                 _dynamicQuestions.value = generatedQuestions

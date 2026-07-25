@@ -381,6 +381,16 @@ class QuranRepository(
         }
     }
 
+    suspend fun getSurahWords(surahNumber: Int): List<com.example.data.model.QuranComWord> {
+        return try {
+            quranComApi.getSurahVerses(surahNumber).verses.flatMap { it.words }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            val cached = getSurahDetailsCombined(surahNumber).flatMap { it.words }
+            if (cached.isNotEmpty()) cached else emptyList()
+        }
+    }
+
     /**
      * Fetches a specific Surah with both Arabic text and Bengali translation,
      * and combines them into a list of CombinedAyah for easy UI consumption.

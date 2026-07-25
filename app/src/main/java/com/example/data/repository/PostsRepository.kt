@@ -31,6 +31,19 @@ class PostsRepository(private val context: Context) {
     private var postsFromBlog = listOf<BlogPost>()
     private var postsFromArticles = listOf<BlogPost>()
 
+    private val syncPrefs: SharedPreferences by lazy {
+        context.getSharedPreferences("posts_sync_prefs", Context.MODE_PRIVATE)
+    }
+
+    private val appFirstInstallTime: Long by lazy {
+        var t = syncPrefs.getLong("app_first_install_time", 0L)
+        if (t == 0L) {
+            t = System.currentTimeMillis()
+            syncPrefs.edit().putLong("app_first_install_time", t).putLong("last_sync_timestamp", t).apply()
+        }
+        t
+    }
+
     init {
         // Load initial state (empty, relying on Firestore and user-added posts)
         _blogPosts.value = emptyList()
@@ -50,6 +63,7 @@ class PostsRepository(private val context: Context) {
             e.printStackTrace()
         }
 
+        appFirstInstallTime // force initialization on startup
         listenToFirestore()
     }
 
@@ -58,12 +72,18 @@ class PostsRepository(private val context: Context) {
             val raw = doc.get("timestamp") ?: doc.get("createdAt") ?: doc.get("date")
             when (raw) {
                 is com.google.firebase.Timestamp -> raw.toDate().time
-                is Number -> raw.toLong()
-                is String -> raw.toLongOrNull() ?: System.currentTimeMillis()
-                else -> System.currentTimeMillis()
+                is Number -> {
+                    val t = raw.toLong()
+                    if (t in 1L..99999999999L) t * 1000 else t
+                }
+                is String -> {
+                    val t = raw.toLongOrNull() ?: 0L
+                    if (t in 1L..99999999999L) t * 1000 else t
+                }
+                else -> 0L
             }
         } catch (e: Exception) {
-            System.currentTimeMillis()
+            0L
         }
     }
 
@@ -138,6 +158,7 @@ class PostsRepository(private val context: Context) {
                                         val title = doc.getString("title") ?: doc.getString("name") ?: ""
                                         val content = doc.getString("content") ?: doc.getString("text") ?: doc.getString("body") ?: ""
                                         if (title.isNotBlank() || content.isNotBlank()) {
+                                            val postTs = extractTimestamp(doc)
                                             val blogPost = BlogPost(
                                                 id = doc.id,
                                                 title = title.ifBlank { "নতুন ইসলামিক পোস্ট" },
@@ -146,12 +167,14 @@ class PostsRepository(private val context: Context) {
                                                 category = doc.getString("category") ?: "সাধারণ",
                                                 imageUrl = doc.getString("imageUrl") ?: doc.getString("image") ?: "",
                                                 readTime = doc.getString("readTime") ?: "২ মিনিট",
-                                                timestamp = extractTimestamp(doc)
+                                                timestamp = postTs
                                             )
-                                            try {
-                                                PostNotificationHelper.showBlogPostNotification(context, blogPost)
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
+                                            if (postTs > appFirstInstallTime) {
+                                                try {
+                                                    PostNotificationHelper.showBlogPostNotification(context, blogPost)
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                }
                                             }
                                         }
                                     }
@@ -180,6 +203,7 @@ class PostsRepository(private val context: Context) {
                                         val title = doc.getString("title") ?: doc.getString("name") ?: ""
                                         val content = doc.getString("content") ?: doc.getString("text") ?: doc.getString("body") ?: ""
                                         if (title.isNotBlank() || content.isNotBlank()) {
+                                            val postTs = extractTimestamp(doc)
                                             val blogPost = BlogPost(
                                                 id = doc.id,
                                                 title = title.ifBlank { "নতুন নিবন্ধ" },
@@ -188,12 +212,14 @@ class PostsRepository(private val context: Context) {
                                                 category = doc.getString("category") ?: "সাধারণ",
                                                 imageUrl = doc.getString("imageUrl") ?: doc.getString("image") ?: "",
                                                 readTime = doc.getString("readTime") ?: "২ মিনিট",
-                                                timestamp = extractTimestamp(doc)
+                                                timestamp = postTs
                                             )
-                                            try {
-                                                PostNotificationHelper.showBlogPostNotification(context, blogPost)
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
+                                            if (postTs > appFirstInstallTime) {
+                                                try {
+                                                    PostNotificationHelper.showBlogPostNotification(context, blogPost)
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                }
                                             }
                                         }
                                     }
@@ -221,18 +247,21 @@ class PostsRepository(private val context: Context) {
                                         knownPostIds.add(doc.id)
                                         val text = doc.getString("text") ?: doc.getString("content") ?: doc.getString("title") ?: ""
                                         if (text.isNotBlank()) {
+                                            val postTs = extractTimestamp(doc)
                                             val shortPost = ShortPost(
                                                 id = doc.id,
                                                 text = text,
                                                 reference = doc.getString("reference") ?: doc.getString("ref") ?: "",
                                                 category = doc.getString("category") ?: "দৈনিক নসীহত",
                                                 author = doc.getString("author") ?: "ইসলামিক স্কলার",
-                                                timestamp = extractTimestamp(doc)
+                                                timestamp = postTs
                                             )
-                                            try {
-                                                PostNotificationHelper.showPhotoCardNotification(context, shortPost)
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
+                                            if (postTs > appFirstInstallTime) {
+                                                try {
+                                                    PostNotificationHelper.showPhotoCardNotification(context, shortPost)
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                }
                                             }
                                         }
                                     }

@@ -1788,7 +1788,7 @@ fun SubjectwiseDialogContent(
         allCategories = loaded
         isLoading = false
         if (!initialCategoryName.isNullOrEmpty() && selectedCategory == null) {
-            val matchedCategory = loaded.find { it.categoryNameBn == initialCategoryName || it.categoryNameBn.contains(initialCategoryName) }
+            val matchedCategory = loaded.find { it.categoryId == 9 || it.categoryNameBn.contains("মানযিল") }
             if (matchedCategory != null) {
                 selectedCategory = matchedCategory
                 if (matchedCategory.topics.isNotEmpty()) {
@@ -2083,7 +2083,7 @@ fun SubjectwiseDialogContent(
         // --- PAGE 3: VERSE CARDS FOR SELECTED TOPIC (বিষয়ের সমস্ত আয়াত) ---
         val category = selectedCategory!!
         val topic = selectedTopic!!
-        val isManzilMode = initialCategoryName != null || category.categoryNameBn == "মানযিল"
+        val isManzilMode = initialCategoryName != null || category.categoryId == 9 || category.categoryNameBn == "মানযিল"
 
         Column(modifier = Modifier.fillMaxSize()) {
             // Header / Sub-controls
@@ -2226,11 +2226,12 @@ fun SubjectwiseDialogContent(
                                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                         Text(
                                             text = verse.arabicText,
-                                            fontSize = 20.sp,
+                                            fontSize = 24.sp,
                                             fontWeight = FontWeight.Medium,
                                             color = PrimaryGreen,
-                                            lineHeight = 36.sp,
+                                            lineHeight = 40.sp,
                                             textAlign = TextAlign.Right,
+                                            fontFamily = com.example.ui.theme.scheherazadeFont,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(14.dp)
@@ -2902,8 +2903,17 @@ fun GameDialogContent(viewModel: SettingsViewModel) {
 @Composable
 fun GameSetupScreen(viewModel: SettingsViewModel) {
     val config by viewModel.gameConfig.collectAsState()
+    val errorMessage by viewModel.gameErrorMessage.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val surahs = com.example.data.surahInfoList
     var isSurahDropdownExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    
+    androidx.compose.runtime.LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            android.widget.Toast.makeText(context, errorMessage, android.widget.Toast.LENGTH_LONG).show()
+            viewModel.clearGameErrorMessage()
+        }
+    }
     
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val inactiveBg = MaterialTheme.colorScheme.surface

@@ -2,8 +2,6 @@ package com.example.data
 
 import android.content.Context
 import com.example.data.local.offline.OfflineQuranDatabase
-import com.example.data.model.CombinedAyah
-import com.example.QuranApplication
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -81,9 +79,7 @@ object SubjectwiseQuranRepository {
                 e.printStackTrace()
             }
 
-            val dao = OfflineQuranDatabase.ensureDatabasePopulated(context).offlineQuranDao()
-            val quranRepo = (context.applicationContext as? QuranApplication)?.container?.quranRepository
-            val surahAyahsCache = mutableMapOf<Int, List<CombinedAyah>>()
+            val dao = OfflineQuranDatabase.getDatabase(context).offlineQuranDao()
 
             val categoryList = mutableListOf<SubjectwiseCategory>()
             var globalVerseCounter = 1
@@ -110,11 +106,7 @@ object SubjectwiseQuranRepository {
                         val ayahNumber = verseObj.getInt("ayah")
 
                         // Query Room offline DB
-                        val ayahEntity = try {
-                            dao.getAyahBySurahAndNumber(surahNumber, ayahNumber)
-                        } catch (e: Exception) {
-                            null
-                        }
+                        val ayahEntity = dao.getAyahBySurahAndNumber(surahNumber, ayahNumber)
 
                         if (ayahEntity != null) {
                             val surahName = surahBanglaNames[surahNumber] ?: "সূরা $surahNumber"
@@ -138,39 +130,6 @@ object SubjectwiseQuranRepository {
                                     lesson = ""
                                 )
                             )
-                        } else if (quranRepo != null) {
-                            // Fallback to main QuranRepository if offline DB is missing or unpopulated
-                            try {
-                                val surahAyahs = surahAyahsCache.getOrPut(surahNumber) {
-                                    quranRepo.getSurahDetailsCombined(surahNumber)
-                                }
-                                val fallbackAyah = surahAyahs.find { it.numberInSurah == ayahNumber }
-                                if (fallbackAyah != null) {
-                                    val surahName = surahBanglaNames[surahNumber] ?: "সূরা $surahNumber"
-                                    val verseNoBangla = ayahNumber.toBanglaDigits()
-
-                                    val cleanedArabic = cleanArabicText(
-                                        rawText = fallbackAyah.arabicText,
-                                        surahNumber = surahNumber,
-                                        numberInSurah = ayahNumber
-                                    )
-
-                                    rawVerseList.add(
-                                        SubjectwiseVerse(
-                                            id = globalVerseCounter++,
-                                            surahNumber = surahNumber,
-                                            ayahNumber = ayahNumber,
-                                            surahName = surahName,
-                                            verseNo = verseNoBangla,
-                                            arabicText = cleanedArabic,
-                                            banglaTranslation = fallbackAyah.bengaliText ?: "",
-                                            lesson = ""
-                                        )
-                                    )
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
                         }
                     }
 

@@ -4,19 +4,31 @@ import sqlite3
 import os
 
 print('Downloading Bengali Quran...')
-bn_data = json.loads(urllib.request.urlopen('https://api.alquran.cloud/v1/quran/bn.bengali').read().decode('utf-8'))['data']
+bn_req = urllib.request.Request('https://api.alquran.cloud/v1/quran/bn.bengali', headers={'User-Agent': 'Mozilla/5.0'})
+bn_data = json.loads(urllib.request.urlopen(bn_req).read().decode('utf-8'))['data']
 
 print('Downloading Arabic Quran...')
-ar_data = json.loads(urllib.request.urlopen('https://api.alquran.cloud/v1/quran/quran-uthmani').read().decode('utf-8'))['data']
+ar_req = urllib.request.Request('https://api.alquran.cloud/v1/quran/quran-uthmani', headers={'User-Agent': 'Mozilla/5.0'})
+ar_data = json.loads(urllib.request.urlopen(ar_req).read().decode('utf-8'))['data']
 
 print('Downloading English Quran...')
-en_data = json.loads(urllib.request.urlopen('https://api.alquran.cloud/v1/quran/en.sahih').read().decode('utf-8'))['data']
+en_req = urllib.request.Request('https://api.alquran.cloud/v1/quran/en.sahih', headers={'User-Agent': 'Mozilla/5.0'})
+en_data = json.loads(urllib.request.urlopen(en_req).read().decode('utf-8'))['data']
 
-db_path = 'app/src/main/assets/databases/quran.db'
-if os.path.exists(db_path):
-    os.remove(db_path)
+# Handle DB paths safely whether run in app project root or current directory
+db_dir = 'app/src/main/assets/databases'
+if not os.path.exists('app'):
+    db_dir = '.'
 
-conn = sqlite3.connect(db_path)
+os.makedirs(db_dir, exist_ok=True)
+
+db_path = os.path.join(db_dir, 'quran.db')
+tmp_db_path = os.path.join(db_dir, 'quran_tmp.db')
+
+if os.path.exists(tmp_db_path):
+    os.remove(tmp_db_path)
+
+conn = sqlite3.connect(tmp_db_path)
 c = conn.cursor()
 
 c.execute("""
@@ -54,10 +66,14 @@ c.execute("""
 INSERT OR REPLACE INTO room_master_table (id, identity_hash) VALUES (42, '40cac304f83466555049be1dd8630e8a')
 """)
 
+print('Inserting Surahs and Ayahs...')
+
 for s_idx, surah in enumerate(bn_data['surahs']):
     surah_num = surah['number']
     s_ar = ar_data['surahs'][s_idx]
     s_en = en_data['surahs'][s_idx]
+    
+    num_ayahs = surah.get('numberOfAyahs', len(surah['ayahs']))
     
     c.execute("""
     INSERT INTO surah (number, name, englishName, englishNameTranslation, numberOfAyahs, revelationType)
@@ -67,7 +83,7 @@ for s_idx, surah in enumerate(bn_data['surahs']):
         s_ar['name'],
         surah['englishName'],
         surah['englishNameTranslation'],
-        len(surah['ayahs']),
+        num_ayahs,
         surah['revelationType']
     ))
     
@@ -92,4 +108,9 @@ for s_idx, surah in enumerate(bn_data['surahs']):
 conn.commit()
 conn.close()
 
-print('Successfully created Room-compliant quran.db!')
+if os.path.exists(db_path):
+    os.remove(db_path)
+os.rename(tmp_db_path, db_path)
+print(f'Successfully created Room-compliant quran.db at {db_path}!')
+
+

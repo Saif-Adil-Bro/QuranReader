@@ -24,17 +24,21 @@ class DataSyncWorker(
     override suspend fun doWork(): Result {
         return try {
             val firestore = FirebaseFirestore.getInstance()
-            val lastSync = prefs.getLong("last_sync_timestamp", 0L)
             val currentMills = System.currentTimeMillis()
+            var installTime = prefs.getLong("app_first_install_time", 0L)
+            if (installTime == 0L) {
+                installTime = currentMills
+                prefs.edit().putLong("app_first_install_time", currentMills).putLong("last_sync_timestamp", currentMills).apply()
+                return Result.success()
+            }
 
-            // On initial run (first app start/sync), initialize lastSync to current time
-            // to avoid sending bulk notifications for existing historical posts.
+            val lastSync = prefs.getLong("last_sync_timestamp", 0L)
             if (lastSync == 0L) {
                 prefs.edit().putLong("last_sync_timestamp", currentMills).apply()
                 return Result.success()
             }
 
-            val effectiveLastSync = lastSync
+            val effectiveLastSync = maxOf(lastSync, installTime)
             var maxTimestampSeen = effectiveLastSync
 
             val processedIds = mutableSetOf<String>()
@@ -142,12 +146,18 @@ class DataSyncWorker(
             val raw = doc.get("timestamp") ?: doc.get("createdAt") ?: doc.get("date")
             when (raw) {
                 is Timestamp -> raw.toDate().time
-                is Number -> raw.toLong()
-                is String -> raw.toLongOrNull() ?: System.currentTimeMillis()
-                else -> System.currentTimeMillis()
+                is Number -> {
+                    val t = raw.toLong()
+                    if (t in 1L..99999999999L) t * 1000 else t
+                }
+                is String -> {
+                    val t = raw.toLongOrNull() ?: 0L
+                    if (t in 1L..99999999999L) t * 1000 else t
+                }
+                else -> 0L
             }
         } catch (e: Exception) {
-            System.currentTimeMillis()
+            0L
         }
     }
 }

@@ -249,9 +249,13 @@ object PostShareUtil {
                 val loadedBg = if (cached != null && !cached.isRecycled) {
                     cached
                 } else {
-                    val input = URL(bgImageUrl).openStream()
-                    val decoded = BitmapFactory.decodeStream(input)
-                    input.close()
+                    val input = if (bgImageUrl.startsWith("content://") || bgImageUrl.startsWith("file://")) {
+                        context.contentResolver.openInputStream(android.net.Uri.parse(bgImageUrl))
+                    } else {
+                        java.net.URL(bgImageUrl).openStream()
+                    }
+                    val decoded = input?.let { BitmapFactory.decodeStream(it) }
+                    input?.close()
                     if (decoded != null) {
                         bgImageCache.put(bgImageUrl, decoded)
                     }
