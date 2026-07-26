@@ -102,26 +102,26 @@ fun AppNavGraph(
         enterTransition = {
             slideInHorizontally(
                 initialOffsetX = { fullWidth -> fullWidth },
-                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(durationMillis = 320))
+                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(durationMillis = 500))
         },
         exitTransition = {
             slideOutHorizontally(
                 targetOffsetX = { fullWidth -> -fullWidth / 4 },
-                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
-            ) + fadeOut(animationSpec = tween(durationMillis = 320))
+                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(durationMillis = 500))
         },
         popEnterTransition = {
             slideInHorizontally(
                 initialOffsetX = { fullWidth -> -fullWidth / 4 },
-                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(durationMillis = 320))
+                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(durationMillis = 500))
         },
         popExitTransition = {
             slideOutHorizontally(
                 targetOffsetX = { fullWidth -> fullWidth },
-                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
-            ) + fadeOut(animationSpec = tween(durationMillis = 320))
+                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(durationMillis = 500))
         }
     ) {
         

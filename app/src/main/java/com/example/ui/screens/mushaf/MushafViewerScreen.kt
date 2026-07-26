@@ -393,6 +393,7 @@ fun MushafViewerScreen(
                                     pageInput = converted
                                 }
                             },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                             placeholder = { Text("১-${com.example.utils.DateUtil.toBengaliNumerals(maxPagesInPara)} পৃষ্ঠা", color = Color.Gray, fontSize = 12.sp) },
                             modifier = Modifier.weight(0.35f).height(48.dp),
                             singleLine = true,
@@ -919,6 +920,7 @@ fun MushafViewerScreen(
                                     pageInput = converted
                                 }
                             },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                             label = { Text("পৃষ্ঠা...", color = if (isDark) Color.LightGray else Color.Gray, fontSize = 12.sp) },
                             placeholder = { Text("১ - ${DateUtil.toBengaliNumerals(maxPagesInPara)}", color = Color.Gray, fontSize = 11.sp) },
                             modifier = Modifier.weight(0.35f),

@@ -156,6 +156,7 @@ fun HomeScreen(
     val lastReadAyah by viewModel.lastReadAyah.collectAsState()
     val defaultMushafId by viewModel.defaultMushafId.collectAsState()
     val hijriOffset by viewModel.hijriOffset.collectAsState()
+    val combinedHijriOffset by viewModel.combinedHijriOffset.collectAsState()
     val surahList by viewModel.surahs.collectAsState()
     val currentTheme by viewModel.theme.collectAsState()
     val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
@@ -447,7 +448,7 @@ fun HomeScreen(
                         HeroSection(
                             lastReadTitle = actionTextForHero,
                             lastReadSubtitle = subTextForHero,
-                            hijriOffset = hijriOffset,
+                            hijriOffset = combinedHijriOffset,
                             onResumeClick = {
                                 when (lastReadMode) {
                                     "HAFEZI" -> onNavigateToHafeziMode(lastReadPage)
@@ -523,6 +524,12 @@ fun HomeScreen(
             text = {
                 Column {
                     Text("হিজরি তারিখ একদিন বা কয়েকদিন আগে-পিছে করতে পারেন।")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "বর্তমান তারিখ: ${com.example.utils.DateUtil.getTodayHijriDateStr(combinedHijriOffset)}",
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryGreen
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),

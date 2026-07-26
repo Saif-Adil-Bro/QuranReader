@@ -282,7 +282,7 @@ class SettingsViewModel(
                     if (!quranRepository.isSurahDownloaded(i)) {
                         try {
                             val edition = tanzilTextStyle.value
-                            quranRepository.getSurahDetailsCombined(i, edition)
+                            quranRepository.downloadSurahDetailsSync(i, edition)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -318,6 +318,13 @@ class SettingsViewModel(
         }
     }
     val hijriOffset: StateFlow<Int> = repository.hijriOffsetFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = 0
+        )
+
+    val combinedHijriOffset: StateFlow<Int> = repository.combinedHijriOffsetFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,

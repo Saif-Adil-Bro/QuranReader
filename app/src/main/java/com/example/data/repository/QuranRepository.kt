@@ -391,14 +391,57 @@ class QuranRepository(
         }
     }
 
+    suspend fun downloadSurahDetailsSync(surahNumber: Int, arabicEdition: String = "quran-uthmani") {
+        val tafsirIdsSet = settingsRepository.selectedTafsirIdsFlow.first()
+        val tafsirIdsStr = tafsirIdsSet.joinToString(",")
+        val audioEdition = settingsRepository.selectedQariIdFlow.first()
+        val cacheKey = "${surahNumber}_${arabicEdition}_${tafsirIdsStr}_${audioEdition}"
+        val cacheFile = getSurahDetailsCacheFile(surahNumber, tafsirIdsStr, "${arabicEdition}_${audioEdition}")
+        
+        var fallbackList: List<CombinedAyah>? = null
+        try {
+            val offlineAyahs = offlineDao.getAyahsBySurah(surahNumber)
+            if (offlineAyahs.isNotEmpty()) {
+                val dbList = offlineAyahs.map {
+                    CombinedAyah(
+                        number = it.globalNumber,
+                        numberInSurah = it.numberInSurah,
+                        page = it.page,
+                        juz = it.juz,
+                        surahNumber = surahNumber,
+                        arabicText = it.arabicText,
+                        bengaliText = it.bengaliText,
+                        tafsirText = null,
+                        audioUrl = null,
+                        words = emptyList(),
+                        textUthmaniTajweed = null
+                    )
+                }
+                fallbackList = cleanCombinedAyahList(dbList)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        
+        fetchAndCacheSurahFromNetwork(
+            surahNumber = surahNumber,
+            cacheKey = cacheKey,
+            cacheFile = cacheFile,
+            tafsirIdsStr = tafsirIdsStr,
+            audioEdition = audioEdition,
+            arabicEdition = arabicEdition,
+            fallbackList = fallbackList
+        )
+    }
+
     /**
      * Fetches a specific Surah with both Arabic text and Bengali translation,
      * and combines them into a list of CombinedAyah for easy UI consumption.
      */
-    suspend fun getSurahDetailsCombined(surahNumber: Int, arabicEdition: String = "quran-uthmani"): List<CombinedAyah> {
+    suspend fun getSurahDetailsCombined(surahNumber: Int, arabicEdition: String = "quran-uthmani", audioEditionOverride: String? = null): List<CombinedAyah> {
         val tafsirIdsSet = settingsRepository.selectedTafsirIdsFlow.first()
         val tafsirIdsStr = tafsirIdsSet.joinToString(",")
-        val audioEdition = settingsRepository.selectedQariIdFlow.first()
+        val audioEdition = audioEditionOverride ?: settingsRepository.selectedQariIdFlow.first()
         val cacheKey = "${surahNumber}_${arabicEdition}_${tafsirIdsStr}_${audioEdition}"
         val inMemory = cachedSurahDetails[cacheKey]
         if (inMemory != null && inMemory.isNotEmpty()) {
@@ -512,10 +555,10 @@ class QuranRepository(
     /**
      * Fetches a specific page of the Quran
      */
-    suspend fun getPageCombined(pageNumber: Int): List<CombinedAyah> {
+    suspend fun getPageCombined(pageNumber: Int, audioEditionOverride: String? = null): List<CombinedAyah> {
         val tafsirIdsSet = settingsRepository.selectedTafsirIdsFlow.first()
         val tafsirIdsStr = tafsirIdsSet.joinToString(",")
-        val audioEdition = settingsRepository.selectedQariIdFlow.first()
+        val audioEdition = audioEditionOverride ?: settingsRepository.selectedQariIdFlow.first()
         val cacheKey = "${pageNumber}_${tafsirIdsStr}_${audioEdition}"
         val inMemory = cachedPageDetails[cacheKey]
         if (inMemory != null && inMemory.isNotEmpty()) {
@@ -605,10 +648,10 @@ class QuranRepository(
     /**
      * Fetches a specific Juz of the Quran
      */
-    suspend fun getJuzCombined(juzNumber: Int): List<CombinedAyah> {
+    suspend fun getJuzCombined(juzNumber: Int, audioEditionOverride: String? = null): List<CombinedAyah> {
         val tafsirIdsSet = settingsRepository.selectedTafsirIdsFlow.first()
         val tafsirIdsStr = tafsirIdsSet.joinToString(",")
-        val audioEdition = settingsRepository.selectedQariIdFlow.first()
+        val audioEdition = audioEditionOverride ?: settingsRepository.selectedQariIdFlow.first()
         val cacheKey = "${juzNumber}_${tafsirIdsStr}_${audioEdition}"
         val inMemory = cachedJuzDetails[cacheKey]
         if (inMemory != null && inMemory.isNotEmpty()) {

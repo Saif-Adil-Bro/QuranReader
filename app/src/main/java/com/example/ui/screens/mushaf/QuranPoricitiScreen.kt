@@ -511,6 +511,7 @@ fun QuranPoricitiScreen(
                                     pageInput = converted
                                 }
                             },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                             label = { Text("পৃষ্ঠা...", color = textSecondary, fontSize = 12.sp) },
                             placeholder = { Text("১ - ${DateUtil.toBengaliNumerals(maxPagesInPara)}", color = Color.Gray, fontSize = 11.sp) },
                             modifier = Modifier.weight(0.35f),

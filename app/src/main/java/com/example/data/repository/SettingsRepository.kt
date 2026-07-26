@@ -10,6 +10,13 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import com.google.firebase.Firebase
+import com.google.firebase.remoteconfig.remoteConfig
+import com.google.firebase.remoteconfig.remoteConfigSettings
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
 
@@ -125,6 +132,35 @@ class SettingsRepository(val context: Context) {
 
     val keepScreenOnFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[KEEP_SCREEN_ON_KEY] ?: false }
+
+    private val _globalHijriOffsetFlow = MutableStateFlow(0)
+    val globalHijriOffsetFlow: StateFlow<Int> = _globalHijriOffsetFlow.asStateFlow()
+    
+    val combinedHijriOffsetFlow: Flow<Int> = hijriOffsetFlow.combine(globalHijriOffsetFlow) { local, global ->
+        local + global
+    }
+
+    init {
+        fetchGlobalHijriOffset()
+    }
+
+    private fun fetchGlobalHijriOffset() {
+        try {
+            val remoteConfig = Firebase.remoteConfig
+            val configSettings = remoteConfigSettings {
+                minimumFetchIntervalInSeconds = 3600
+            }
+            remoteConfig.setConfigSettingsAsync(configSettings)
+            remoteConfig.fetchAndActivate().addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val globalOffset = remoteConfig.getLong("global_hijri_offset").toInt()
+                    _globalHijriOffsetFlow.value = globalOffset
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     suspend fun setShowTranslation(show: Boolean) {
         context.dataStore.edit { preferences -> preferences[SHOW_TRANSLATION_KEY] = show }

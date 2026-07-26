@@ -113,6 +113,7 @@ firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashly
 firebase-inappmessaging-display = { group = "com.google.firebase", name = "firebase-inappmessaging-display" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-config = { group = "com.google.firebase", name = "firebase-config" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

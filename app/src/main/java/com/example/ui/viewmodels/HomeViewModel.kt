@@ -86,6 +86,13 @@ class HomeViewModel(
             initialValue = 0
         )
 
+    val combinedHijriOffset: StateFlow<Int> = settingsRepository.combinedHijriOffsetFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = 0
+        )
+
     val theme: StateFlow<String> = settingsRepository.themeFlow
         .stateIn(
             scope = viewModelScope,
@@ -176,7 +183,7 @@ class HomeViewModel(
                     if (!quranRepository.isSurahDownloaded(i)) {
                         try {
                             val edition = settingsRepository.tanzilTextStyleFlow.first()
-                            quranRepository.getSurahDetailsCombined(i, edition)
+                            quranRepository.downloadSurahDetailsSync(i, edition)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -205,7 +212,32 @@ class HomeViewModel(
     private val _surahs = MutableStateFlow<List<Surah>>(emptyList())
     val surahs: StateFlow<List<Surah>> = _surahs
 
+    // --- Audio Player Support ---
+    private val _currentPlayingSurah = MutableStateFlow<Int?>(null)
+    val currentPlayingSurah: StateFlow<Int?> = _currentPlayingSurah.asStateFlow()
+
+    private val _currentPlayingAyahIndex = MutableStateFlow(0)
+    val currentPlayingAyahIndex: StateFlow<Int> = _currentPlayingAyahIndex.asStateFlow()
+
+    private val _currentPlayingAyahs = MutableStateFlow<List<CombinedAyah>>(emptyList())
+    val currentPlayingAyahs: StateFlow<List<CombinedAyah>> = _currentPlayingAyahs.asStateFlow()
+
+    val isPlaying: StateFlow<Boolean> = audioRepository.isPlaying
+    val currentPlayingAyahNumber: StateFlow<Int?> = audioRepository.currentPlayingAyahNumber
+
+    private val _selectedQariId = MutableStateFlow("ar.alafasy")
+    val selectedQariId: StateFlow<String> = _selectedQariId.asStateFlow()
+
+    private val _isRepeatAyahEnabled = MutableStateFlow(false)
+    val isRepeatAyahEnabled: StateFlow<Boolean> = _isRepeatAyahEnabled.asStateFlow()
+
+    private val _isRepeatSurahEnabled = MutableStateFlow(false)
+    val isRepeatSurahEnabled: StateFlow<Boolean> = _isRepeatSurahEnabled.asStateFlow()
+
+    val playbackSpeed: StateFlow<Float> = audioRepository.playbackSpeed
+
     init {
+        viewModelScope.launch { settingsRepository.selectedQariIdFlow.collect { _selectedQariId.value = it } }
         loadSurahs()
     }
 
@@ -237,30 +269,6 @@ class HomeViewModel(
         }
     }
 
-    // --- Audio Player Support ---
-    private val _currentPlayingSurah = MutableStateFlow<Int?>(null)
-    val currentPlayingSurah: StateFlow<Int?> = _currentPlayingSurah.asStateFlow()
-
-    private val _currentPlayingAyahIndex = MutableStateFlow(0)
-    val currentPlayingAyahIndex: StateFlow<Int> = _currentPlayingAyahIndex.asStateFlow()
-
-    private val _currentPlayingAyahs = MutableStateFlow<List<CombinedAyah>>(emptyList())
-    val currentPlayingAyahs: StateFlow<List<CombinedAyah>> = _currentPlayingAyahs.asStateFlow()
-
-    val isPlaying: StateFlow<Boolean> = audioRepository.isPlaying
-    val currentPlayingAyahNumber: StateFlow<Int?> = audioRepository.currentPlayingAyahNumber
-
-    val selectedQariId: StateFlow<String> = settingsRepository.selectedQariIdFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "ar.alafasy")
-
-    private val _isRepeatAyahEnabled = MutableStateFlow(false)
-    val isRepeatAyahEnabled: StateFlow<Boolean> = _isRepeatAyahEnabled.asStateFlow()
-
-    private val _isRepeatSurahEnabled = MutableStateFlow(false)
-    val isRepeatSurahEnabled: StateFlow<Boolean> = _isRepeatSurahEnabled.asStateFlow()
-
-    val playbackSpeed: StateFlow<Float> = audioRepository.playbackSpeed
-
     fun toggleRepeatAyah() {
         _isRepeatAyahEnabled.value = !_isRepeatAyahEnabled.value
         if (_isRepeatAyahEnabled.value) {
@@ -280,6 +288,7 @@ class HomeViewModel(
     }
 
     fun setSelectedQariId(qariId: String) {
+        _selectedQariId.value = qariId
         viewModelScope.launch {
             settingsRepository.setSelectedQariId(qariId)
             
@@ -288,7 +297,7 @@ class HomeViewModel(
             if (surah != null) {
                 try {
                     val edition = settingsRepository.tanzilTextStyleFlow.first()
-                    val ayahs = quranRepository.getSurahDetailsCombined(surah, edition)
+                    val ayahs = quranRepository.getSurahDetailsCombined(surah, edition, qariId)
                     _currentPlayingAyahs.value = ayahs
                     
                     val currentIndex = _currentPlayingAyahIndex.value
@@ -311,7 +320,7 @@ class HomeViewModel(
 
                 val qari = selectedQariId.value
                 val edition = settingsRepository.tanzilTextStyleFlow.first()
-                val ayahs = quranRepository.getSurahDetailsCombined(surahNumber, edition)
+                val ayahs = quranRepository.getSurahDetailsCombined(surahNumber, edition, qari)
                 
                 _currentPlayingAyahs.value = ayahs
                 _currentPlayingAyahIndex.value = startAyahIndex

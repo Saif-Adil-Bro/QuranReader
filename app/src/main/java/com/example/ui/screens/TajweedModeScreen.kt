@@ -381,6 +381,7 @@ fun TajweedModeScreen(
                                     jumpPageInput = input
                                 }
                             },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                             label = { Text("পৃষ্ঠা নম্বর") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true

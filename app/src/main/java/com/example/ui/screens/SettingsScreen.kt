@@ -88,6 +88,7 @@ fun SettingsScreen(
     val showTajweed by viewModel.showTajweed.collectAsState()
     val keepScreenOn by viewModel.keepScreenOnFlow.collectAsState()
     val hijriOffset by viewModel.hijriOffset.collectAsState()
+    val combinedHijriOffset by viewModel.combinedHijriOffset.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     val username by viewModel.username.collectAsState()
     val readingTime by viewModel.readingTimeMinutes.collectAsState()
@@ -454,7 +455,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "বর্তমান আরবি তারিখ: ${com.example.utils.DateUtil.getTodayHijriDateStr(hijriOffset)}",
+                            text = "বর্তমান আরবি তারিখ: ${com.example.utils.DateUtil.getTodayHijriDateStr(combinedHijriOffset)}",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1976,31 +1977,13 @@ fun SubjectwiseDialogContent(
         val category = selectedCategory!!
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header with Back Button
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(bottom = 12.dp, start = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = { selectedCategory = null },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "ফিরে যান",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(10.dp))
-
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = category.categoryNameBn,
@@ -2097,26 +2080,8 @@ fun SubjectwiseDialogContent(
                 if (!isManzilMode) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).padding(start = 4.dp)
                     ) {
-                        IconButton(
-                            onClick = { selectedTopic = null },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    shape = CircleShape
-                                )
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "ফিরে যান",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
                         Column {
                             Text(
                                 text = topic.titleBn,
@@ -3204,45 +3169,36 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
     }
 }
 
-fun saveBitmapToGallery(context: android.content.Context, bitmap: android.graphics.Bitmap) {
-    val filename = "QuranGameResult_${System.currentTimeMillis()}.jpg"
-    var fos: java.io.OutputStream? = null
-    
+fun shareBitmap(context: android.content.Context, bitmap: android.graphics.Bitmap) {
     try {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            val resolver = context.contentResolver
-            val contentValues = android.content.ContentValues().apply {
-                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/QuranReader")
-            }
-            val imageUri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-            fos = imageUri?.let { resolver.openOutputStream(it) }
-        } else {
-            val imagesDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES).toString() + "/QuranReader"
-            val file = java.io.File(imagesDir)
-            if (!file.exists()) {
-                file.mkdir()
-            }
-            val image = java.io.File(imagesDir, filename)
-            fos = java.io.FileOutputStream(image)
-            
-            // notify gallery
-            val mediaScanIntent = android.content.Intent(android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
-            val contentUri = android.net.Uri.fromFile(image)
-            mediaScanIntent.data = contentUri
-            context.sendBroadcast(mediaScanIntent)
+        val cacheDir = java.io.File(context.cacheDir, "shared_images")
+        if (!cacheDir.exists()) {
+            cacheDir.mkdirs()
         }
+        val file = java.io.File(cacheDir, "game_result_${System.currentTimeMillis()}.png")
+        val out = java.io.FileOutputStream(file)
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+        out.flush()
+        out.close()
         
-        fos?.use {
-            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 100, it)
-            android.widget.Toast.makeText(context, "ফলাফল কার্ড সেভ হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+        context.startActivity(android.content.Intent.createChooser(intent, "ফলাফল কার্ড শেয়ার করুন"))
     } catch (e: Exception) {
-        android.widget.Toast.makeText(context, "ফলাফল সেভ করতে সমস্যা হয়েছে", android.widget.Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(context, "শেয়ার করতে সমস্যা হয়েছে: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
         e.printStackTrace()
     }
 }
+
 
 @Composable
 fun GameResultScreen(viewModel: SettingsViewModel) {
@@ -3316,23 +3272,23 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = { 
-                android.widget.Toast.makeText(context, "ফলাফল কার্ড ডাউনলোড শুরু হয়েছে...", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, "শেয়ারের প্রস্তুতি চলছে...", android.widget.Toast.LENGTH_SHORT).show()
                 coroutineScope.launch {
                     try {
                         val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
-                        saveBitmapToGallery(context, bitmap)
+                        shareBitmap(context, bitmap)
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        android.widget.Toast.makeText(context, "ডাউনলোড ব্যর্থ হয়েছে", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "শেয়ার ব্যর্থ হয়েছে", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
         ) {
-            Icon(androidx.compose.material.icons.Icons.Default.Download, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Icon(androidx.compose.material.icons.Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("ফলাফল কার্ড ডাউনলোড করুন", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("ফলাফল কার্ড শেয়ার করুন", color = Color.White, fontWeight = FontWeight.Bold)
         }
         
         Spacer(modifier = Modifier.height(12.dp))
