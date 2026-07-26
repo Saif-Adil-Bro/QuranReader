@@ -35,7 +35,7 @@ fun SettingAdjustmentRow(
         Text(
             text = label,
             fontSize = 14.sp,
-            color = GrayText
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -64,7 +64,7 @@ fun SettingAdjustmentRow(
                 text = valueText,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = DarkText,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.widthIn(min = 40.dp),
                 textAlign = TextAlign.Center
             )
