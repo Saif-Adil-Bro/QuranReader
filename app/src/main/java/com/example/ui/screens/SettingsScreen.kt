@@ -1789,7 +1789,7 @@ fun SubjectwiseDialogContent(
         allCategories = loaded
         isLoading = false
         if (!initialCategoryName.isNullOrEmpty() && selectedCategory == null) {
-            val matchedCategory = loaded.find { it.categoryId == 9 || it.categoryNameBn.contains("মানযিল") }
+            val matchedCategory = loaded.find { it.categoryNameBn == "মানযিল" }
             if (matchedCategory != null) {
                 selectedCategory = matchedCategory
                 if (matchedCategory.topics.isNotEmpty()) {
@@ -1847,7 +1847,7 @@ fun SubjectwiseDialogContent(
 
             val baseCategories = remember(allCategories, initialCategoryName) {
                 if (initialCategoryName == null) {
-                    allCategories.filter { it.categoryNameBn != "মানযিল" && it.categoryId != 9 }
+                    allCategories.filter { it.categoryNameBn != "মানযিল" }
                 } else {
                     allCategories
                 }
@@ -2066,7 +2066,7 @@ fun SubjectwiseDialogContent(
         // --- PAGE 3: VERSE CARDS FOR SELECTED TOPIC (বিষয়ের সমস্ত আয়াত) ---
         val category = selectedCategory!!
         val topic = selectedTopic!!
-        val isManzilMode = initialCategoryName != null || category.categoryId == 9 || category.categoryNameBn == "মানযিল"
+        val isManzilMode = initialCategoryName != null || category.categoryNameBn == "মানযিল"
 
         Column(modifier = Modifier.fillMaxSize()) {
             // Header / Sub-controls
