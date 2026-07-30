@@ -1,9 +1,13 @@
 package com.example.data.repository
 
+import android.content.ComponentName
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.example.service.PlaybackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,14 +15,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
-import java.net.URL
 
 /**
- * Repository to manage audio playback using ExoPlayer.
+ * Repository to manage audio playback using ExoPlayer via MediaSessionService.
  */
 class AudioRepository(private val context: Context) {
 
-    private var exoPlayer: ExoPlayer? = null
+    private var exoPlayer: Player? = null
 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -33,6 +36,10 @@ class AudioRepository(private val context: Context) {
     val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
     var onPlaybackEnded: (() -> Unit)? = null
+    
+    private var isInitializing = false
+    private var pendingPlayUrl: String? = null
+    private var pendingAyahNumber: Int? = null
 
     fun setPlaybackSpeed(speed: Float) {
         _playbackSpeed.value = speed
@@ -49,58 +56,68 @@ class AudioRepository(private val context: Context) {
     }
 
     fun initializePlayer() {
-        if (exoPlayer == null) {
-            val audioAttributes = androidx.media3.common.AudioAttributes.Builder()
-                .setUsage(androidx.media3.common.C.USAGE_MEDIA)
-                .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC)
-                .build()
-
-            val audioContext = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                context.createAttributionContext("quran_audio")
-            } else {
-                context
-            }
-            exoPlayer = ExoPlayer.Builder(audioContext).build().apply {
-                setAudioAttributes(audioAttributes, true)
-                setPlaybackSpeed(_playbackSpeed.value)
-                addListener(object : Player.Listener {
-                    override fun onIsPlayingChanged(isPlayingState: Boolean) {
-                        _isPlaying.value = isPlayingState
-                        if (!isPlayingState) {
-                            _currentPlayingWordUrl.value = null
+        if (exoPlayer == null && !isInitializing) {
+            isInitializing = true
+            val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+            val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+            controllerFuture.addListener(
+                {
+                    exoPlayer = controllerFuture.get()
+                    isInitializing = false
+                    exoPlayer?.setPlaybackSpeed(_playbackSpeed.value)
+                    exoPlayer?.addListener(object : Player.Listener {
+                        override fun onIsPlayingChanged(isPlayingState: Boolean) {
+                            _isPlaying.value = isPlayingState
+                            if (!isPlayingState) {
+                                _currentPlayingWordUrl.value = null
+                            }
                         }
-                    }
 
-                    override fun onPlaybackStateChanged(playbackState: Int) {
-                        if (playbackState == Player.STATE_ENDED) {
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == Player.STATE_ENDED) {
+                                _isPlaying.value = false
+                                _currentPlayingAyahNumber.value = null
+                                _currentPlayingWordUrl.value = null
+                                onPlaybackEnded?.invoke()
+                            }
+                        }
+
+                        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                             _isPlaying.value = false
                             _currentPlayingAyahNumber.value = null
                             _currentPlayingWordUrl.value = null
-                            onPlaybackEnded?.invoke()
-                        }
-                    }
-
-                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                        _isPlaying.value = false
-                        _currentPlayingAyahNumber.value = null
-                        _currentPlayingWordUrl.value = null
-                        if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
-                            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    "নেটওয়ার্ক ত্রুটি! অডিও প্লে করতে ইন্টারনেট সংযোগ প্রয়োজন।",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
+                            if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "নেটওয়ার্ক ত্রুটি! অডিও প্লে করতে ইন্টারনেট সংযোগ প্রয়োজন।",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
                         }
+                    })
+                    
+                    // Handle pending play request
+                    pendingPlayUrl?.let { url ->
+                        val ayah = pendingAyahNumber ?: -1
+                        pendingPlayUrl = null
+                        pendingAyahNumber = null
+                        playAudio(url, ayah)
                     }
-                })
-            }
+                },
+                ContextCompat.getMainExecutor(context)
+            )
         }
     }
 
     fun playAudio(url: String, ayahNumber: Int) {
-        initializePlayer()
+        if (exoPlayer == null) {
+            pendingPlayUrl = url
+            pendingAyahNumber = ayahNumber
+            initializePlayer()
+            return
+        }
         
         if (ayahNumber == -1) {
             _currentPlayingWordUrl.value = url

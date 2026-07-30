@@ -59,16 +59,13 @@ class ReminderReceiver : BroadcastReceiver() {
         
         val title = titles.random()
         val message = messages.random()
-        val cleanMessage = if (message.endsWith("...")) message.substring(0, message.length - 3) else message
-        val formattedMessage = "$cleanMessage\n...."
 
         val iconRes = com.example.R.mipmap.ic_launcher
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(iconRes)
             .setContentTitle(title)
-            .setContentText(formattedMessage)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(formattedMessage))
+            .setContentText(message)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

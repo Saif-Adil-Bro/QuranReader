@@ -147,7 +147,6 @@ object PostNotificationHelper {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(titleText)
             .setContentText(post.content)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(post.content))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
@@ -185,11 +184,23 @@ object PostNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        var finalTitle = title
+        var finalText = message
+        
+        if (title.contains("•")) {
+            val parts = title.split("•", limit = 2)
+            finalTitle = parts[0].trim()
+            finalText = parts[1].trim()
+        } else if (title.contains("-")) {
+            val parts = title.split("-", limit = 2)
+            finalTitle = parts[0].trim()
+            finalText = parts[1].trim()
+        }
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setContentTitle(finalTitle)
+            .setContentText(finalText)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

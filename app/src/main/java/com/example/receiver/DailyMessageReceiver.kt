@@ -72,17 +72,14 @@ class DailyMessageReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val duaTitle = "কুরআনিক দুআ • ${selectedDua.title}"
-        val firstSegment = selectedDua.segments.firstOrNull()
-        val translationText = firstSegment?.translation ?: ""
-        val formattedBody = "$translationText\n...."
+        val duaTitle = "কুরআনিক দুআ"
+        val duaSubtitle = selectedDua.title
 
         val iconRes = com.example.R.mipmap.ic_launcher
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(iconRes)
             .setContentTitle(duaTitle)
-            .setContentText(formattedBody)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(formattedBody))
+            .setContentText(duaSubtitle)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

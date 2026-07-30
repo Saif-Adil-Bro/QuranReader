@@ -96,11 +96,24 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        var finalTitle = title
+        var finalText = messageBody
+        
+        if (title.contains("•")) {
+            val parts = title.split("•", limit = 2)
+            finalTitle = parts[0].trim()
+            finalText = parts[1].trim()
+        } else if (title.contains("-")) {
+            val parts = title.split("-", limit = 2)
+            finalTitle = parts[0].trim()
+            finalText = parts[1].trim()
+        }
+
         val channelId = "fcm_default_channel"
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(messageBody)
+            .setContentTitle(finalTitle)
+            .setContentText(finalText)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
 
@@ -109,11 +122,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationBuilder.setStyle(
                 NotificationCompat.BigPictureStyle()
                     .bigPicture(bitmap)
-                    .bigLargeIcon(null as Bitmap?) // Hide thumbnail when expanded
-                    .setSummaryText(messageBody)
+                    .bigLargeIcon(null as Bitmap?)
             )
-        } else {
-            notificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
         }
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
