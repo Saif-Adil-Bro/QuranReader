@@ -16,7 +16,7 @@ class StorageManager(private val context: Context) {
     
     fun getPageFile(mushafId: String, pageNumber: Int): File {
         val dir = getMushafDirectory(mushafId)
-        return File(dir, "$pageNumber.png")
+        return File(dir, "$pageNumber.webp")
     }
     
     fun isPageDownloaded(mushafId: String, pageNumber: Int): Boolean {
@@ -25,7 +25,7 @@ class StorageManager(private val context: Context) {
     
     fun getDownloadedPagesCount(mushafId: String): Int {
         val dir = getMushafDirectory(mushafId)
-        return dir.listFiles()?.count { it.extension == "png" } ?: 0
+        return dir.listFiles()?.count { it.extension == "webp" } ?: 0
     }
     
     fun getTotalStorageUsed(): Long {

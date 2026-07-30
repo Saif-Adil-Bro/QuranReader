@@ -224,7 +224,7 @@ class SurahDetailViewModel(
     }
 
     fun playAyah(ayah: CombinedAyah, surahNumber: Int) {
-        val audioUrl = "https://cdn.islamic.network/quran/audio/128/$currentSelectedQariId/${ayah.number}.mp3"
+        val audioUrl = com.example.util.AudioUtils.getAudioUrl(currentSelectedQariId, ayah.number)
         audioRepository.playAudio(audioUrl, ayah.numberInSurah)
         
         // Setup completion callback for continuous play
@@ -406,7 +406,7 @@ class SurahDetailViewModel(
                 withContext(Dispatchers.IO) {
                     for ((index, ayah) in combinedAyahs.withIndex()) {
                         ensureActive()
-                        val targetUrl = "https://cdn.islamic.network/quran/audio/128/$selectedQariId/${ayah.number}.mp3"
+                        val targetUrl = com.example.util.AudioUtils.getAudioUrl(selectedQariId, ayah.number)
                         val localFile = audioRepository.getLocalAudioFile(targetUrl)
 
                         var downloadedOk = false
@@ -454,7 +454,5 @@ class SurahDetailViewModel(
     override fun onCleared() {
         super.onCleared()
         downloadJob?.cancel()
-        audioRepository.onPlaybackEnded = null
-        audioRepository.stopAudio()
     }
 }

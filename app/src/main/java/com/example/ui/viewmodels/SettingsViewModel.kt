@@ -189,7 +189,7 @@ class SettingsViewModel(
                 withContext(Dispatchers.IO) {
                     for ((index, ayah) in combinedAyahs.withIndex()) {
                         ensureActive()
-                        val targetUrl = "https://cdn.islamic.network/quran/audio/128/$selectedQariId/${ayah.number}.mp3"
+                        val targetUrl = com.example.util.AudioUtils.getAudioUrl(selectedQariId, ayah.number)
                         val localFile = audioRepository.getLocalAudioFile(targetUrl)
 
                         var downloadedOk = false

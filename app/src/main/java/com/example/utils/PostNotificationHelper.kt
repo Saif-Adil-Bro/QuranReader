@@ -141,12 +141,12 @@ object PostNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val titleText = "নতুন ব্লগ পোস্ট: ${post.title}"
+        val titleText = "নতুন ব্লগ পোস্ট"
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(titleText)
-            .setContentText(post.content)
+            .setContentText(post.title)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)

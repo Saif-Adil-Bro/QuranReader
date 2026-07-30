@@ -346,7 +346,7 @@ class HomeViewModel(
             _currentPlayingAyahIndex.value = index
             val ayah = ayahs[index]
             val qari = selectedQariId.value
-            val audioUrl = "https://cdn.islamic.network/quran/audio/128/$qari/${ayah.number}.mp3"
+            val audioUrl = com.example.util.AudioUtils.getAudioUrl(qari, ayah.number)
             
             audioRepository.playAudio(audioUrl, ayah.numberInSurah)
             audioRepository.onPlaybackEnded = {

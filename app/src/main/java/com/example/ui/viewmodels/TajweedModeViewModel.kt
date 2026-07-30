@@ -208,7 +208,7 @@ class TajweedModeViewModel(
         if (currentPlaylistIndex < playlist.size) {
             val ayah = playlist[currentPlaylistIndex]
             val qari = selectedQariId.value
-            val audioUrl = "https://cdn.islamic.network/quran/audio/128/$qari/${ayah.number}.mp3"
+            val audioUrl = com.example.util.AudioUtils.getAudioUrl(qari, ayah.number)
             audioRepository.onPlaybackEnded = {
                 playNextAyah()
             }
@@ -218,7 +218,6 @@ class TajweedModeViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        audioRepository.releasePlayer()
     }
 
     fun setArabicFontSize(size: Float) {

@@ -90,6 +90,7 @@ class MushafRepository(
             mushaf.id,
             mushaf.baseUrl,
             mushaf.totalPages,
+            mushaf.pdfPageOffset,
             onProgress,
             scope
         )
@@ -144,7 +145,7 @@ class MushafRepository(
             val pdfFile = File(storageManager.getMushafDirectory(mushafId), "mushaf.pdf")
             if (pdfFile.exists() && pdfFile.length() > 0) {
                 val offset = customOffset ?: style.pdfPageOffset
-                val renderedFile = renderPdfPageToPng(pdfFile, pageNumber, file, offset)
+                val renderedFile = renderPdfPageToImage(pdfFile, pageNumber, file, offset)
                 if (renderedFile != null) {
                     return renderedFile.absolutePath
                 }
@@ -166,7 +167,7 @@ class MushafRepository(
         }
     }
 
-    private fun renderPdfPageToPng(pdfFile: File, pageNumber: Int, outputFile: File, offset: Int): File? {
+    private fun renderPdfPageToImage(pdfFile: File, pageNumber: Int, outputFile: File, offset: Int): File? {
         try {
             val parcelFileDescriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
             val pdfRenderer = PdfRenderer(parcelFileDescriptor)
@@ -192,7 +193,12 @@ class MushafRepository(
             
             val tempFile = File(outputFile.parent, outputFile.name + ".tmp")
             val out = FileOutputStream(tempFile)
-            bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 80, out)
+            } else {
+                @Suppress("DEPRECATION")
+                bitmap.compress(Bitmap.CompressFormat.WEBP, 80, out)
+            }
             out.flush()
             out.close()
             tempFile.renameTo(outputFile)

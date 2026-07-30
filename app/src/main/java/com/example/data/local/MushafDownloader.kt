@@ -20,6 +20,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.example.worker.PdfExtractionWorker
 
 class MushafDownloader(
     private val context: Context,
@@ -33,6 +37,7 @@ class MushafDownloader(
         mushafId: String,
         baseUrl: String,
         totalPages: Int,
+        pdfPageOffset: Int = 0,
         onProgress: (DownloadStatus) -> Unit,
         scope: CoroutineScope
     ) {
@@ -41,7 +46,7 @@ class MushafDownloader(
             
             val isPdf = baseUrl.endsWith(".pdf")
             if (isPdf) {
-                downloadPdfFile(mushafId, baseUrl, totalPages, onProgress)
+                downloadPdfFile(mushafId, baseUrl, totalPages, pdfPageOffset, onProgress)
                 return@launch
             }
 
@@ -104,6 +109,7 @@ class MushafDownloader(
         mushafId: String,
         url: String,
         totalPages: Int,
+        pdfPageOffset: Int,
         onProgress: (DownloadStatus) -> Unit
     ) = withContext(Dispatchers.IO) {
         val destDir = storageManager.getMushafDirectory(mushafId)
@@ -118,6 +124,7 @@ class MushafDownloader(
                     val renderer = PdfRenderer(pfd)
                     renderer.close()
                     pfd.close()
+                    enqueueExtraction(mushafId, totalPages, pdfPageOffset)
                     onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, totalPages, totalPages))
                     return@withContext
                 } catch (e: Exception) {
@@ -172,6 +179,7 @@ class MushafDownloader(
                     inputStream.close()
                     
                     if (tempFile.renameTo(file)) {
+                        enqueueExtraction(mushafId, totalPages, pdfPageOffset)
                         onProgress(DownloadStatus(mushafId, DownloadState.Downloaded, 100, totalPages, totalPages))
                     } else {
                         tempFile.delete()
@@ -192,6 +200,18 @@ class MushafDownloader(
             }
             onProgress(DownloadStatus(mushafId, DownloadState.Failed, 0, 0, totalPages))
         }
+    }
+
+    private fun enqueueExtraction(mushafId: String, totalPages: Int, pdfPageOffset: Int) {
+        val workData = workDataOf(
+            "mushafId" to mushafId,
+            "totalPages" to totalPages,
+            "offset" to pdfPageOffset
+        )
+        val request = OneTimeWorkRequestBuilder<PdfExtractionWorker>()
+            .setInputData(workData)
+            .build()
+        WorkManager.getInstance(context).enqueue(request)
     }
 
     private suspend fun downloadPage(mushafId: String, baseUrl: String, page: Int): Boolean = withContext(Dispatchers.IO) {
