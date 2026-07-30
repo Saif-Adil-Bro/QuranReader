@@ -11,7 +11,7 @@ import com.example.data.local.entity.MemorizedPageEntity
 
 @Database(
     entities = [BookmarkEntity::class, MemorizedPageEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class QuranDatabase : RoomDatabase() {
@@ -28,7 +28,9 @@ abstract class QuranDatabase : RoomDatabase() {
                     context.applicationContext,
                     QuranDatabase::class.java,
                     "quran_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

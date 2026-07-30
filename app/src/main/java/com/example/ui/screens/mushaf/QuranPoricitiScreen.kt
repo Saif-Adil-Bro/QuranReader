@@ -56,7 +56,7 @@ fun QuranPoricitiScreen(
     // Collect bookmarks of type PAGE to display in Bookmark action
     val bookmarks by viewModel.bookmarks.collectAsState(initial = emptyList())
     val pageBookmarks = remember(bookmarks) {
-        bookmarks.filter { it.type == "PAGE" }
+        bookmarks.filter { it.type == "PAGE" || it.type == "MUSHAF_PAGE" }
     }
 
     // Colors
@@ -640,8 +640,9 @@ fun QuranPoricitiScreen(
                                             .fillMaxWidth()
                                             .clickable {
                                                 showBookmarksDialog = false
-                                                if (viewModel.isMushafDownloaded(defaultMushafId)) {
-                                                    onNavigateToMushafPage(defaultMushafId, bookmark.referenceId, false)
+                                                val targetmId = bookmark.mushafId ?: defaultMushafId
+                                                if (viewModel.isMushafDownloaded(targetmId)) {
+                                                    onNavigateToMushafPage(targetmId, bookmark.referenceId, false)
                                                 } else {
                                                     showDownloadRequestDialog = true
                                                 }

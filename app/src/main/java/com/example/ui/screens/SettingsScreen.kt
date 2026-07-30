@@ -76,6 +76,7 @@ fun SettingsScreen(
     onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> },
     onNavigateToPlayer: () -> Unit = {},
     onNavigateToPosts: () -> Unit = {},
+    onNavigateToMushafPage: (String, Int) -> Unit = { _, _ -> },
     initialSubScreen: String? = null,
     initialDuaId: Int? = null
 ) {
@@ -894,6 +895,7 @@ fun SettingsScreen(
             onNavigateToPage = onNavigateToPage,
             onNavigateToJuz = onNavigateToJuz,
             onNavigateToAyah = onNavigateToAyah,
+            onNavigateToMushafPage = onNavigateToMushafPage,
             initialDuaId = if (activeDialog == "dua" || activeDialog == "morning_evening_dua") initialDuaId else null
         )
     }
@@ -908,6 +910,7 @@ fun MenuDetailDialog(
     onNavigateToPage: (Int) -> Unit = {},
     onNavigateToJuz: (Int) -> Unit = {},
     onNavigateToAyah: (Int, Int) -> Unit = { _, _ -> },
+    onNavigateToMushafPage: (String, Int) -> Unit = { _, _ -> },
     initialDuaId: Int? = null
 ) {
     val context = LocalContext.current
@@ -1016,6 +1019,10 @@ fun MenuDetailDialog(
                                 onDismiss()
                                 when (bookmark.type) {
                                     "SURAH" -> onNavigateToSurah(bookmark.referenceId)
+                                    "MUSHAF_PAGE" -> {
+                                        val targetMushaf = bookmark.mushafId ?: "imdadia_hafezi"
+                                        onNavigateToMushafPage(targetMushaf, bookmark.referenceId)
+                                    }
                                     "PAGE" -> onNavigateToPage(bookmark.referenceId)
                                     "JUZ" -> onNavigateToJuz(bookmark.referenceId)
                                     "AYAH" -> {
@@ -1249,7 +1256,8 @@ fun BookmarkDialogContent(
                             Spacer(modifier = Modifier.height(2.dp))
                             val displayType = when (bookmark.type) {
                                 "SURAH" -> "সুরা"
-                                "PAGE" -> "পৃষ্ঠা"
+                                "PAGE" -> "পৃষ্ঠা (হাফেজী)"
+                                "MUSHAF_PAGE" -> "মুসহাফ পৃষ্ঠা"
                                 "JUZ" -> "পারা"
                                 "AYAH" -> "আয়াত"
                                 else -> bookmark.type
@@ -4385,13 +4393,28 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
     // Searchable Surah Selector Dialog
     if (showSurahSelectorSheet) {
         var searchQuery by remember { mutableStateOf("") }
-        val filteredSurahs = if (searchQuery.isEmpty()) {
+        val trimmedQuery = searchQuery.trim()
+        val filteredSurahs = if (trimmedQuery.isEmpty()) {
             surahList
         } else {
-            surahList.filter { 
-                (it.name ?: "").contains(searchQuery, ignoreCase = true) || 
-                it.englishName.contains(searchQuery, ignoreCase = true) || 
-                it.number.toString() == searchQuery
+            val diacriticsRegex = Regex("[\\u0610-\\u061A\\u064B-\\u065F\\u0670-\\u06D6\\u06DC-\\u06ED]")
+            val normalizedQuery = trimmedQuery.replace(diacriticsRegex, "").lowercase()
+
+            surahList.filter { surah ->
+                val surahNamePair = com.example.data.QuranData.surahNames.find { it.first == surah.number }
+                val bengaliName = surahNamePair?.second?.first ?: ""
+                val bengaliMeaning = surahNamePair?.second?.second ?: ""
+                val arabicNameRaw = surah.name ?: ""
+                val normalizedArabicName = arabicNameRaw.replace(diacriticsRegex, "")
+
+                surah.englishName.contains(trimmedQuery, ignoreCase = true) ||
+                surah.englishNameTranslation.contains(trimmedQuery, ignoreCase = true) ||
+                arabicNameRaw.contains(trimmedQuery, ignoreCase = true) ||
+                (normalizedQuery.isNotEmpty() && normalizedArabicName.lowercase().contains(normalizedQuery)) ||
+                bengaliName.contains(trimmedQuery, ignoreCase = true) ||
+                bengaliMeaning.contains(trimmedQuery, ignoreCase = true) ||
+                surah.number.toString().contains(trimmedQuery) ||
+                com.example.utils.DateUtil.toBengaliNumerals(surah.number).contains(trimmedQuery)
             }
         }
         

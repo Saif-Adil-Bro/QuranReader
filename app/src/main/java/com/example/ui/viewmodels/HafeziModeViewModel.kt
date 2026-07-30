@@ -46,6 +46,9 @@ class HafeziModeViewModel(
     val isPlaying: StateFlow<Boolean> = audioRepository.isPlaying
     val currentPlayingAyahNumber: StateFlow<Int?> = audioRepository.currentPlayingAyahNumber
 
+    val selectedQariId: StateFlow<String> = settingsRepository.selectedQariIdFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "ar.alafasy")
+
     val repeatCount: StateFlow<Int> = settingsRepository.repeatCountFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 1)
 
@@ -203,15 +206,12 @@ class HafeziModeViewModel(
     private fun playCurrentIndex() {
         if (currentPlaylistIndex < playlist.size) {
             val ayah = playlist[currentPlaylistIndex]
-            if (ayah.audioUrl != null) {
-                audioRepository.onPlaybackEnded = {
-                    playNextAyah()
-                }
-                audioRepository.playAudio(ayah.audioUrl, ayah.number)
-            } else {
-                // Skip if no audio
+            val qari = selectedQariId.value
+            val audioUrl = "https://cdn.islamic.network/quran/audio/128/$qari/${ayah.number}.mp3"
+            audioRepository.onPlaybackEnded = {
                 playNextAyah()
             }
+            audioRepository.playAudio(audioUrl, ayah.number)
         }
     }
 

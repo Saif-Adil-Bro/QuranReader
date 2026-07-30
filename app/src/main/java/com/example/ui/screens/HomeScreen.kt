@@ -577,7 +577,7 @@ fun HeroSection(
     val pagerState = rememberPagerState(pageCount = { 4 })
     LaunchedEffect(pagerState) {
         while (true) {
-            delay(6000)
+            delay(9000)
             try {
                 val nextPage = (pagerState.currentPage + 1) % 4
                 if (!pagerState.isScrollInProgress) {
@@ -1673,6 +1673,10 @@ fun BookmarksAndLastReadSection(
                         modifier = Modifier.clickable {
                             when (bookmark.type) {
                                 "SURAH" -> onSurahClick(bookmark.referenceId)
+                                "MUSHAF_PAGE" -> {
+                                    val targetMushaf = bookmark.mushafId?.takeIf { it.isNotEmpty() } ?: defaultMushafId
+                                    onNavigateToMushafPage(targetMushaf, bookmark.referenceId, false)
+                                }
                                 "PAGE" -> onNavigateToHafeziMode(bookmark.referenceId)
                                 "JUZ" -> {
                                     val startPage = getJuzStartPage(bookmark.referenceId)
@@ -1992,10 +1996,20 @@ fun SurahSelectorDialog(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val filteredSurahs = remember(searchQuery) {
-        QuranData.surahNames.filter { surah ->
-            surah.second.first.contains(searchQuery, ignoreCase = true) ||
-            surah.second.second.contains(searchQuery, ignoreCase = true) ||
-            surah.first.toString().contains(searchQuery)
+        val trimmedQuery = searchQuery.trim()
+        if (trimmedQuery.isEmpty()) {
+            QuranData.surahNames
+        } else {
+            QuranData.surahNames.filter { surah ->
+                val surahId = surah.first
+                val bengaliName = surah.second.first
+                val meaning = surah.second.second
+
+                bengaliName.contains(trimmedQuery, ignoreCase = true) ||
+                meaning.contains(trimmedQuery, ignoreCase = true) ||
+                surahId.toString().contains(trimmedQuery) ||
+                surahId.toBengaliNumerals().contains(trimmedQuery)
+            }
         }
     }
 
@@ -2243,7 +2257,7 @@ fun RecitationPlayerPanel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onPrevClick) {
-                            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = PrimaryGreen, modifier = Modifier.size(32.dp))
+                            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(32.dp))
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         FilledIconButton(
@@ -2260,7 +2274,7 @@ fun RecitationPlayerPanel(
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         IconButton(onClick = onNextClick) {
-                            Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = PrimaryGreen, modifier = Modifier.size(32.dp))
+                            Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(32.dp))
                         }
                         Spacer(modifier = Modifier.width(20.dp))
                         IconButton(onClick = onStopClick) {

@@ -139,20 +139,43 @@ class AudioRepository(private val context: Context) {
         // Download asynchronously in the background if not already downloaded and network is available
         if (!isLocal && com.example.util.NetworkUtils.isNetworkAvailable(context)) {
             CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val tempFile = File(localFile.parent, localFile.name + ".temp")
-                    URL(url).openStream().use { input ->
-                        tempFile.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    if (tempFile.exists() && tempFile.length() > 0) {
-                        tempFile.renameTo(localFile)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                downloadUrlToFile(url, localFile)
             }
+        }
+    }
+
+    fun downloadUrlToFile(url: String, targetFile: File): Boolean {
+        if (targetFile.exists() && targetFile.length() > 0) return true
+        val tempFile = File(targetFile.parent, targetFile.name + ".temp")
+        return try {
+            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            connection.instanceFollowRedirects = true
+            connection.connect()
+            val responseCode = connection.responseCode
+            if (responseCode in 200..299) {
+                connection.inputStream.use { input ->
+                    tempFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                if (tempFile.exists() && tempFile.length() > 0) {
+                    tempFile.renameTo(targetFile)
+                    true
+                } else {
+                    if (tempFile.exists()) tempFile.delete()
+                    false
+                }
+            } else {
+                if (tempFile.exists()) tempFile.delete()
+                false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            if (tempFile.exists()) tempFile.delete()
+            false
         }
     }
 

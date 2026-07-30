@@ -42,18 +42,28 @@ fun RecitationIndexScreen(
     var showQariSelectorDialog by remember { mutableStateOf(false) }
 
     val filteredSurahList = remember(searchQuery, surahList) {
-        if (searchQuery.trim().isEmpty()) {
+        val trimmedQuery = searchQuery.trim()
+        if (trimmedQuery.isEmpty()) {
             surahList
         } else {
+            val diacriticsRegex = Regex("[\\u0610-\\u061A\\u064B-\\u065F\\u0670-\\u06D6\\u06DC-\\u06ED]")
+            val normalizedQuery = trimmedQuery.replace(diacriticsRegex, "").lowercase()
+
             surahList.filter { surah ->
                 val surahNamePair = QuranData.surahNames.find { it.first == surah.number }
                 val bengaliName = surahNamePair?.second?.first ?: ""
                 val bengaliMeaning = surahNamePair?.second?.second ?: ""
-                
-                surah.englishName.contains(searchQuery, ignoreCase = true) ||
-                        surah.number.toString().contains(searchQuery) ||
-                        bengaliName.contains(searchQuery) ||
-                        bengaliMeaning.contains(searchQuery)
+                val arabicNameRaw = surah.name ?: ""
+                val normalizedArabicName = arabicNameRaw.replace(diacriticsRegex, "")
+
+                surah.englishName.contains(trimmedQuery, ignoreCase = true) ||
+                surah.englishNameTranslation.contains(trimmedQuery, ignoreCase = true) ||
+                arabicNameRaw.contains(trimmedQuery, ignoreCase = true) ||
+                (normalizedQuery.isNotEmpty() && normalizedArabicName.lowercase().contains(normalizedQuery)) ||
+                bengaliName.contains(trimmedQuery, ignoreCase = true) ||
+                bengaliMeaning.contains(trimmedQuery, ignoreCase = true) ||
+                surah.number.toString().contains(trimmedQuery) ||
+                surah.number.toBengaliNumerals().contains(trimmedQuery)
             }
         }
     }
@@ -87,12 +97,31 @@ fun RecitationIndexScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showQariSelectorDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.RecordVoiceOver,
-                            contentDescription = "Select Qari",
-                            tint = PrimaryGreen
-                        )
+                    Surface(
+                        onClick = { showQariSelectorDialog = true },
+                        shape = RoundedCornerShape(20.dp),
+                        color = PrimaryGreen.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.4f)),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RecordVoiceOver,
+                                contentDescription = "ক্বারী সিলেক্ট করুন",
+                                tint = PrimaryGreen,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "ক্বারী",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

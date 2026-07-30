@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -170,10 +171,11 @@ class SettingsViewModel(
         audioDownloadJob = viewModelScope.launch {
             _isDownloadingAudio.value = true
             _audioDownloadProgress.value = 0
-            _audioDownloadStatus.value = "সুরা $surahName-এর অডিও ফাইল ডাউনলোড হচ্ছে..."
+            val bengaliName = com.example.data.QuranData.surahNames.find { it.first == surahNumber }?.second?.first ?: surahName
+            _audioDownloadStatus.value = "সুরা $bengaliName-এর অডিও ফাইল ডাউনলোড হচ্ছে..."
             _audioDownloadError.value = null
             try {
-                // Ensure surah details are cached or loaded
+                val selectedQariId = repository.selectedQariIdFlow.first()
                 val combinedAyahs = quranRepository.getSurahDetailsCombined(surahNumber)
                 val totalAyahs = combinedAyahs.size
                 if (totalAyahs == 0) {
@@ -181,43 +183,56 @@ class SettingsViewModel(
                     return@launch
                 }
 
+                var successCount = 0
+                var failCount = 0
+
                 withContext(Dispatchers.IO) {
                     for ((index, ayah) in combinedAyahs.withIndex()) {
-                        val url = ayah.audioUrl
-                        if (url != null && url.isNotEmpty()) {
-                            val localFile = audioRepository.getLocalAudioFile(url)
-                            if (!localFile.exists() || localFile.length() == 0L) {
-                                val tempFile = File(localFile.parent, localFile.name + ".temp")
-                                try {
-                                    URL(url).openStream().use { input ->
-                                        tempFile.outputStream().use { output ->
-                                            input.copyTo(output)
-                                        }
-                                    }
-                                    if (tempFile.exists() && tempFile.length() > 0) {
-                                        tempFile.renameTo(localFile)
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    if (tempFile.exists()) tempFile.delete()
-                                    // Let's not crash/stop download of subsequent files for minor errors, but log
-                                }
+                        ensureActive()
+                        val targetUrl = "https://cdn.islamic.network/quran/audio/128/$selectedQariId/${ayah.number}.mp3"
+                        val localFile = audioRepository.getLocalAudioFile(targetUrl)
+
+                        var downloadedOk = false
+                        if (localFile.exists() && localFile.length() > 0) {
+                            downloadedOk = true
+                        } else {
+                            downloadedOk = audioRepository.downloadUrlToFile(targetUrl, localFile)
+                            if (!downloadedOk && !ayah.audioUrl.isNullOrEmpty() && ayah.audioUrl != targetUrl) {
+                                val altUrl = ayah.audioUrl.replace("http://", "https://")
+                                val altFile = audioRepository.getLocalAudioFile(altUrl)
+                                downloadedOk = audioRepository.downloadUrlToFile(altUrl, altFile)
                             }
                         }
+
+                        if (downloadedOk) {
+                            successCount++
+                        } else {
+                            failCount++
+                        }
+
                         val progress = ((index + 1) * 100) / totalAyahs
                         _audioDownloadProgress.value = progress
                         updateAudioCacheSize()
-        updateDownloadedSurahsCount()
+                        updateDownloadedSurahsCount()
                     }
                 }
-                _audioDownloadStatus.value = "সুরা $surahName-এর অডিও ডাউনলোড সফল হয়েছে!"
+
+                if (failCount == totalAyahs) {
+                    _audioDownloadError.value = "অডিও ফাইল ডাউনলোড করতে ব্যর্থ হয়েছে! ইন্টারনেট সংযোগ পরীক্ষা করুন।"
+                    _audioDownloadStatus.value = null
+                } else if (failCount > 0) {
+                    _audioDownloadStatus.value = "সুরা $bengaliName-এর $successCount/$totalAyahs অডিও সম্পূর্ণ ডাউনলোড হয়েছে"
+                } else {
+                    _audioDownloadStatus.value = "সুরা $bengaliName-এর অডিও ডাউনলোড সফল হয়েছে!"
+                }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _audioDownloadError.value = e.localizedMessage ?: "অডিও ডাউনলোড ব্যর্থ হয়েছে"
                 _audioDownloadStatus.value = null
             } finally {
                 _isDownloadingAudio.value = false
                 updateAudioCacheSize()
-        updateDownloadedSurahsCount()
+                updateDownloadedSurahsCount()
             }
         }
     }

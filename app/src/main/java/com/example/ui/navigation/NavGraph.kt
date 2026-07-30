@@ -445,6 +445,9 @@ fun AppNavGraph(
                 onNavigateToPosts = {
                     navController.navigate("posts")
                 },
+                onNavigateToMushafPage = { mushafId, page ->
+                    navController.navigate("mushaf/viewer/$mushafId?page=$page")
+                },
                 initialSubScreen = subScreen,
                 initialDuaId = if (duaIdVal != -1) duaIdVal else null
             )

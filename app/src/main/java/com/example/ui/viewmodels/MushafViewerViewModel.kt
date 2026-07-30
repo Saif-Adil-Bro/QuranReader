@@ -92,20 +92,33 @@ class MushafViewerViewModel(
             settingsRepository.setLastReadMushaf(currentMushafId, pageNumber)
             settingsRepository.setLastReadMode("MUSHAF")
 
-            val bookmarkEntity = bookmarkDao.getBookmark("PAGE", pageNumber)
+            val bookmarkEntity = bookmarkDao.getBookmark("MUSHAF_PAGE", pageNumber)
+                ?: bookmarkDao.getBookmark("PAGE", pageNumber)
             _isBookmarked.value = bookmarkEntity != null
         }
     }
 
     fun toggleBookmark() {
         val page = _currentPageNumber.value
+        val mId = currentMushafId
         viewModelScope.launch(Dispatchers.IO) {
             val currentlyBookmarked = _isBookmarked.value
             if (currentlyBookmarked) {
+                bookmarkDao.deleteBookmarkByReference("MUSHAF_PAGE", page)
                 bookmarkDao.deleteBookmarkByReference("PAGE", page)
                 _isBookmarked.value = false
             } else {
-                bookmarkDao.insertBookmark(BookmarkEntity(type = "PAGE", referenceId = page, name = "Page $page"))
+                val styleName = repository.getAvailableMushafs().find { it.id == mId }?.nameBengali ?: "মুসহাফ"
+                val pageStr = com.example.utils.DateUtil.toBengaliNumerals(page)
+                val nameText = "$styleName: পৃষ্ঠা $pageStr"
+                bookmarkDao.insertBookmark(
+                    BookmarkEntity(
+                        type = "MUSHAF_PAGE",
+                        referenceId = page,
+                        name = nameText,
+                        mushafId = mId
+                    )
+                )
                 _isBookmarked.value = true
             }
         }

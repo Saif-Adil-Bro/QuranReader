@@ -200,14 +200,25 @@ fun QuranIndexComponent(
                     }
                 }
                 is UiState.Success -> {
+                    val diacriticsRegex = Regex("[\\u0610-\\u061A\\u064B-\\u065F\\u0670-\\u06D6\\u06DC-\\u06ED]")
+                    val trimmedQuery = searchQuery.trim()
+                    val normalizedQuery = trimmedQuery.replace(diacriticsRegex, "").lowercase()
+
                     val filteredSurahs = state.data.filter { surah ->
                         val bengaliName = QuranData.surahNames.find { it.first == surah.number }?.second?.first ?: ""
                         val meaning = QuranData.surahNames.find { it.first == surah.number }?.second?.second ?: ""
-                        searchQuery.isEmpty() ||
-                        surah.englishName.contains(searchQuery, ignoreCase = true) ||
-                        bengaliName.contains(searchQuery) ||
-                        meaning.contains(searchQuery) ||
-                        surah.number.toString().contains(searchQuery)
+                        val arabicNameRaw = surah.name ?: ""
+                        val normalizedArabicName = arabicNameRaw.replace(diacriticsRegex, "")
+
+                        trimmedQuery.isEmpty() ||
+                        surah.englishName.contains(trimmedQuery, ignoreCase = true) ||
+                        surah.englishNameTranslation.contains(trimmedQuery, ignoreCase = true) ||
+                        arabicNameRaw.contains(trimmedQuery, ignoreCase = true) ||
+                        (normalizedQuery.isNotEmpty() && normalizedArabicName.lowercase().contains(normalizedQuery)) ||
+                        bengaliName.contains(trimmedQuery, ignoreCase = true) ||
+                        meaning.contains(trimmedQuery, ignoreCase = true) ||
+                        surah.number.toString().contains(trimmedQuery) ||
+                        surah.number.toBengaliNumerals().contains(trimmedQuery)
                     }
 
                     if (filteredSurahs.isEmpty()) {

@@ -55,10 +55,20 @@ fun TajweedIndexScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredSurahs = remember(searchQuery) {
-        QuranData.surahNames.filter { surah ->
-            surah.second.first.contains(searchQuery, ignoreCase = true) ||
-            surah.second.second.contains(searchQuery, ignoreCase = true) ||
-            surah.first.toString().contains(searchQuery)
+        val trimmedQuery = searchQuery.trim()
+        if (trimmedQuery.isEmpty()) {
+            QuranData.surahNames
+        } else {
+            QuranData.surahNames.filter { surah ->
+                val surahId = surah.first
+                val bengaliName = surah.second.first
+                val meaning = surah.second.second
+
+                bengaliName.contains(trimmedQuery, ignoreCase = true) ||
+                meaning.contains(trimmedQuery, ignoreCase = true) ||
+                surahId.toString().contains(trimmedQuery) ||
+                com.example.utils.DateUtil.toBengaliNumerals(surahId).contains(trimmedQuery)
+            }
         }
     }
 

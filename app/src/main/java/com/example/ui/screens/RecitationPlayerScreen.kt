@@ -136,12 +136,31 @@ fun RecitationPlayerScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showQariSelectorDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.RecordVoiceOver,
-                            contentDescription = "Qari Selection",
-                            tint = PrimaryGreen
-                        )
+                    Surface(
+                        onClick = { showQariSelectorDialog = true },
+                        shape = RoundedCornerShape(20.dp),
+                        color = PrimaryGreen.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.4f)),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RecordVoiceOver,
+                                contentDescription = "ক্বারী সিলেক্ট করুন",
+                                tint = PrimaryGreen,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "ক্বারী",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -209,43 +228,45 @@ fun RecitationPlayerScreen(
                             IconButton(
                                 onClick = { viewModel.toggleRepeatAyah() },
                                 modifier = Modifier
-                                    .size(44.dp)
+                                    .size(46.dp)
                                     .clip(CircleShape)
-                                    .background(if (isRepeatAyahEnabled) PrimaryGreen else MaterialTheme.colorScheme.primaryContainer)
+                                    .background(if (isRepeatAyahEnabled) PrimaryGreen else PrimaryGreen.copy(alpha = 0.15f))
+                                    .border(1.dp, if (isRepeatAyahEnabled) PrimaryGreen else PrimaryGreen.copy(alpha = 0.3f), CircleShape)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.RepeatOne,
                                     contentDescription = "Ayah Repeat",
-                                    tint = if (isRepeatAyahEnabled) MaterialTheme.colorScheme.onPrimary else PrimaryGreen,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = if (isRepeatAyahEnabled) White else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Spacer(modifier = Modifier.width(14.dp))
 
                             // Prev Button
                             IconButton(
                                 onClick = { viewModel.previousAyah() },
                                 modifier = Modifier
-                                    .size(48.dp)
+                                    .size(50.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .background(PrimaryGreen.copy(alpha = 0.15f))
+                                    .border(1.dp, PrimaryGreen.copy(alpha = 0.35f), CircleShape)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipPrevious,
                                     contentDescription = "Previous",
-                                    tint = PrimaryGreen,
-                                    modifier = Modifier.size(24.dp)
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Spacer(modifier = Modifier.width(14.dp))
 
                             // Play/Pause Button
                             Box(
                                 modifier = Modifier
                                     .size(64.dp)
-                                    .shadow(4.dp, CircleShape)
+                                    .shadow(6.dp, CircleShape)
                                     .clip(CircleShape)
                                     .background(PrimaryGreen)
                                     .clickable {
@@ -260,44 +281,46 @@ fun RecitationPlayerScreen(
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = "Play/Pause",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(32.dp)
+                                    tint = White,
+                                    modifier = Modifier.size(36.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Spacer(modifier = Modifier.width(14.dp))
 
                             // Next Button
                             IconButton(
                                 onClick = { viewModel.nextAyah() },
                                 modifier = Modifier
-                                    .size(48.dp)
+                                    .size(50.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .background(PrimaryGreen.copy(alpha = 0.15f))
+                                    .border(1.dp, PrimaryGreen.copy(alpha = 0.35f), CircleShape)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipNext,
                                     contentDescription = "Next",
-                                    tint = PrimaryGreen,
-                                    modifier = Modifier.size(24.dp)
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Spacer(modifier = Modifier.width(14.dp))
 
                             // Surah Repeat Toggle (Right side loop)
                             IconButton(
                                 onClick = { viewModel.toggleRepeatSurah() },
                                 modifier = Modifier
-                                    .size(44.dp)
+                                    .size(46.dp)
                                     .clip(CircleShape)
-                                    .background(if (isRepeatSurahEnabled) PrimaryGreen else MaterialTheme.colorScheme.primaryContainer)
+                                    .background(if (isRepeatSurahEnabled) PrimaryGreen else PrimaryGreen.copy(alpha = 0.15f))
+                                    .border(1.dp, if (isRepeatSurahEnabled) PrimaryGreen else PrimaryGreen.copy(alpha = 0.3f), CircleShape)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Repeat,
                                     contentDescription = "Surah Repeat",
-                                    tint = if (isRepeatSurahEnabled) MaterialTheme.colorScheme.onPrimary else PrimaryGreen,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = if (isRepeatSurahEnabled) White else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }

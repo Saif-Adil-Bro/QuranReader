@@ -2,6 +2,9 @@ package com.example.data
 
 import android.content.Context
 import com.example.data.local.offline.OfflineQuranDatabase
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -58,6 +61,21 @@ object SubjectwiseQuranRepository {
     suspend fun getCategories(context: Context): List<SubjectwiseCategory> = withContext(Dispatchers.IO) {
         cachedCategories?.let {
             if (it.isNotEmpty()) return@withContext it
+        }
+
+        val cacheFile = File(context.cacheDir, "subjectwise_categories_cache_v2.json")
+        if (cacheFile.exists()) {
+            try {
+                val jsonStr = cacheFile.readText()
+                val type = object : TypeToken<List<SubjectwiseCategory>>() {}.type
+                val cachedList: List<SubjectwiseCategory>? = Gson().fromJson(jsonStr, type)
+                if (!cachedList.isNullOrEmpty()) {
+                    cachedCategories = cachedList
+                    return@withContext cachedList
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
         try {
@@ -159,6 +177,14 @@ object SubjectwiseQuranRepository {
             }
 
             cachedCategories = categoryList
+            try {
+                if (categoryList.isNotEmpty()) {
+                    val jsonStr = Gson().toJson(categoryList)
+                    cacheFile.writeText(jsonStr)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             return@withContext categoryList
         } catch (e: Exception) {
             e.printStackTrace()

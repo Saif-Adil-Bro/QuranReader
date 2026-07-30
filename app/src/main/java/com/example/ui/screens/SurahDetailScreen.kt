@@ -1174,7 +1174,7 @@ fun FloatingAudioPlayer(
                     Icon(
                         imageVector = if (playbackMode == PlaybackMode.SURAH) Icons.Default.Repeat else Icons.Default.RepeatOne,
                         contentDescription = "Mode",
-                        tint = if (playbackMode == PlaybackMode.SURAH) PrimaryGreen else GrayText,
+                        tint = if (playbackMode == PlaybackMode.SURAH) PrimaryGreen else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -1187,7 +1187,7 @@ fun FloatingAudioPlayer(
                     Icon(
                         Icons.Default.SkipPrevious,
                         contentDescription = "Previous",
-                        tint = GrayText,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -1216,7 +1216,7 @@ fun FloatingAudioPlayer(
                     Icon(
                         Icons.Default.SkipNext,
                         contentDescription = "Next",
-                        tint = GrayText,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(24.dp)
                     )
                 }

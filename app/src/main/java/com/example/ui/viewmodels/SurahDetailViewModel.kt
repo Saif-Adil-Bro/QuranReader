@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -73,7 +75,18 @@ class SurahDetailViewModel(
     init {
         viewModelScope.launch {
             settingsRepository.selectedQariIdFlow.collect { qariId ->
+                val changed = currentSelectedQariId != qariId
                 currentSelectedQariId = qariId
+                if (changed && audioRepository.isPlaying.value) {
+                    val playingAyahNum = audioRepository.currentPlayingAyahNumber.value
+                    val state = _uiState.value
+                    if (playingAyahNum != null && state is UiState.Success) {
+                        val currentAyah = state.data.find { it.numberInSurah == playingAyahNum }
+                        if (currentAyah != null) {
+                            playAyah(currentAyah, currentAyah.surahNumber)
+                        }
+                    }
+                }
             }
         }
         viewModelScope.launch {
@@ -211,7 +224,7 @@ class SurahDetailViewModel(
     }
 
     fun playAyah(ayah: CombinedAyah, surahNumber: Int) {
-        val audioUrl = ayah.audioUrl ?: "https://cdn.islamic.network/quran/audio/128/$currentSelectedQariId/${ayah.number}.mp3"
+        val audioUrl = "https://cdn.islamic.network/quran/audio/128/$currentSelectedQariId/${ayah.number}.mp3"
         audioRepository.playAudio(audioUrl, ayah.numberInSurah)
         
         // Setup completion callback for continuous play
@@ -386,33 +399,43 @@ class SurahDetailViewModel(
                 }
 
                 _downloadStatus.value = "অডিও ফাইল ডাউনলোড হচ্ছে..."
+                val selectedQariId = settingsRepository.selectedQariIdFlow.first()
+                var successCount = 0
+                var failCount = 0
+
                 withContext(Dispatchers.IO) {
                     for ((index, ayah) in combinedAyahs.withIndex()) {
-                        val url = ayah.audioUrl
-                        if (url != null && url.isNotEmpty()) {
-                            val localFile = audioRepository.getLocalAudioFile(url)
-                            if (!localFile.exists() || localFile.length() == 0L) {
-                                val tempFile = File(localFile.parent, localFile.name + ".temp")
-                                try {
-                                    URL(url).openStream().use { input ->
-                                        tempFile.outputStream().use { output ->
-                                            input.copyTo(output)
-                                        }
-                                    }
-                                    if (tempFile.exists() && tempFile.length() > 0) {
-                                        tempFile.renameTo(localFile)
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    if (tempFile.exists()) tempFile.delete()
-                                }
+                        ensureActive()
+                        val targetUrl = "https://cdn.islamic.network/quran/audio/128/$selectedQariId/${ayah.number}.mp3"
+                        val localFile = audioRepository.getLocalAudioFile(targetUrl)
+
+                        var downloadedOk = false
+                        if (localFile.exists() && localFile.length() > 0) {
+                            downloadedOk = true
+                        } else {
+                            downloadedOk = audioRepository.downloadUrlToFile(targetUrl, localFile)
+                            if (!downloadedOk && !ayah.audioUrl.isNullOrEmpty() && ayah.audioUrl != targetUrl) {
+                                val altUrl = ayah.audioUrl.replace("http://", "https://")
+                                val altFile = audioRepository.getLocalAudioFile(altUrl)
+                                downloadedOk = audioRepository.downloadUrlToFile(altUrl, altFile)
                             }
                         }
+
+                        if (downloadedOk) successCount++ else failCount++
+
                         val progress = ((index + 1) * 100) / totalAyahs
                         _downloadProgress.value = progress
                     }
                 }
-                _downloadStatus.value = "সম্পূর্ণ সুরা অফলাইন ডাউনলোড সফল হয়েছে!"
+
+                if (failCount == totalAyahs) {
+                    _downloadError.value = "অডিও ফাইল ডাউনলোড করতে ব্যর্থ হয়েছে! ইন্টারনেট সংযোগ পরীক্ষা করুন।"
+                    _downloadStatus.value = null
+                } else if (failCount > 0) {
+                    _downloadStatus.value = "সুরার $successCount/$totalAyahs অডিও ডাউনলোড হয়েছে"
+                } else {
+                    _downloadStatus.value = "সম্পূর্ণ সুরা অফলাইন ডাউনলোড সফল হয়েছে!"
+                }
             } catch (e: Exception) {
                 _downloadError.value = e.localizedMessage ?: "ডাউনলোড ব্যর্থ হয়েছে"
                 _downloadStatus.value = null
