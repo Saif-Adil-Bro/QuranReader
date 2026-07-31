@@ -26,6 +26,9 @@ jobs:
       with:
         validate-wrappers: false
 
+    - name: Regenerate Gradle Wrapper (fixes corrupt wrapper jar)
+      run: gradle wrapper --gradle-version 8.9 --distribution-type bin
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
