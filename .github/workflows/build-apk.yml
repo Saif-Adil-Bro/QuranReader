@@ -60,8 +60,8 @@ jobs:
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
       with:
-        name: release-unsigned-apk
-        path: app/build/outputs/apk/release/app-release-unsigned.apk
+        name: release-apk
+        path: app/build/outputs/apk/release/*.apk
 
     - name: Upload Release AAB
       uses: actions/upload-artifact@v4
