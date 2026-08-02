@@ -1,0 +1,600 @@
+package com.example.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import com.example.utils.HijriCalendarUtil
+import com.example.utils.HijriDateInfo
+import java.time.LocalDate
+import java.time.YearMonth
+
+@Composable
+fun IslamicCalendarView(
+    hijriOffset: Int = 0,
+    onHijriOffsetChange: (Int) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    var currentYearMonth by remember { mutableStateOf(YearMonth.now()) }
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var showOffsetDialog by remember { mutableStateOf(false) }
+
+    val today = LocalDate.now()
+
+    // Days grid calculation
+    val daysInMonth = currentYearMonth.lengthOfMonth()
+    val firstDayOfWeek = currentYearMonth.atDay(1).dayOfWeek.value % 7 // 0 = Sunday, ..., 6 = Saturday
+
+    // Calculate Hijri info for selected date
+    val selectedHijriInfo = remember(selectedDate, hijriOffset) {
+        HijriCalendarUtil.getHijriDate(selectedDate, hijriOffset)
+    }
+
+    // Collect special events for current displayed month
+    val monthEvents = remember(currentYearMonth, hijriOffset) {
+        val eventsList = mutableListOf<Pair<LocalDate, HijriDateInfo>>()
+        for (day in 1..daysInMonth) {
+            val date = currentYearMonth.atDay(day)
+            val info = HijriCalendarUtil.getHijriDate(date, hijriOffset)
+            if (info.specialEvents.isNotEmpty() || info.hijriDay in 13..15) {
+                eventsList.add(date to info)
+            }
+        }
+        eventsList
+    }
+
+    // Determine primary Hijri Month & Year span for header (e.g. "সফর-রবিউল আউয়াল ১৪৪৮")
+    val currentMonthHijriHeaderStr = remember(currentYearMonth, hijriOffset) {
+        val startHijri = HijriCalendarUtil.getHijriDate(currentYearMonth.atDay(1), hijriOffset)
+        val endHijri = HijriCalendarUtil.getHijriDate(currentYearMonth.atDay(daysInMonth), hijriOffset)
+
+        if (startHijri.hijriMonthNameBn == endHijri.hijriMonthNameBn) {
+            "${startHijri.hijriMonthNameBn} ${HijriCalendarUtil.toBengaliNumerals(startHijri.hijriYear)}"
+        } else if (startHijri.hijriYear == endHijri.hijriYear) {
+            "${startHijri.hijriMonthNameBn}-${endHijri.hijriMonthNameBn} ${HijriCalendarUtil.toBengaliNumerals(startHijri.hijriYear)}"
+        } else {
+            "${startHijri.hijriMonthNameBn} ${HijriCalendarUtil.toBengaliNumerals(startHijri.hijriYear)}-${endHijri.hijriMonthNameBn} ${HijriCalendarUtil.toBengaliNumerals(endHijri.hijriYear)}"
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 1. TOP HERO CARD (MINIMAL BANNER FROM MOCKUP)
+            item {
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFF10B981), // Vibrant Emerald
+                                        Color(0xFF059669)  // Deep Emerald
+                                    )
+                                )
+                            )
+                            .padding(horizontal = 20.dp, vertical = 22.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Main English (Gregorian) Date with Weekday
+                            Text(
+                                text = "${HijriCalendarUtil.getBengaliWeekdayName(selectedDate)}, ${HijriCalendarUtil.toBengaliNumerals(selectedDate.dayOfMonth)} ${HijriCalendarUtil.getBengaliMonthName(selectedDate.monthValue)} ${HijriCalendarUtil.toBengaliNumerals(selectedDate.year)}",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Thin Divider Line
+                            HorizontalDivider(
+                                color = Color.White.copy(alpha = 0.25f),
+                                thickness = 1.dp,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Sub Date: Only Hijri Date (with (i) icon) is clickable for adjustment
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable { showOffsetDialog = true }
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "${HijriCalendarUtil.toBengaliNumerals(selectedHijriInfo.hijriDay)} ${selectedHijriInfo.hijriMonthNameBn} ${HijriCalendarUtil.toBengaliNumerals(selectedHijriInfo.hijriYear)} হিজরী",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color.White.copy(alpha = 0.95f)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Hijri Adjustment",
+                                        tint = Color.White.copy(alpha = 0.85f),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+
+                                Text(
+                                    text = "  •  ${HijriCalendarUtil.getBanglaDateStr(selectedDate)}",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White.copy(alpha = 0.95f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. SECTION HEADER 1: ক্যালেন্ডার
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "ক্যালেন্ডার",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+
+            // 3. CALENDAR GRID CARD
+            item {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        // Header with Month Switcher (e.g. "< সফর ১৪৪৮ >")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = { currentYearMonth = currentYearMonth.minusMonths(1) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    contentDescription = "Previous Month",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "${HijriCalendarUtil.getBengaliMonthName(currentYearMonth.monthValue)} ${HijriCalendarUtil.toBengaliNumerals(currentYearMonth.year)}",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = currentMonthHijriHeaderStr,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            IconButton(
+                                onClick = { currentYearMonth = currentYearMonth.plusMonths(1) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = "Next Month",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Weekdays Row
+                        val weekdays = listOf("রবি", "সোম", "মঙ্গল", "বুধ", "বৃহঃ", "শুক্র", "শনি")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            weekdays.forEachIndexed { idx, day ->
+                                Text(
+                                    text = day,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (idx == 5) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Calendar Days Grid
+                        val totalCells = firstDayOfWeek + daysInMonth
+                        val rows = (totalCells + 6) / 7
+
+                        for (r in 0 until rows) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                for (c in 0..6) {
+                                    val cellIndex = r * 7 + c
+                                    val dayNum = cellIndex - firstDayOfWeek + 1
+
+                                    if (dayNum in 1..daysInMonth) {
+                                        val date = currentYearMonth.atDay(dayNum)
+                                        val hijriInfo = HijriCalendarUtil.getHijriDate(date, hijriOffset)
+
+                                        val isSelected = date == selectedDate
+                                        val isToday = date == today
+
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .aspectRatio(0.9f)
+                                                .padding(2.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(
+                                                    when {
+                                                        isSelected -> Color(0xFF10B981)
+                                                        isToday -> Color(0xFF10B981).copy(alpha = 0.15f)
+                                                        else -> Color.Transparent
+                                                    }
+                                                )
+                                                .border(
+                                                    width = if (isToday && !isSelected) 1.5.dp else 0.dp,
+                                                    color = if (isToday && !isSelected) Color(0xFF10B981) else Color.Transparent,
+                                                    shape = RoundedCornerShape(12.dp)
+                                                )
+                                                .clickable { selectedDate = date },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                // Top Number: Gregorian Day (Main / Bold)
+                                                Text(
+                                                    text = HijriCalendarUtil.toBengaliNumerals(dayNum),
+                                                    fontSize = 15.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = when {
+                                                        isSelected -> Color.White
+                                                        c == 5 -> Color(0xFF10B981) // Friday Green
+                                                        else -> MaterialTheme.colorScheme.onSurface
+                                                    }
+                                                )
+
+                                                // Bottom Number: Hijri Day (Sub / Smaller)
+                                                Text(
+                                                    text = HijriCalendarUtil.toBengaliNumerals(hijriInfo.hijriDay),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Normal,
+                                                    color = when {
+                                                        isSelected -> Color.White.copy(alpha = 0.85f)
+                                                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. SECTION HEADER 2: ইসলামিক ইভেন্ট
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Event,
+                        contentDescription = null,
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "ইসলামিক ইভেন্ট",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+
+            // 5. ISLAMIC EVENTS LIST CARDS
+            if (monthEvents.isEmpty()) {
+                item {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "এই মাসে কোনো বিশেষ ইসলামিক ইভেন্ট নেই।",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            } else {
+                items(monthEvents) { (date, info) ->
+                    val isPast = date.isBefore(today)
+                    val isCurrentDay = date.isEqual(today)
+
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedDate = date }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFF10B981).copy(alpha = 0.12f),
+                                    modifier = Modifier.size(42.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Settings,
+                                            contentDescription = null,
+                                            tint = Color(0xFF10B981),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Column {
+                                    val title = if (info.specialEvents.isNotEmpty()) {
+                                        info.specialEvents.joinToString(", ")
+                                    } else {
+                                        info.sunnahFastReason ?: "সুন্নাত আমল"
+                                    }
+
+                                    Text(
+                                        text = title,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+
+                                    Text(
+                                        text = "${HijriCalendarUtil.toBengaliNumerals(date.dayOfMonth)} ${HijriCalendarUtil.getBengaliMonthName(date.monthValue)} (${HijriCalendarUtil.toBengaliNumerals(info.hijriDay)} ${info.hijriMonthNameBn})",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Event Status Badge
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = when {
+                                    isCurrentDay -> Color(0xFF10B981).copy(alpha = 0.15f)
+                                    isPast -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
+                                    else -> Color(0xFFFEF3C7)
+                                }
+                            ) {
+                                Text(
+                                    text = when {
+                                        isCurrentDay -> "আজ"
+                                        isPast -> "পার হয়ে গেছে"
+                                        else -> "আসন্ন"
+                                    },
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = when {
+                                        isCurrentDay -> Color(0xFF10B981)
+                                        isPast -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        else -> Color(0xFFD97706)
+                                    },
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // HIJRI OFFSET ADJUSTMENT DIALOG
+    if (showOffsetDialog) {
+        Dialog(onDismissRequest = { showOffsetDialog = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF26272B))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                ) {
+                    Text(
+                        text = "হিজরি তারিখ সমন্বয়",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "হিজরি তারিখ একদিন বা কয়েকদিন আগে-পিছে করতে পারেন।",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.85f),
+                        lineHeight = 20.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "বর্তমান তারিখ: ${HijriCalendarUtil.toBengaliNumerals(selectedHijriInfo.hijriDay)} ${selectedHijriInfo.hijriMonthNameBn} ${HijriCalendarUtil.toBengaliNumerals(selectedHijriInfo.hijriYear)}",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2DD4BF)
+                    )
+
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { if (hijriOffset > -5) onHijriOffsetChange(hijriOffset - 1) },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Remove,
+                                contentDescription = "Decrease offset",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        val offsetDisplay = if (hijriOffset > 0) "+${HijriCalendarUtil.toBengaliNumerals(hijriOffset)}"
+                                           else if (hijriOffset < 0) "-${HijriCalendarUtil.toBengaliNumerals(-hijriOffset)}"
+                                           else HijriCalendarUtil.toBengaliNumerals(0)
+
+                        Text(
+                            text = "$offsetDisplay দিন",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+
+                        IconButton(
+                            onClick = { if (hijriOffset < 5) onHijriOffsetChange(hijriOffset + 1) },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Increase offset",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Text(
+                            text = "বন্ধ করুন",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF2DD4BF),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { showOffsetDialog = false }
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

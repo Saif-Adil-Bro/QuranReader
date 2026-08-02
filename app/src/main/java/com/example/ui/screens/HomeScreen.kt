@@ -145,7 +145,8 @@ fun HomeScreen(
     onNavigateToTajweedIndex: () -> Unit,
     onNavigateToTajweedMode: (Int) -> Unit,
     onNavigateToPlayer: () -> Unit,
-    onNavigateToPosts: () -> Unit = {}
+    onNavigateToPosts: () -> Unit = {},
+    onNavigateToCalendar: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lastReadSurah by viewModel.lastReadSurah.collectAsState()
@@ -459,7 +460,7 @@ fun HomeScreen(
                                     else -> onNavigateToSurahWithAyah(lastReadSurah, "LIST", lastReadAyah)
                                 }
                             },
-                            onHijriDateClick = { showHijriAdjustDialog = true },
+                            onHijriDateClick = { onNavigateToCalendar() },
                             onDuaClick = { selectedDuaForDetail = it }
                         )
                         Box(
@@ -518,50 +519,109 @@ fun HomeScreen(
     }
 
     if (showHijriAdjustDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showHijriAdjustDialog = false },
-            title = { Text("হিজরি তারিখ সমন্বয়", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text("হিজরি তারিখ একদিন বা কয়েকদিন আগে-পিছে করতে পারেন।")
-                    Spacer(modifier = Modifier.height(8.dp))
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showHijriAdjustDialog = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF26272B))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                ) {
+                    Text(
+                        text = "হিজরি তারিখ সমন্বয়",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "হিজরি তারিখ একদিন বা কয়েকদিন আগে-পিছে করতে পারেন।",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.85f),
+                        lineHeight = 20.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Text(
                         text = "বর্তমান তারিখ: ${com.example.utils.DateUtil.getTodayHijriDateStr(combinedHijriOffset)}",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = PrimaryGreen
+                        color = Color(0xFF2DD4BF)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Spacer(modifier = Modifier.height(28.dp))
+
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         androidx.compose.material3.IconButton(
-                            onClick = { if (hijriOffset > -3) viewModel.updateHijriOffset(hijriOffset - 1) },
-                            enabled = hijriOffset > -3
+                            onClick = { if (hijriOffset > -5) viewModel.updateHijriOffset(hijriOffset - 1) },
+                            modifier = Modifier.size(48.dp)
                         ) {
-                            Icon(androidx.compose.material.icons.Icons.Default.Remove, contentDescription = "Decrease")
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Remove,
+                                contentDescription = "Decrease",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
+
+                        val offsetDisplay = if (hijriOffset > 0) "+${com.example.utils.DateUtil.toBengaliNumerals(hijriOffset)}"
+                                           else if (hijriOffset < 0) "-${com.example.utils.DateUtil.toBengaliNumerals(-hijriOffset)}"
+                                           else com.example.utils.DateUtil.toBengaliNumerals(0)
+
                         Text(
-                            text = "${if (hijriOffset > 0) "+" else ""}${com.example.utils.DateUtil.toBengaliNumerals(hijriOffset)} দিন",
+                            text = "$offsetDisplay দিন",
                             fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
+
                         androidx.compose.material3.IconButton(
                             onClick = { if (hijriOffset < 5) viewModel.updateHijriOffset(hijriOffset + 1) },
-                            enabled = hijriOffset < 5
+                            modifier = Modifier.size(48.dp)
                         ) {
-                            Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = "Increase")
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                                contentDescription = "Increase",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                     }
-                }
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = { showHijriAdjustDialog = false }) {
-                    Text("বন্ধ করুন", color = PrimaryGreen)
+
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Text(
+                            text = "বন্ধ করুন",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF2DD4BF),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { showHijriAdjustDialog = false }
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
                 }
             }
-        )
+        }
     }
 }
 
@@ -795,7 +855,7 @@ fun HeroSection(
                                             .background(Color.White.copy(alpha = 0.2f))
                                     )
                                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                                        Text("🌙 হিজরি ক্যালেন্ডার", color = White.copy(alpha = 0.8f), fontSize = 10.sp, lineHeight = 12.sp)
+                                        Text("🌙 ক্যালেন্ডার", color = White.copy(alpha = 0.8f), fontSize = 10.sp, lineHeight = 12.sp)
                                         Text(com.example.utils.DateUtil.getTodayHijriDateStr(hijriOffset), color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
                                         Text(com.example.utils.DateUtil.getHijriNoteStr(hijriOffset), color = White.copy(alpha = 0.8f), fontSize = 10.sp, lineHeight = 12.sp)
                                     }

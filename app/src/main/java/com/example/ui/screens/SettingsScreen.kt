@@ -99,6 +99,7 @@ fun SettingsScreen(
     var activeDialog by remember(initialSubScreen) { mutableStateOf<String?>(initialSubScreen) }
     
     val menuItems = listOf(
+        MenuItem("calendar", "ক্যালেন্ডার", Icons.Default.CalendarMonth, Color(0xFF10B981)),
         MenuItem("bookmark", "বুকমার্ক", Icons.Default.Bookmark, Color(0xFFEF4444)),
         MenuItem("note", "নোট", Icons.Default.Edit, Color(0xFF0D9488)),
         MenuItem("planner", "কুরআন প্ল্যানার", Icons.Default.DateRange, Color(0xFF10B981)),
@@ -916,6 +917,8 @@ fun MenuDetailDialog(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val dialogHijriOffset by viewModel.hijriOffset.collectAsState()
+    val dialogCombinedHijriOffset by viewModel.combinedHijriOffset.collectAsState()
     
     // Hold selected dua state for back click handling
     var selectedDuaForDuaTab by remember(initialDuaId, type) { 
@@ -960,6 +963,7 @@ fun MenuDetailDialog(
             Column(modifier = Modifier.fillMaxSize()) {
                 // Dialog Header
                 val title = when (type) {
+                    "calendar" -> "ক্যালেন্ডার"
                     "profile" -> "আমার প্রোফাইল"
                     "bookmark" -> "বুকমার্ক তালিকা"
                     "note" -> "আমার নোটপ্যাড"
@@ -1013,6 +1017,13 @@ fun MenuDetailDialog(
                         .padding(16.dp)
                 ) {
                     when (type) {
+                        "calendar" -> com.example.ui.components.IslamicCalendarView(
+                            hijriOffset = dialogCombinedHijriOffset,
+                            onHijriOffsetChange = { newCombined ->
+                                val diff = newCombined - dialogCombinedHijriOffset
+                                viewModel.setHijriOffset(dialogHijriOffset + diff)
+                            }
+                        )
                         "profile" -> ProfileDialogContent(viewModel)
                         "bookmark" -> BookmarkDialogContent(
                             viewModel = viewModel,

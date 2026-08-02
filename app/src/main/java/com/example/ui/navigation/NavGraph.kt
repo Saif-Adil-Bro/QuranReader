@@ -214,6 +214,9 @@ fun AppNavGraph(
                 },
                 onNavigateToPosts = {
                     navController.navigate("posts")
+                },
+                onNavigateToCalendar = {
+                    navController.navigate("settings?subScreen=calendar")
                 }
             )
         }

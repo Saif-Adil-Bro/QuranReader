@@ -562,6 +562,7 @@ class QuranRepository(
         val cacheKey = "${pageNumber}_${tafsirIdsStr}_${audioEdition}"
         val inMemory = cachedPageDetails[cacheKey]
         if (inMemory != null && inMemory.isNotEmpty()) {
+            val enrichedInMemory = enrichAyahsWithTajweed(inMemory)
             if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
                 repositoryScope.launch {
                     try {
@@ -572,7 +573,7 @@ class QuranRepository(
                     }
                 }
             }
-            return inMemory
+            return enrichedInMemory
         }
         return withContext(Dispatchers.IO) {
             val cacheFile = getPageDetailsCacheFile(pageNumber, "${tafsirIdsStr}_${audioEdition}")
@@ -619,7 +620,8 @@ class QuranRepository(
 
             // Always return offline database or file cache data IMMEDIATELY
             if (!cachedList.isNullOrEmpty()) {
-                cachedPageDetails[cacheKey] = cachedList
+                val enriched = enrichAyahsWithTajweed(cachedList)
+                cachedPageDetails[cacheKey] = enriched
                 if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
                     repositoryScope.launch {
                         try {
@@ -629,7 +631,7 @@ class QuranRepository(
                         }
                     }
                 }
-                return@withContext cachedList
+                return@withContext enriched
             }
 
             if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
@@ -655,6 +657,7 @@ class QuranRepository(
         val cacheKey = "${juzNumber}_${tafsirIdsStr}_${audioEdition}"
         val inMemory = cachedJuzDetails[cacheKey]
         if (inMemory != null && inMemory.isNotEmpty()) {
+            val enrichedInMemory = enrichAyahsWithTajweed(inMemory)
             if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
                 repositoryScope.launch {
                     try {
@@ -665,7 +668,7 @@ class QuranRepository(
                     }
                 }
             }
-            return inMemory
+            return enrichedInMemory
         }
         return withContext(Dispatchers.IO) {
             val cacheFile = getJuzDetailsCacheFile(juzNumber, "${tafsirIdsStr}_${audioEdition}")
@@ -712,7 +715,8 @@ class QuranRepository(
 
             // Always return offline database or file cache data IMMEDIATELY
             if (!cachedList.isNullOrEmpty()) {
-                cachedJuzDetails[cacheKey] = cachedList
+                val enriched = enrichAyahsWithTajweed(cachedList)
+                cachedJuzDetails[cacheKey] = enriched
                 if (com.example.util.NetworkUtils.isNetworkAvailable(context)) {
                     repositoryScope.launch {
                         try {
@@ -722,7 +726,7 @@ class QuranRepository(
                         }
                     }
                 }
-                return@withContext cachedList
+                return@withContext enriched
             }
 
             if (!com.example.util.NetworkUtils.isNetworkAvailable(context)) {
@@ -857,10 +861,10 @@ class QuranRepository(
             val audioAyahs = audioResponse.data.ayahs
             
             val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
-                val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
                 val computedSurahNumber = arabicAyah.surah?.number?.takeIf { it > 0 } 
                     ?: com.example.data.QuranData.getSurahAndAyahFromGlobal(arabicAyah.number).first
                 val verseKey = "$computedSurahNumber:${arabicAyah.numberInSurah}"
+                val quranComVerse = quranComResponse?.verses?.find { it.verseKey == verseKey }
                 val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
                 CombinedAyah(
                     number = arabicAyah.number,
@@ -876,7 +880,7 @@ class QuranRepository(
                     textUthmaniTajweed = quranComVerse?.textUthmaniTajweed
                 )
             }
-            val cleaned = cleanCombinedAyahList(combined)
+            val cleaned = enrichAyahsWithTajweed(cleanCombinedAyahList(combined))
             cachedPageDetails[cacheKey] = cleaned
             
             try {
@@ -915,8 +919,10 @@ class QuranRepository(
             val audioAyahs = audioResponse.data.ayahs
             
             val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
-                val quranComVerse = quranComResponse?.verses?.find { it.id == arabicAyah.number }
-                val verseKey = "${arabicAyah.surah?.number ?: 0}:${arabicAyah.numberInSurah}"
+                val computedSurahNumber = arabicAyah.surah?.number?.takeIf { it > 0 } 
+                    ?: com.example.data.QuranData.getSurahAndAyahFromGlobal(arabicAyah.number).first
+                val verseKey = "$computedSurahNumber:${arabicAyah.numberInSurah}"
+                val quranComVerse = quranComResponse?.verses?.find { it.verseKey == verseKey }
                 val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
                 val cachedWords = fallbackList?.getOrNull(index)?.words ?: emptyList()
                 CombinedAyah(
@@ -924,7 +930,7 @@ class QuranRepository(
                     numberInSurah = arabicAyah.numberInSurah,
                     page = arabicAyah.page,
                     juz = arabicAyah.juz,
-                    surahNumber = arabicAyah.surah?.number ?: 0,
+                    surahNumber = computedSurahNumber,
                     arabicText = processArabicText(arabicAyah),
                     bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
                     tafsirText = tafsir,
@@ -933,7 +939,7 @@ class QuranRepository(
                     textUthmaniTajweed = quranComVerse?.textUthmaniTajweed ?: fallbackList?.getOrNull(index)?.textUthmaniTajweed
                 )
             }
-            val cleaned = cleanCombinedAyahList(combined)
+            val cleaned = enrichAyahsWithTajweed(cleanCombinedAyahList(combined))
             cachedJuzDetails[cacheKey] = cleaned
             
             try {
@@ -941,6 +947,65 @@ class QuranRepository(
                 cacheFile.writeText(Gson().toJson(cleaned))
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    private fun enrichAyahsWithTajweed(ayahs: List<CombinedAyah>): List<CombinedAyah> {
+        if (ayahs.isEmpty()) return ayahs
+        val needsTajweed = ayahs.any { it.textUthmaniTajweed.isNullOrEmpty() || it.words.isEmpty() }
+        if (!needsTajweed) return ayahs
+
+        val surahNumbers = ayahs.map { it.surahNumber }.filter { it > 0 }.distinct()
+        val surahAyahMap = mutableMapOf<Pair<Int, Int>, CombinedAyah>()
+
+        for (surahNum in surahNumbers) {
+            val inMemorySurah = cachedSurahDetails.values.firstOrNull { list ->
+                list.firstOrNull()?.surahNumber == surahNum && list.any { !it.textUthmaniTajweed.isNullOrEmpty() }
+            }
+            if (inMemorySurah != null) {
+                inMemorySurah.forEach { surahAyah ->
+                    surahAyahMap[Pair(surahNum, surahAyah.numberInSurah)] = surahAyah
+                }
+                continue
+            }
+
+            val cacheDir = File(context.filesDir, "quran_text_cache")
+            if (cacheDir.exists()) {
+                val surahFiles = cacheDir.listFiles { _, name ->
+                    name.startsWith("surah_details_${surahNum}_") && name.endsWith(".json")
+                }
+                if (!surahFiles.isNullOrEmpty()) {
+                    val latestFile = surahFiles.maxByOrNull { it.lastModified() }
+                    if (latestFile != null && latestFile.length() > 0) {
+                        try {
+                            val json = latestFile.readText()
+                            val type = object : TypeToken<List<CombinedAyah>>() {}.type
+                            val list = Gson().fromJson<List<CombinedAyah>>(json, type)
+                            if (!list.isNullOrEmpty()) {
+                                list.forEach { surahAyah ->
+                                    surahAyahMap[Pair(surahNum, surahAyah.numberInSurah)] = surahAyah
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            }
+        }
+
+        if (surahAyahMap.isEmpty()) return ayahs
+
+        return ayahs.map { ayah ->
+            val surahAyah = surahAyahMap[Pair(ayah.surahNumber, ayah.numberInSurah)]
+            if (surahAyah != null) {
+                ayah.copy(
+                    textUthmaniTajweed = if (!ayah.textUthmaniTajweed.isNullOrEmpty()) ayah.textUthmaniTajweed else surahAyah.textUthmaniTajweed,
+                    words = if (ayah.words.isNotEmpty()) ayah.words else surahAyah.words
+                )
+            } else {
+                ayah
             }
         }
     }

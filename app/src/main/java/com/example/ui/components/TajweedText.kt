@@ -55,7 +55,7 @@ fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
             val tag = preprocessed.substring(nextTagStart + 1, nextTagEnd)
             
             if (tag.startsWith("/")) {
-                if (tag == "/tajweed" || tag == "/span") {
+                if (tag.startsWith("/tajweed") || tag.startsWith("/span")) {
                     try {
                         pop()
                     } catch (e: Exception) {
@@ -63,8 +63,8 @@ fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
                     }
                 }
             } else {
-                if (tag.startsWith("tajweed class=") || tag.startsWith("span class=")) {
-                    val className = tag.substringAfter("class=").trim('\'', '"')
+                if (tag.contains("class=")) {
+                    val className = tag.substringAfter("class=").trim().substringBefore(" ").trim('\'', '"', '>')
                     val color = if (className == "end") defaultColor else (TajweedColors[className] ?: defaultColor)
                     pushStyle(SpanStyle(color = color))
                 }
