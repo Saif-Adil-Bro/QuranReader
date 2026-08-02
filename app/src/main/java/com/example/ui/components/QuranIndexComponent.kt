@@ -27,6 +27,9 @@ import com.example.ui.theme.PrimaryGreen
 import com.example.ui.theme.GrayText
 import com.example.ui.theme.Border
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
+
 private val paraNamesBangla = listOf(
     "আলিফ লাম মীম", "সাইয়াকুল", "তিলকাল রুসুল", "লান তানালু", "ওয়াল মুহসানাত",
     "লা ইউহিব্বুল্লাহ", "ওয়া ইজা সামিউ", "ওয়া লাও আন্নানা", "ক্বলাল মালাইউ", "ওয়া'লামু",
@@ -59,7 +62,9 @@ fun QuranIndexComponent(
     onRetryClick: () -> Unit
 ) {
     val tabs = listOf("সূরা", "পারা")
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    val surahListState = rememberLazyListState()
+    val paraListState = rememberLazyListState()
 
     Column(
         modifier = modifier
@@ -152,12 +157,13 @@ fun QuranIndexComponent(
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val columns = maxOf(2, (maxWidth / 160.dp).toInt())
                     LazyColumn(
+                        state = paraListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         val chunkedParas = filteredParas.chunked(columns)
-                        items(chunkedParas) { rowItems ->
+                        items(chunkedParas, key = { row -> row.first().first }) { rowItems ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -229,12 +235,13 @@ fun QuranIndexComponent(
                         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                             val columns = maxOf(2, (maxWidth / 160.dp).toInt())
                             LazyColumn(
+                                state = surahListState,
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 val chunkedSurahs = filteredSurahs.chunked(columns)
-                                items(chunkedSurahs) { rowItems ->
+                                items(chunkedSurahs, key = { row -> row.first().number }) { rowItems ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)

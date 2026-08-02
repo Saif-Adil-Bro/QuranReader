@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -91,6 +93,10 @@ fun MushafViewerScreen(
     
     val isBookmarked by viewModel.isBookmarked.collectAsState()
     var showSelectorSheet by remember { mutableStateOf(initialShowIndex) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0 for Surah, 1 for Para
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    val surahListState = rememberLazyListState()
+    val juzListState = rememberLazyListState()
 
     BackHandler(enabled = !showSelectorSheet) {
         showSelectorSheet = true
@@ -233,8 +239,6 @@ fun MushafViewerScreen(
                 showSelectorSheet = false
                 onBack()
             }
-            var selectedTab by remember { mutableStateOf(0) } // 0 for Surah, 1 for Para
-            var searchQuery by remember { mutableStateOf("") }
             
             Column(
                 modifier = Modifier
@@ -504,10 +508,11 @@ fun MushafViewerScreen(
                     }
 
                     LazyColumn(
+                        state = surahListState,
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
-                        items(filteredSurahs) { surah ->
+                        items(filteredSurahs, key = { it.first }) { surah ->
                             val surahNum = surah.first
                             val name = surah.second.first
                             val meaning = surah.second.second
@@ -593,10 +598,11 @@ fun MushafViewerScreen(
                     }
 
                     LazyColumn(
+                        state = juzListState,
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
-                        items(filteredParas) { juz ->
+                        items(filteredParas, key = { it.first }) { juz ->
                             val juzNum = juz.first
                             val name = juz.second
                             val isHafezi = (mushafId == "hafizi_15line" || mushafId == "imdadia_hafezi" || mushafId == "custom_pdf")

@@ -49,6 +49,8 @@ import com.example.data.model.removeWaqfSigns
 import com.example.data.model.formatWaqfSigns
 import com.example.data.model.appendStyledWaqfText
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.text.ClickableText
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
@@ -156,6 +158,9 @@ fun HafeziModeScreen(
     
     var showSettings by remember { mutableStateOf(false) }
     var showJuzList by remember { mutableStateOf(false) }
+    var hafeziSelectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    val hafeziJuzListState = rememberLazyListState()
+    val hafeziSurahListState = rememberLazyListState()
     var showJumpToPageDialog by remember { mutableStateOf(false) }
 
     // Dynamic coloring based on user-selected reading theme
@@ -580,7 +585,6 @@ fun HafeziModeScreen(
         }
 
         if (showJuzList) {
-            var selectedTabIndex by remember { mutableStateOf(0) }
             ModalBottomSheet(
                 onDismissRequest = { showJuzList = false },
                 sheetState = rememberModalBottomSheetState(),
@@ -592,24 +596,24 @@ fun HafeziModeScreen(
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     androidx.compose.material3.TabRow(
-                        selectedTabIndex = selectedTabIndex,
+                        selectedTabIndex = hafeziSelectedTabIndex,
                         containerColor = containerColor,
                         contentColor = topBarContentColor,
                         indicator = { tabPositions ->
                             TabRowDefaults.Indicator(
-                                modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                                modifier = Modifier.tabIndicatorOffset(tabPositions[hafeziSelectedTabIndex]),
                                 color = topBarContentColor
                             )
                         }
                     ) {
                         androidx.compose.material3.Tab(
-                            selected = selectedTabIndex == 0,
-                            onClick = { selectedTabIndex = 0 },
+                            selected = hafeziSelectedTabIndex == 0,
+                            onClick = { hafeziSelectedTabIndex = 0 },
                             text = { Text("পারা", fontWeight = FontWeight.Bold) }
                         )
                         androidx.compose.material3.Tab(
-                            selected = selectedTabIndex == 1,
-                            onClick = { selectedTabIndex = 1 },
+                            selected = hafeziSelectedTabIndex == 1,
+                            onClick = { hafeziSelectedTabIndex = 1 },
                             text = { Text("সূরা", fontWeight = FontWeight.Bold) }
                         )
                     }
@@ -617,12 +621,13 @@ fun HafeziModeScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     LazyColumn(
+                        state = if (hafeziSelectedTabIndex == 0) hafeziJuzListState else hafeziSurahListState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 400.dp)
                     ) {
-                        if (selectedTabIndex == 0) {
-                            items(30) { index ->
+                        if (hafeziSelectedTabIndex == 0) {
+                            items(30, key = { it + 1 }) { index ->
                                 val juzNum = index + 1
                                 val juzName = paraNamesBangla[index]
                                 val startPage = getJuzStartPage(juzNum)
@@ -663,7 +668,7 @@ fun HafeziModeScreen(
                                 }
                             }
                         } else {
-                            items(114) { index ->
+                            items(114, key = { it + 1 }) { index ->
                                 val surahNum = index + 1
                                 val surahName = com.example.data.QuranData.surahNames.find { it.first == surahNum }?.second?.first ?: ""
                                 val surahNameArabic = ""

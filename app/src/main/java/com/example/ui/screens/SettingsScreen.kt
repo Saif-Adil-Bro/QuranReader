@@ -7,6 +7,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -1764,6 +1765,9 @@ fun SubjectwiseDialogContent(
     onRegisterBackAction: (((() -> Unit)?) -> Unit) = {}
 ) {
     val context = LocalContext.current
+    val subjectCategoryListState = rememberLazyListState()
+    val subjectTopicListState = rememberLazyListState()
+    val subjectVerseListState = rememberLazyListState()
     var selectedCategory by remember { mutableStateOf<com.example.data.SubjectwiseCategory?>(null) }
     var selectedTopic by remember { mutableStateOf<com.example.data.SubjectwiseTopic?>(null) }
     var searchQuery by remember { mutableStateOf("") }
@@ -1893,6 +1897,7 @@ fun SubjectwiseDialogContent(
                 }
             } else {
                 LazyColumn(
+                    state = subjectCategoryListState,
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -2008,6 +2013,7 @@ fun SubjectwiseDialogContent(
             }
 
             LazyColumn(
+                state = subjectTopicListState,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -2144,6 +2150,7 @@ fun SubjectwiseDialogContent(
             }
 
             LazyColumn(
+                state = subjectVerseListState,
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -2334,6 +2341,7 @@ fun DuaDialogContent(
     val arabicFontName by viewModel.arabicFontName.collectAsState()
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     val allDuas = if (isMorningEvening) com.example.data.DuaData.morningEveningDuas else com.example.data.DuaData.richDuas
+    val duaListState = rememberLazyListState()
     var searchQuery by remember { mutableStateOf("") }
     
     fun formatToBanglaNumber(num: Int): String {
@@ -2422,12 +2430,13 @@ fun DuaDialogContent(
                     }
                 } else {
                     LazyColumn(
+                        state = duaListState,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier
                             .fillMaxSize()
                             .weight(1f)
                     ) {
-                        items(filteredDuas) { dua ->
+                        items(filteredDuas, key = { it.id }) { dua ->
                             val index = allDuas.indexOf(dua) + 1
                             val banglaIndex = formatToBanglaNumber(index)
                             

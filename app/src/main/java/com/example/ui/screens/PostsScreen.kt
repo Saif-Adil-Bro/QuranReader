@@ -44,6 +44,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.text.font.FontFamily
@@ -452,6 +454,39 @@ fun PostsScreen(
     }
 }
 
+fun formatPostDate(timestamp: Long): String {
+    if (timestamp <= 0L) return "সম্প্রতি"
+    val diffMillis = System.currentTimeMillis() - timestamp
+    if (diffMillis < 0) return "সম্প্রতি"
+    val seconds = diffMillis / 1000
+    val minutes = seconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+
+    fun String.toBanglaDigits(): String {
+        val banglaDigits = mapOf(
+            '0' to '০', '1' to '১', '2' to '২', '3' to '৩', '4' to '৪',
+            '5' to '৫', '6' to '৬', '7' to '৭', '8' to '৮', '9' to '৯'
+        )
+        return this.map { banglaDigits[it] ?: it }.joinToString("")
+    }
+
+    return when {
+        minutes < 1 -> "এখনই"
+        minutes < 60 -> "${minutes.toString().toBanglaDigits()} মিনিট আগে"
+        hours < 24 -> "${hours.toString().toBanglaDigits()} ঘণ্টা আগে"
+        days < 7 -> "${days.toString().toBanglaDigits()} দিন আগে"
+        else -> {
+            try {
+                val sdf = java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale("bn", "BD"))
+                sdf.format(java.util.Date(timestamp))
+            } catch (e: Exception) {
+                "সম্প্রতি"
+            }
+        }
+    }
+}
+
 @Composable
 fun BlogPostCard(
     post: BlogPost,
@@ -499,7 +534,7 @@ fun BlogPostCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = post.readTime,
+                        text = formatPostDate(post.timestamp),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -758,7 +793,7 @@ fun BlogPostDetailScreen(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = post.readTime,
+                        text = formatPostDate(post.timestamp),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1449,6 +1484,7 @@ fun AddPostDialog(
     val context = LocalContext.current
     var isBlogType by remember { mutableStateOf(true) }
     var title by remember { mutableStateOf("") }
+    var imageUrl by remember { mutableStateOf("") }
     var contentText by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("সাধারণ") }
     var reference by remember { mutableStateOf("") }
@@ -1625,6 +1661,22 @@ fun AddPostDialog(
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp)
                         )
+                        OutlinedTextField(
+                            value = imageUrl,
+                            onValueChange = { imageUrl = it },
+                            label = { Text("কভার ফোটো লিঙ্ক (Image URL)") },
+                            placeholder = { Text("যেমন: https://example.com/image.jpg (ঐচ্ছিক)") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = null,
+                                    tint = PrimaryGreen
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
                     }
 
                     OutlinedTextField(
@@ -1776,6 +1828,7 @@ fun AddPostDialog(
                                     content = contentText,
                                     category = category,
                                     author = author,
+                                    imageUrl = imageUrl,
                                     onSuccess = {
                                         Toast.makeText(context, "ব্লগ পোস্ট সফলভাবে পাবলিশ হয়েছে!", Toast.LENGTH_SHORT).show()
                                         onDismiss()

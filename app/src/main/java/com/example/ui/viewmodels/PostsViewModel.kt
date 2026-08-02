@@ -61,8 +61,8 @@ class PostsViewModel(private val postsRepository: PostsRepository) : ViewModel()
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addBlogPost(title: String, content: String, category: String, author: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        postsRepository.addBlogPost(title, content, category, author, onSuccess, onError)
+    fun addBlogPost(title: String, content: String, category: String, author: String, imageUrl: String = "", onSuccess: () -> Unit, onError: (String) -> Unit) {
+        postsRepository.addBlogPost(title, content, category, author, imageUrl, onSuccess, onError)
     }
 
     fun addShortPost(text: String, reference: String, category: String, author: String, onSuccess: () -> Unit, onError: (String) -> Unit) {

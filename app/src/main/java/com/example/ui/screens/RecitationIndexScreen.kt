@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,6 +41,7 @@ fun RecitationIndexScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var showQariSelectorDialog by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
 
     val filteredSurahList = remember(searchQuery, surahList) {
         val trimmedQuery = searchQuery.trim()
@@ -208,12 +210,13 @@ fun RecitationIndexScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
-                        items(filteredSurahList) { surah ->
+                        items(filteredSurahList, key = { it.number }) { surah ->
                             val isCurrent = currentPlayingSurah == surah.number
                             val surahNamePair = QuranData.surahNames.find { it.first == surah.number }
                             val bengaliName = surahNamePair?.second?.first ?: surah.englishName

@@ -303,7 +303,7 @@ class PostsRepository(private val context: Context) {
         }
     }
 
-    fun addBlogPost(title: String, content: String, category: String, author: String = "ইসলামিক এডমিন", onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun addBlogPost(title: String, content: String, category: String, author: String = "ইসলামিক এডমিন", imageUrl: String = "", onSuccess: () -> Unit, onError: (String) -> Unit) {
         val now = System.currentTimeMillis()
         val localPost = BlogPost(
             id = "local_$now",
@@ -311,6 +311,7 @@ class PostsRepository(private val context: Context) {
             content = content,
             category = category,
             author = author,
+            imageUrl = imageUrl,
             timestamp = now
         )
 
@@ -325,7 +326,7 @@ class PostsRepository(private val context: Context) {
             "content" to content,
             "category" to category,
             "author" to author,
-            "imageUrl" to "",
+            "imageUrl" to imageUrl,
             "readTime" to "${(content.length / 300).coerceAtLeast(1)} মিনিট",
             "timestamp" to now,
             "createdAt" to com.google.firebase.Timestamp.now()

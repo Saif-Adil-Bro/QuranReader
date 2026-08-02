@@ -8,6 +8,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -51,8 +54,10 @@ fun TajweedIndexScreen(
     onJuzClick: (Int) -> Unit,
     onSettingsClick: () -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) } // 0 for Surah, 1 for Para
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0 for Surah, 1 for Para
     var searchQuery by remember { mutableStateOf("") }
+    val surahListState = rememberLazyListState()
+    val juzGridState = rememberLazyGridState()
 
     val filteredSurahs = remember(searchQuery) {
         val trimmedQuery = searchQuery.trim()
@@ -202,13 +207,14 @@ fun TajweedIndexScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = surahListState,
                         modifier = Modifier
                             .fillMaxSize()
                             .weight(1f),
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(filteredSurahs) { surahPair ->
+                        items(filteredSurahs, key = { it.first }) { surahPair ->
                             val surahId = surahPair.first
                             Card(
                                 modifier = Modifier
@@ -258,6 +264,7 @@ fun TajweedIndexScreen(
             } else {
                 // Juz/Para list
                 LazyVerticalGrid(
+                    state = juzGridState,
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -266,7 +273,7 @@ fun TajweedIndexScreen(
                         .weight(1f),
                     contentPadding = PaddingValues(16.dp)
                 ) {
-                    items(30) { index ->
+                    items(30, key = { it + 1 }) { index ->
                         val juzNum = index + 1
                         val juzName = paraNamesBangla[index]
                         Card(

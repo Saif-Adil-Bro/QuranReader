@@ -5,6 +5,8 @@ import com.example.ui.components.quranPageSlideTransition
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
@@ -144,6 +146,9 @@ fun TajweedModeScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showTajweedInfo by remember { mutableStateOf(false) }
     var showJuzList by remember { mutableStateOf(false) }
+    var tajweedSelectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    val tajweedJuzListState = rememberLazyListState()
+    val tajweedSurahListState = rememberLazyListState()
     var showJumpToPageDialog by remember { mutableStateOf(false) }
     var jumpPageInput by remember { mutableStateOf("") }
 
@@ -790,7 +795,6 @@ fun TajweedModeScreen(
 
         // Juz & Surah Selection Sheet
         if (showJuzList) {
-            var selectedTabIndex by remember { mutableStateOf(0) }
             ModalBottomSheet(
                 onDismissRequest = { showJuzList = false },
                 sheetState = rememberModalBottomSheetState(),
@@ -802,24 +806,24 @@ fun TajweedModeScreen(
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     TabRow(
-                        selectedTabIndex = selectedTabIndex,
+                        selectedTabIndex = tajweedSelectedTabIndex,
                         containerColor = containerColor,
                         contentColor = topBarContentColor,
                         indicator = { tabPositions ->
                             TabRowDefaults.Indicator(
-                                modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                                modifier = Modifier.tabIndicatorOffset(tabPositions[tajweedSelectedTabIndex]),
                                 color = topBarContentColor
                             )
                         }
                     ) {
                         Tab(
-                            selected = selectedTabIndex == 0,
-                            onClick = { selectedTabIndex = 0 },
+                            selected = tajweedSelectedTabIndex == 0,
+                            onClick = { tajweedSelectedTabIndex = 0 },
                             text = { Text("পারা", fontWeight = FontWeight.Bold) }
                         )
                         Tab(
-                            selected = selectedTabIndex == 1,
-                            onClick = { selectedTabIndex = 1 },
+                            selected = tajweedSelectedTabIndex == 1,
+                            onClick = { tajweedSelectedTabIndex = 1 },
                             text = { Text("সূরা", fontWeight = FontWeight.Bold) }
                         )
                     }
@@ -827,12 +831,13 @@ fun TajweedModeScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     LazyColumn(
+                        state = if (tajweedSelectedTabIndex == 0) tajweedJuzListState else tajweedSurahListState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 400.dp)
                     ) {
-                        if (selectedTabIndex == 0) {
-                            items(30) { index ->
+                        if (tajweedSelectedTabIndex == 0) {
+                            items(30, key = { it + 1 }) { index ->
                                 val juzNum = index + 1
                                 val juzName = paraNamesBangla[index]
                                 val startPage = getJuzStartPage(juzNum)
@@ -874,7 +879,7 @@ fun TajweedModeScreen(
                                 }
                             }
                         } else {
-                            items(114) { index ->
+                            items(114, key = { it + 1 }) { index ->
                                 val surahNum = index + 1
                                 val surahName = com.example.data.QuranData.surahNames.find { it.first == surahNum }?.second?.first ?: ""
                                 val surahNameArabic = com.example.data.QuranData.surahNames.find { it.first == surahNum }?.second?.second ?: ""
