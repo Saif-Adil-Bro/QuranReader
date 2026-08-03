@@ -31,17 +31,27 @@ object HijriCalendarUtil {
     )
 
     fun getHijriDate(date: LocalDate, offsetDays: Int = 0): HijriDateInfo {
-        val adjustedDate = date.plusDays(offsetDays.toLong())
-        val hijrahDate = try {
-            HijrahDate.from(adjustedDate)
+        val (hDay, hMonth, hYear) = try {
+            val islamicCalendar = android.icu.util.IslamicCalendar()
+            val calendar = java.util.Calendar.getInstance()
+            calendar.set(date.year, date.monthValue - 1, date.dayOfMonth)
+            islamicCalendar.time = calendar.time
+            if (offsetDays != 0) {
+                islamicCalendar.add(android.icu.util.IslamicCalendar.DAY_OF_MONTH, offsetDays)
+            }
+            Triple(
+                islamicCalendar.get(android.icu.util.IslamicCalendar.DAY_OF_MONTH),
+                islamicCalendar.get(android.icu.util.IslamicCalendar.MONTH) + 1,
+                islamicCalendar.get(android.icu.util.IslamicCalendar.YEAR)
+            )
         } catch (e: Exception) {
-            // Fallback estimation
-            HijrahDate.from(LocalDate.now())
+            val hijrahDate = HijrahDate.from(date.plusDays(offsetDays.toLong()))
+            Triple(
+                hijrahDate.get(ChronoField.DAY_OF_MONTH),
+                hijrahDate.get(ChronoField.MONTH_OF_YEAR),
+                hijrahDate.get(ChronoField.YEAR)
+            )
         }
-
-        val hDay = hijrahDate.get(ChronoField.DAY_OF_MONTH)
-        val hMonth = hijrahDate.get(ChronoField.MONTH_OF_YEAR)
-        val hYear = hijrahDate.get(ChronoField.YEAR)
 
         val monthBn = hijriMonthNamesBengali.getOrElse(hMonth - 1) { "হিজরী" }
         val monthAr = hijriMonthNamesArabic.getOrElse(hMonth - 1) { "" }
@@ -120,7 +130,7 @@ object HijriCalendarUtil {
         )
     }
 
-    fun getBanglaDateStr(date: LocalDate): String {
+    fun getBanglaDateStr(date: LocalDate, includeSuffix: Boolean = true): String {
         val year = date.year
         val isLeapYear = date.isLeapYear
 
@@ -161,7 +171,8 @@ object HijriCalendarUtil {
         val bDay = remainingDays + 1
         val bMonth = banglaMonths.getOrElse(mIndex % 12) { "" }
 
-        return "${toBengaliNumerals(bDay)} $bMonth ${toBengaliNumerals(banglaYear)} বঙ্গাব্দ"
+        val suffixStr = if (includeSuffix) " বঙ্গাব্দ" else ""
+        return "${toBengaliNumerals(bDay)} $bMonth ${toBengaliNumerals(banglaYear)}$suffixStr"
     }
 
     fun toBengaliNumerals(num: Int): String {

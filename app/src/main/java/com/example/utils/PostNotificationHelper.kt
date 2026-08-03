@@ -122,7 +122,7 @@ object PostNotificationHelper {
 
         val openDetailIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra("navigate_to", "posts")
+            putExtra("navigate_to", if (post.category == "নোটিফিকেশন" || post.category == "নোটিশ") "notifications" else "posts")
             putExtra("open_blog_post_detail", true)
             putExtra("blog_post_id", post.id)
             putExtra("blog_post_title", post.title)
@@ -141,7 +141,11 @@ object PostNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val titleText = "নতুন ব্লগ পোস্ট"
+        val titleText = if (post.category == "নোটিফিকেশন" || post.category == "নোটিশ") {
+            "📢 ${post.title.ifBlank { "নতুন নোটিফিকেশন" }}"
+        } else {
+            "নতুন পোস্ট: ${post.title}"
+        }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)

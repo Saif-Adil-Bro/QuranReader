@@ -120,9 +120,10 @@ class MainActivity : ComponentActivity() {
               val targetIntent = activeIntent
               if (targetIntent != null && currentRoute != "splash" && currentRoute != null) {
                   val navigateTo = targetIntent.getStringExtra("navigate_to") ?: targetIntent.getStringExtra("target_screen")
-                  if (navigateTo == "posts") {
+                  if (navigateTo == "posts" || navigateTo == "notifications") {
                       val openBlogDetailBool = targetIntent.getBooleanExtra("open_blog_post_detail", false)
                       val openBlogDetailStr = targetIntent.getStringExtra("open_blog_post_detail") == "true"
+                      var isNotificationCategory = false
                       if (openBlogDetailBool || openBlogDetailStr) {
                           val id = targetIntent.getStringExtra("blog_post_id") ?: ""
                           val title = targetIntent.getStringExtra("blog_post_title") ?: ""
@@ -132,6 +133,10 @@ class MainActivity : ComponentActivity() {
                           val readTime = targetIntent.getStringExtra("blog_post_read_time") ?: ""
                           val imageUrl = targetIntent.getStringExtra("blog_post_image_url") ?: ""
                           val timestamp = targetIntent.getLongExtra("blog_post_timestamp", System.currentTimeMillis())
+
+                          if (category == "নোটিফিকেশন" || category == "নোটিশ") {
+                              isNotificationCategory = true
+                          }
 
                           if (title.isNotBlank() || content.isNotBlank()) {
                               val blogPost = com.example.data.model.BlogPost(
@@ -171,8 +176,9 @@ class MainActivity : ComponentActivity() {
                           targetIntent.removeExtra("open_photo_card_edit")
                       }
 
-                      if (currentRoute != "posts") {
-                          navController.navigate("posts") {
+                      val dest = if (navigateTo == "notifications" || isNotificationCategory) "notifications" else "posts"
+                      if (currentRoute != dest) {
+                          navController.navigate(dest) {
                               launchSingleTop = true
                           }
                       }

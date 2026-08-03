@@ -55,17 +55,25 @@ fun IslamicCalendarView(
         HijriCalendarUtil.getHijriDate(selectedDate, hijriOffset)
     }
 
-    // Collect special events for current displayed month
-    val monthEvents = remember(currentYearMonth, hijriOffset) {
+    // Collect special events for current running Hijri month (e.g. Safar, Rabi' al-Awwal)
+    val monthEvents = remember(selectedHijriInfo.hijriMonth, selectedHijriInfo.hijriYear, hijriOffset) {
         val eventsList = mutableListOf<Pair<LocalDate, HijriDateInfo>>()
-        for (day in 1..daysInMonth) {
-            val date = currentYearMonth.atDay(day)
-            val info = HijriCalendarUtil.getHijriDate(date, hijriOffset)
-            if (info.specialEvents.isNotEmpty() || info.hijriDay in 13..15) {
-                eventsList.add(date to info)
+        val targetHijriMonth = selectedHijriInfo.hijriMonth
+        val targetHijriYear = selectedHijriInfo.hijriYear
+
+        val startDate = selectedDate.minusDays(32)
+        val endDate = selectedDate.plusDays(32)
+        var curr = startDate
+        while (!curr.isAfter(endDate)) {
+            val info = HijriCalendarUtil.getHijriDate(curr, hijriOffset)
+            if (info.hijriMonth == targetHijriMonth && info.hijriYear == targetHijriYear) {
+                if (info.specialEvents.isNotEmpty()) {
+                    eventsList.add(curr to info)
+                }
             }
+            curr = curr.plusDays(1)
         }
-        eventsList
+        eventsList.distinctBy { it.first }
     }
 
     // Determine primary Hijri Month & Year span for header (e.g. "সফর-রবিউল আউয়াল ১৪৪৮")
@@ -89,8 +97,8 @@ fun IslamicCalendarView(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // 1. TOP HERO CARD (MINIMAL BANNER FROM MOCKUP)
             item {
@@ -111,7 +119,7 @@ fun IslamicCalendarView(
                                     )
                                 )
                             )
-                            .padding(horizontal = 20.dp, vertical = 22.dp)
+                            .padding(horizontal = 14.dp, vertical = 20.dp)
                     ) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
@@ -150,7 +158,7 @@ fun IslamicCalendarView(
                                         .padding(horizontal = 4.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "${HijriCalendarUtil.toBengaliNumerals(selectedHijriInfo.hijriDay)} ${selectedHijriInfo.hijriMonthNameBn} ${HijriCalendarUtil.toBengaliNumerals(selectedHijriInfo.hijriYear)} হিজরী",
+                                        text = "${HijriCalendarUtil.toBengaliNumerals(selectedHijriInfo.hijriDay)} ${selectedHijriInfo.hijriMonthNameBn} ${HijriCalendarUtil.toBengaliNumerals(selectedHijriInfo.hijriYear)}",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = Color.White.copy(alpha = 0.95f)
@@ -165,7 +173,7 @@ fun IslamicCalendarView(
                                 }
 
                                 Text(
-                                    text = "  •  ${HijriCalendarUtil.getBanglaDateStr(selectedDate)}",
+                                    text = "  •  ${HijriCalendarUtil.getBanglaDateStr(selectedDate, includeSuffix = false)}",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = Color.White.copy(alpha = 0.95f)
@@ -387,7 +395,7 @@ fun IslamicCalendarView(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "এই মাসে কোনো বিশেষ ইসলামিক ইভেন্ট নেই।",
+                            text = "${selectedHijriInfo.hijriMonthNameBn} মাসে কোনো বিশেষ ইসলামিক ইভেন্ট নেই।",
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(16.dp)
@@ -425,7 +433,7 @@ fun IslamicCalendarView(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
-                                            imageVector = Icons.Default.Settings,
+                                            imageVector = Icons.Default.Info,
                                             contentDescription = null,
                                             tint = Color(0xFF10B981),
                                             modifier = Modifier.size(20.dp)

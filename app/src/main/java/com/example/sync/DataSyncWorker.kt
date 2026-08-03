@@ -131,6 +131,36 @@ class DataSyncWorker(
                 }
             }
 
+            // 4. Sync new notifications collection
+            val notifSnapshot = firestore.collection("notifications")
+                .get()
+                .await()
+
+            for (doc in notifSnapshot.documents) {
+                val ts = extractTimestamp(doc)
+                if (ts > effectiveLastSync) {
+                    val title = doc.getString("title") ?: doc.getString("name") ?: ""
+                    val content = doc.getString("content") ?: doc.getString("text") ?: doc.getString("body") ?: ""
+                    if ((title.isNotBlank() || content.isNotBlank()) && !processedIds.contains(doc.id) && !processedTitles.contains(title)) {
+                        processedIds.add(doc.id)
+                        if (title.isNotBlank()) processedTitles.add(title)
+
+                        val blogPost = BlogPost(
+                            id = doc.id,
+                            title = title.ifBlank { "নতুন নোটিফিকেশন" },
+                            content = content,
+                            author = doc.getString("author") ?: "ইসলামিক এডমিন",
+                            category = doc.getString("category") ?: "নোটিফিকেশন",
+                            imageUrl = doc.getString("imageUrl") ?: doc.getString("image") ?: "",
+                            readTime = doc.getString("readTime") ?: "১ মিনিট",
+                            timestamp = ts
+                        )
+                        PostNotificationHelper.showBlogPostNotification(appContext, blogPost)
+                        if (ts > maxTimestampSeen) maxTimestampSeen = ts
+                    }
+                }
+            }
+
             // Update last sync time
             prefs.edit().putLong("last_sync_timestamp", maxOf(maxTimestampSeen, currentMills)).apply()
 

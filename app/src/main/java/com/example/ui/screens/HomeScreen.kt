@@ -146,6 +146,7 @@ fun HomeScreen(
     onNavigateToTajweedMode: (Int) -> Unit,
     onNavigateToPlayer: () -> Unit,
     onNavigateToPosts: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
     onNavigateToCalendar: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -400,6 +401,13 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToNotifications) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "নোটিফিকেশন সেন্টার",
+                            tint = Color(0xFF10B981)
+                        )
+                    }
                     IconButton(onClick = { viewModel.toggleTheme() }) {
                         Icon(
                             imageVector = if (isDark) Icons.Filled.LightMode else Icons.Outlined.DarkMode,

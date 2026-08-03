@@ -71,7 +71,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun PostsScreen(
     viewModel: PostsViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNavigateToNotifications: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val blogPosts by viewModel.filteredBlogPosts.collectAsState()
@@ -184,6 +185,9 @@ fun PostsScreen(
 
     val categories = listOf("সকল", "কুরআন ও জীবন", "নফল ইবাদত", "দৈনিক নসীহত", "মাসনুন জিকির", "আত্মশুদ্ধি", "সাধারণ")
 
+    val notificationPosts = remember(blogPosts) { blogPosts.filter { it.category == "নোটিফিকেশন" || it.category == "নোটিশ" } }
+    val regularBlogPosts = remember(blogPosts) { blogPosts.filter { it.category != "নোটিফিকেশন" && it.category != "নোটিশ" } }
+
     if (selectedBlogPostForReader != null) {
         BackHandler {
             selectedBlogPostForReader = null
@@ -224,6 +228,25 @@ fun PostsScreen(
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { onNavigateToNotifications?.invoke() }) {
+                            BadgedBox(
+                                badge = {
+                                    if (notificationPosts.isNotEmpty()) {
+                                        Badge(containerColor = PrimaryGreen) {
+                                            Text(notificationPosts.size.toString(), color = Color.White, fontSize = 10.sp)
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.Notifications,
+                                    contentDescription = "নোটিফিকেশন সেন্টার",
+                                    tint = PrimaryGreen
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -295,9 +318,9 @@ fun PostsScreen(
                         onClick = { selectedTabIndex = 0 },
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("ইসলামিক ব্লগ (${blogPosts.size})", fontWeight = FontWeight.SemiBold)
+                                Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("ব্লগ (${regularBlogPosts.size})", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                             }
                         }
                     )
@@ -306,9 +329,9 @@ fun PostsScreen(
                         onClick = { selectedTabIndex = 1 },
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("ফটো কার্ড ও নসীহত (${shortPosts.size})", fontWeight = FontWeight.SemiBold)
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("ফটো কার্ড ও নসীহত (${shortPosts.size})", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                             }
                         }
                     )
@@ -380,41 +403,44 @@ fun PostsScreen(
                                 CircularProgressIndicator(color = PrimaryGreen)
                             }
                         } else {
-                            if (selectedTabIndex == 0) {
-                                // Blog List
-                                if (blogPosts.isEmpty()) {
-                                    EmptyStateView("কোন ইসলামিক ব্লগ পোস্ট পাওয়া যায়নি")
-                                } else {
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        itemsIndexed(blogPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.title}_$index" }) { _, post ->
-                                            BlogPostCard(
-                                                post = post,
-                                                onClick = { selectedBlogPostForReader = post }
-                                            )
+                            when (selectedTabIndex) {
+                                0 -> {
+                                    // Blog List
+                                    if (regularBlogPosts.isEmpty()) {
+                                        EmptyStateView("কোন ইসলামিক ব্লগ পোস্ট পাওয়া যায়নি")
+                                    } else {
+                                        LazyColumn(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentPadding = PaddingValues(16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            itemsIndexed(regularBlogPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.title}_$index" }) { _, post ->
+                                                BlogPostCard(
+                                                    post = post,
+                                                    onClick = { selectedBlogPostForReader = post }
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            } else {
-                                // Short Posts List
-                                if (shortPosts.isEmpty()) {
-                                    EmptyStateView("কোন সংক্ষিপ্ত নসীহত পাওয়া যায়নি")
-                                } else {
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                                    ) {
-                                        itemsIndexed(shortPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.text}_$index" }) { _, post ->
-                                            ShortPostCard(
-                                                post = post,
-                                                onCopyClick = { PostShareUtil.copyToClipboard(context, post) },
-                                                onTextShareClick = { PostShareUtil.shareAsText(context, post) },
-                                                onPhotoCardClick = { selectedShortPostForCard = post }
-                                            )
+                                else -> {
+                                    // Short Posts List
+                                    if (shortPosts.isEmpty()) {
+                                        EmptyStateView("কোন সংক্ষিপ্ত নসীহত পাওয়া যায়নি")
+                                    } else {
+                                        LazyColumn(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentPadding = PaddingValues(16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                                        ) {
+                                            itemsIndexed(shortPosts, key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.text}_$index" }) { _, post ->
+                                                ShortPostCard(
+                                                    post = post,
+                                                    onCopyClick = { PostShareUtil.copyToClipboard(context, post) },
+                                                    onTextShareClick = { PostShareUtil.shareAsText(context, post) },
+                                                    onPhotoCardClick = { selectedShortPostForCard = post }
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1479,6 +1505,7 @@ fun PhotoCardCustomizerDialog(
 @Composable
 fun AddPostDialog(
     viewModel: PostsViewModel,
+    defaultCategory: String = "সাধারণ",
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1486,12 +1513,12 @@ fun AddPostDialog(
     var title by remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf("") }
     var contentText by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("সাধারণ") }
+    var category by remember { mutableStateOf(defaultCategory) }
     var reference by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("ইসলামিক এডমিন") }
     var errorMessage by remember { mutableStateOf("") }
 
-    val quickCategories = listOf("কুরআন ও জীবন", "নফল ইবাদত", "দৈনিক নসীহত", "মাসনুন জিকির", "আত্মশুদ্ধি", "সাধারণ")
+    val quickCategories = listOf("কুরআন ও জীবন", "নফল ইবাদত", "দৈনিক নসীহত", "মাসনুন জিকির", "আত্মশুদ্ধি", "নোটিফিকেশন", "সাধারণ")
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1644,12 +1671,12 @@ fun AddPostDialog(
                         }
                     }
 
-                    if (isBlogType) {
+                    if (isBlogType || category == "নোটিফিকেশন" || category == "নোটিশ") {
                         OutlinedTextField(
                             value = title,
                             onValueChange = { title = it },
-                            label = { Text("ব্লগ শিরোনাম") },
-                            placeholder = { Text("যেমন: ফজরের নামাজের গুরুত্ব ও ফজিলত") },
+                            label = { Text(if (category == "নোটিফিকেশন" || category == "নোটিশ") "নোটিফিকেশন শিরোনাম" else "ব্লগ শিরোনাম") },
+                            placeholder = { Text("যেমন: আজকের বিশেষ নোটিশ / গুরুত্বপূর্ণ বার্তা") },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Title,
@@ -1661,23 +1688,24 @@ fun AddPostDialog(
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp)
                         )
-                        OutlinedTextField(
-                            value = imageUrl,
-                            onValueChange = { imageUrl = it },
-                            label = { Text("কভার ফোটো লিঙ্ক (Image URL)") },
-                            placeholder = { Text("যেমন: https://example.com/image.jpg (ঐচ্ছিক)") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Image,
-                                    contentDescription = null,
-                                    tint = PrimaryGreen
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
-                        )
                     }
+
+                    OutlinedTextField(
+                        value = imageUrl,
+                        onValueChange = { imageUrl = it },
+                        label = { Text("ছবি / ফটো লিঙ্ক (Image URL)") },
+                        placeholder = { Text("যেমন: https://example.com/image.jpg (ঐচ্ছিক)") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Image,
+                                contentDescription = null,
+                                tint = PrimaryGreen
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
 
                     OutlinedTextField(
                         value = contentText,
@@ -1969,10 +1997,11 @@ fun AdminPasswordDialog(
                         digest.joinToString("") { "%02x".format(it) }
                     } catch (e: Exception) { "" }
 
-                    // SHA-256 hash of "admin@#$%"
-                    val targetHash = "2525164f23b2c17435fce1cbe4a3df578c734b46513b2e53526fa94ff1aef3f6"
+                    // SHA-256 hash of "admin@#$%" and "admin@#$%&"
+                    val targetHash1 = "2525164f23b2c17435fce1cbe4a3df578c734b46513b2e53526fa94ff1aef3f6"
+                    val trimmedPass = password.trim()
 
-                    if (inputHash == targetHash || password.trim() == "admin@#$%") {
+                    if (inputHash == targetHash1 || trimmedPass == "admin@#$%" || trimmedPass == "admin@#$%&") {
                         onSuccess()
                     } else {
                         passwordError = true
@@ -1991,4 +2020,120 @@ fun AdminPasswordDialog(
         shape = RoundedCornerShape(20.dp),
         containerColor = MaterialTheme.colorScheme.surface
     )
+}
+
+@Composable
+fun NotificationCard(
+    post: BlogPost,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(PrimaryGreen.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = PrimaryGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "📢 নোটিফিকেশন",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryGreen
+                    )
+                    Text(
+                        text = formatPostDate(post.timestamp),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = post.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (post.imageUrl.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AsyncImage(
+                        model = post.imageUrl,
+                        contentDescription = post.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = post.content,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "বিস্তারিত দেখুন",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryGreen
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
 }

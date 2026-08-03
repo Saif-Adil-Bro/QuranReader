@@ -30,6 +30,7 @@ class PostsRepository(private val context: Context) {
 
     private var postsFromBlog = listOf<BlogPost>()
     private var postsFromArticles = listOf<BlogPost>()
+    private var postsFromNotifications = listOf<BlogPost>()
 
     private val syncPrefs: SharedPreferences by lazy {
         context.getSharedPreferences("posts_sync_prefs", Context.MODE_PRIVATE)
@@ -89,7 +90,7 @@ class PostsRepository(private val context: Context) {
 
     @Synchronized
     private fun updateMergedBlogPosts() {
-        val allRemote = (postsFromBlog + postsFromArticles).distinctBy { it.id }
+        val allRemote = (postsFromBlog + postsFromArticles + postsFromNotifications).distinctBy { it.id }
         val existingBlogPosts = _blogPosts.value
         val remainingLocals = existingBlogPosts
             .filter { it.id.startsWith("local_") }
@@ -111,6 +112,7 @@ class PostsRepository(private val context: Context) {
     private val knownPostIds = mutableSetOf<String>()
     private var isInitialBlogLoad = true
     private var isInitialArticlesLoad = true
+    private var isInitialNotificationsLoad = true
     private var isInitialShortLoad = true
 
     private fun parseBlogDocs(docs: List<DocumentSnapshot>): List<BlogPost> {
@@ -231,6 +233,53 @@ class PostsRepository(private val context: Context) {
                     }
                 }
 
+            // Listen to notifications
+            firestore.collection("notifications")
+                .addSnapshotListener { snapshot, error ->
+                    _isLoading.value = false
+                    if (error == null && snapshot != null) {
+                        if (isInitialNotificationsLoad) {
+                            isInitialNotificationsLoad = false
+                            snapshot.documents.forEach { knownPostIds.add(it.id) }
+                        } else {
+                            for (dc in snapshot.documentChanges) {
+                                if (dc.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
+                                    val doc = dc.document
+                                    if (!knownPostIds.contains(doc.id)) {
+                                        knownPostIds.add(doc.id)
+                                        val title = doc.getString("title") ?: doc.getString("name") ?: ""
+                                        val content = doc.getString("content") ?: doc.getString("text") ?: doc.getString("body") ?: ""
+                                        if (title.isNotBlank() || content.isNotBlank()) {
+                                            val postTs = extractTimestamp(doc)
+                                            val blogPost = BlogPost(
+                                                id = doc.id,
+                                                title = title.ifBlank { "নতুন নোটিফিকেশন" },
+                                                content = content,
+                                                author = doc.getString("author") ?: "ইসলামিক এডমিন",
+                                                category = doc.getString("category") ?: "নোটিফিকেশন",
+                                                imageUrl = doc.getString("imageUrl") ?: doc.getString("image") ?: "",
+                                                readTime = doc.getString("readTime") ?: "১ মিনিট",
+                                                timestamp = postTs
+                                            )
+                                            if (postTs > appFirstInstallTime) {
+                                                try {
+                                                    PostNotificationHelper.showBlogPostNotification(context, blogPost)
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        postsFromNotifications = parseDocs(snapshot.documents).map {
+                            if (it.category == "সাধারণ" || it.category.isBlank()) it.copy(category = "নোটিফিকেশন") else it
+                        }
+                        updateMergedBlogPosts()
+                    }
+                }
+
             // Listen to short_posts
             firestore.collection("short_posts")
                 .addSnapshotListener { snapshot, error ->
@@ -332,9 +381,10 @@ class PostsRepository(private val context: Context) {
             "createdAt" to com.google.firebase.Timestamp.now()
         )
 
+        val targetCollection = if (category == "নোটিফিকেশন" || category == "নোটিশ") "notifications" else "blog_posts"
+
         try {
-            // Save ONLY to blog_posts to avoid duplicated entries in both collections
-            firestore.collection("blog_posts")
+            firestore.collection(targetCollection)
                 .add(newPost)
                 .addOnFailureListener { e ->
                     e.printStackTrace()
@@ -382,7 +432,7 @@ class PostsRepository(private val context: Context) {
     }
 
     fun refresh(onComplete: (() -> Unit)? = null) {
-        val pendingCount = java.util.concurrent.atomic.AtomicInteger(3)
+        val pendingCount = java.util.concurrent.atomic.AtomicInteger(4)
         fun checkDone() {
             if (pendingCount.decrementAndGet() <= 0) {
                 _isLoading.value = false
@@ -417,6 +467,27 @@ class PostsRepository(private val context: Context) {
                         val docs = task.result.documents
                         docs.forEach { knownPostIds.add(it.id) }
                         postsFromArticles = parseBlogDocs(docs)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                updateMergedBlogPosts()
+                checkDone()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            checkDone()
+        }
+
+        try {
+            firestore.collection("notifications").get().addOnCompleteListener { task ->
+                try {
+                    if (task.isSuccessful && task.result != null) {
+                        val docs = task.result.documents
+                        docs.forEach { knownPostIds.add(it.id) }
+                        postsFromNotifications = parseBlogDocs(docs).map {
+                            if (it.category == "সাধারণ" || it.category.isBlank()) it.copy(category = "নোটিফিকেশন") else it
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()

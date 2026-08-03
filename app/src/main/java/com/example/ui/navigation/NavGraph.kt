@@ -215,6 +215,9 @@ fun AppNavGraph(
                 onNavigateToPosts = {
                     navController.navigate("posts")
                 },
+                onNavigateToNotifications = {
+                    navController.navigate("notifications")
+                },
                 onNavigateToCalendar = {
                     navController.navigate("settings?subScreen=calendar")
                 }
@@ -223,6 +226,14 @@ fun AppNavGraph(
 
         composable("posts") {
             com.example.ui.screens.PostsScreen(
+                viewModel = postsViewModel,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToNotifications = { navController.navigate("notifications") }
+            )
+        }
+
+        composable("notifications") {
+            com.example.ui.screens.NotificationScreen(
                 viewModel = postsViewModel,
                 onBackClick = { navController.popBackStack() }
             )
