@@ -36,7 +36,8 @@ class ReminderReceiver : BroadcastReceiver() {
         }
 
         val openIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("navigate_to", "planner")
             putExtra("target_screen", "planner")
         }
         val pendingIntent = PendingIntent.getActivity(
@@ -60,12 +61,28 @@ class ReminderReceiver : BroadcastReceiver() {
         val title = titles.random()
         val message = messages.random()
 
+        try {
+            com.example.utils.PostNotificationHelper.saveSystemNotificationToFirestore(
+                context = context,
+                title = title,
+                content = message,
+                category = "নোটিফিকেশন",
+                author = "কুরআন প্ল্যানার",
+                navigateTo = "planner"
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val iconRes = com.example.R.mipmap.ic_launcher
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(iconRes)
             .setContentTitle(title)
             .setContentText(message)
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(message)
+            )
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

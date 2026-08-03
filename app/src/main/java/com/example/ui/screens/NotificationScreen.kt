@@ -24,7 +24,9 @@ import com.example.ui.viewmodels.PostsViewModel
 @Composable
 fun NotificationScreen(
     viewModel: PostsViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNavigateToDua: ((Int?) -> Unit)? = null,
+    onNavigateToPlanner: (() -> Unit)? = null
 ) {
     val blogPosts by viewModel.rawBlogPosts.collectAsState(initial = emptyList())
     val isLoading by viewModel.isLoading.collectAsState(initial = false)
@@ -54,7 +56,16 @@ fun NotificationScreen(
     if (selectedPostForReader != null) {
         BlogPostDetailScreen(
             post = selectedPostForReader!!,
-            onBackClick = { selectedPostForReader = null }
+            onBackClick = { selectedPostForReader = null },
+            onNavigateToDua = {
+                val post = selectedPostForReader
+                selectedPostForReader = null
+                onNavigateToDua?.invoke(null)
+            },
+            onNavigateToPlanner = {
+                selectedPostForReader = null
+                onNavigateToPlanner?.invoke()
+            }
         )
         return
     }

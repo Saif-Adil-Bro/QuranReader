@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.example.data.model.BlogPost
 import com.example.data.model.ShortPost
 import com.example.utils.PostNotificationHelper
@@ -150,7 +151,10 @@ class PostsRepository(private val context: Context) {
                     if (error == null && snapshot != null) {
                         if (isInitialBlogLoad) {
                             isInitialBlogLoad = false
-                            snapshot.documents.forEach { knownPostIds.add(it.id) }
+                            snapshot.documents.forEach {
+                                knownPostIds.add(it.id)
+                                PostNotificationHelper.markAsNotified(context, it.id)
+                            }
                         } else {
                             for (dc in snapshot.documentChanges) {
                                 if (dc.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
@@ -171,7 +175,7 @@ class PostsRepository(private val context: Context) {
                                                 readTime = doc.getString("readTime") ?: "২ মিনিট",
                                                 timestamp = postTs
                                             )
-                                            if (postTs > appFirstInstallTime) {
+                                            if (!PostNotificationHelper.isAlreadyNotified(context, blogPost.id)) {
                                                 try {
                                                     PostNotificationHelper.showBlogPostNotification(context, blogPost)
                                                 } catch (e: Exception) {
@@ -195,7 +199,10 @@ class PostsRepository(private val context: Context) {
                     if (error == null && snapshot != null) {
                         if (isInitialArticlesLoad) {
                             isInitialArticlesLoad = false
-                            snapshot.documents.forEach { knownPostIds.add(it.id) }
+                            snapshot.documents.forEach {
+                                knownPostIds.add(it.id)
+                                PostNotificationHelper.markAsNotified(context, it.id)
+                            }
                         } else {
                             for (dc in snapshot.documentChanges) {
                                 if (dc.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
@@ -216,7 +223,7 @@ class PostsRepository(private val context: Context) {
                                                 readTime = doc.getString("readTime") ?: "২ মিনিট",
                                                 timestamp = postTs
                                             )
-                                            if (postTs > appFirstInstallTime) {
+                                            if (!PostNotificationHelper.isAlreadyNotified(context, blogPost.id)) {
                                                 try {
                                                     PostNotificationHelper.showBlogPostNotification(context, blogPost)
                                                 } catch (e: Exception) {
@@ -240,7 +247,10 @@ class PostsRepository(private val context: Context) {
                     if (error == null && snapshot != null) {
                         if (isInitialNotificationsLoad) {
                             isInitialNotificationsLoad = false
-                            snapshot.documents.forEach { knownPostIds.add(it.id) }
+                            snapshot.documents.forEach {
+                                knownPostIds.add(it.id)
+                                PostNotificationHelper.markAsNotified(context, it.id)
+                            }
                         } else {
                             for (dc in snapshot.documentChanges) {
                                 if (dc.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
@@ -261,7 +271,7 @@ class PostsRepository(private val context: Context) {
                                                 readTime = doc.getString("readTime") ?: "১ মিনিট",
                                                 timestamp = postTs
                                             )
-                                            if (postTs > appFirstInstallTime) {
+                                            if (!PostNotificationHelper.isAlreadyNotified(context, blogPost.id)) {
                                                 try {
                                                     PostNotificationHelper.showBlogPostNotification(context, blogPost)
                                                 } catch (e: Exception) {
@@ -287,7 +297,10 @@ class PostsRepository(private val context: Context) {
                     if (error == null && snapshot != null) {
                         if (isInitialShortLoad) {
                             isInitialShortLoad = false
-                            snapshot.documents.forEach { knownPostIds.add(it.id) }
+                            snapshot.documents.forEach {
+                                knownPostIds.add(it.id)
+                                PostNotificationHelper.markAsNotified(context, it.id)
+                            }
                         } else {
                             for (dc in snapshot.documentChanges) {
                                 if (dc.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
@@ -305,7 +318,7 @@ class PostsRepository(private val context: Context) {
                                                 author = doc.getString("author") ?: "ইসলামিক স্কলার",
                                                 timestamp = postTs
                                             )
-                                            if (postTs > appFirstInstallTime) {
+                                            if (!PostNotificationHelper.isAlreadyNotified(context, shortPost.id)) {
                                                 try {
                                                     PostNotificationHelper.showPhotoCardNotification(context, shortPost)
                                                 } catch (e: Exception) {
@@ -354,11 +367,16 @@ class PostsRepository(private val context: Context) {
 
     fun addBlogPost(title: String, content: String, category: String, author: String = "ইসলামিক এডমিন", imageUrl: String = "", onSuccess: () -> Unit, onError: (String) -> Unit) {
         val now = System.currentTimeMillis()
+        val trimmedCategory = category.trim()
+        val isNotification = trimmedCategory.contains("নোটিফিকেশন", ignoreCase = true) || 
+                             trimmedCategory.contains("নোটিশ", ignoreCase = true) || 
+                             trimmedCategory.contains("notification", ignoreCase = true)
+
         val localPost = BlogPost(
             id = "local_$now",
             title = title,
             content = content,
-            category = category,
+            category = if (isNotification) "নোটিফিকেশন" else category,
             author = author,
             imageUrl = imageUrl,
             timestamp = now
@@ -367,30 +385,50 @@ class PostsRepository(private val context: Context) {
         // Optimistic UI update
         _blogPosts.value = listOf(localPost) + _blogPosts.value.filter { it.id != localPost.id }
 
-        // Notify caller immediately for responsive UX
-        onSuccess()
-
         val newPost = hashMapOf<String, Any>(
             "title" to title,
+            "name" to title,
             "content" to content,
-            "category" to category,
+            "text" to content,
+            "body" to content,
+            "category" to (if (isNotification) "নোটিফিকেশন" else category),
             "author" to author,
             "imageUrl" to imageUrl,
+            "image" to imageUrl,
             "readTime" to "${(content.length / 300).coerceAtLeast(1)} মিনিট",
             "timestamp" to now,
             "createdAt" to com.google.firebase.Timestamp.now()
         )
 
-        val targetCollection = if (category == "নোটিফিকেশন" || category == "নোটিশ") "notifications" else "blog_posts"
+        val targetCollection = if (isNotification) "notifications" else "blog_posts"
 
         try {
             firestore.collection(targetCollection)
                 .add(newPost)
+                .addOnSuccessListener { docRef ->
+                    Log.d("PostsRepository", "Post added to $targetCollection with ID: ${docRef.id}")
+                    onSuccess()
+                }
                 .addOnFailureListener { e ->
-                    e.printStackTrace()
+                    Log.e("PostsRepository", "Error adding post to $targetCollection, trying fallback to blog_posts", e)
+                    if (targetCollection != "blog_posts") {
+                        firestore.collection("blog_posts")
+                            .add(newPost)
+                            .addOnSuccessListener { docRef ->
+                                Log.d("PostsRepository", "Post added to blog_posts (fallback) with ID: ${docRef.id}")
+                                onSuccess()
+                            }
+                            .addOnFailureListener { err ->
+                                Log.e("PostsRepository", "Error in fallback to blog_posts", err)
+                                onError(err.localizedMessage ?: "ফায়ারবেসে পোস্ট সংরক্ষণ করতে সমস্যা হয়েছে")
+                            }
+                    } else {
+                        onError(e.localizedMessage ?: "ফায়ারবেসে পোস্ট সংরক্ষণ করতে সমস্যা হয়েছে")
+                    }
                 }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("PostsRepository", "Exception in addBlogPost", e)
+            onError(e.localizedMessage ?: "একটি ত্রুটি ঘটেছে")
         }
     }
 

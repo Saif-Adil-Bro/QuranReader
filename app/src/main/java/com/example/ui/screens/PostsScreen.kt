@@ -737,7 +737,9 @@ fun ShortPostCard(
 @Composable
 fun BlogPostDetailScreen(
     post: BlogPost,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNavigateToDua: (() -> Unit)? = null,
+    onNavigateToPlanner: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var textSizeSp by remember { mutableFloatStateOf(16f) }
@@ -746,8 +748,13 @@ fun BlogPostDetailScreen(
         topBar = {
             TopAppBar(
                 title = {
+                    val headerTitle = when {
+                        post.category == "নোটিফিকেশন" || post.category == "নোটিশ" || post.category.contains("Notification", ignoreCase = true) -> "নোটিফিকেশন"
+                        post.category.isNotBlank() -> post.category
+                        else -> "ব্লগ পোস্ট"
+                    }
                     Text(
-                        text = "ব্লগ পোস্ট",
+                        text = headerTitle,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -882,6 +889,26 @@ fun BlogPostDetailScreen(
                 lineHeight = 30.sp
             )
 
+            if (post.imageUrl.trim().isNotBlank()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    AsyncImage(
+                        model = post.imageUrl.trim(),
+                        contentDescription = post.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 180.dp, max = 380.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
@@ -895,6 +922,53 @@ fun BlogPostDetailScreen(
                 lineHeight = (textSizeSp * 1.6f).sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
+
+            val isDuaTarget = post.author == "কুরআনিক দুআ" || post.title.contains("দুআ") || post.content.contains("দুআ") || post.category.contains("দুআ")
+            val isPlannerTarget = post.author == "কুরআন প্ল্যানার" || post.title.contains("প্ল্যানার") || post.title.contains("লক্ষ্য") || post.content.contains("প্ল্যান")
+
+            if (isDuaTarget && onNavigateToDua != null) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = { onNavigateToDua() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "দুআ সেকশনে সরাসরি যান",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+            } else if (isPlannerTarget && onNavigateToPlanner != null) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = { onNavigateToPlanner() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "কুরআন প্ল্যানারে সরাসরি যান",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -2089,19 +2163,6 @@ fun NotificationCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-
-                if (post.imageUrl.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    AsyncImage(
-                        model = post.imageUrl,
-                        contentDescription = post.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                }
 
                 Spacer(modifier = Modifier.height(6.dp))
 

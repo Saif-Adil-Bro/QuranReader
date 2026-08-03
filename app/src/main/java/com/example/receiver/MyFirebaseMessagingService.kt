@@ -109,6 +109,20 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             finalText = parts[1].trim()
         }
 
+        try {
+            com.example.utils.PostNotificationHelper.saveSystemNotificationToFirestore(
+                context = this,
+                title = finalTitle,
+                content = finalText,
+                category = "নোটিফিকেশন",
+                author = "পুশ নোটিফিকেশন",
+                imageUrl = dataMap["image"] ?: dataMap["imageUrl"] ?: "",
+                navigateTo = dataMap["navigate_to"] ?: "notifications"
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val channelId = "fcm_default_channel"
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)

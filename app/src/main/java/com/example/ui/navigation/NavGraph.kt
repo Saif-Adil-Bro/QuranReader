@@ -235,7 +235,23 @@ fun AppNavGraph(
         composable("notifications") {
             com.example.ui.screens.NotificationScreen(
                 viewModel = postsViewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onNavigateToDua = { duaId ->
+                    if (duaId != null && duaId > 0) {
+                        navController.navigate("settings?subScreen=dua&duaId=$duaId") {
+                            launchSingleTop = true
+                        }
+                    } else {
+                        navController.navigate("settings?subScreen=dua") {
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                onNavigateToPlanner = {
+                    navController.navigate("settings?subScreen=planner") {
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 

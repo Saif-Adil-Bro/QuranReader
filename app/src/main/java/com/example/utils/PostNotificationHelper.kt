@@ -23,6 +23,79 @@ object PostNotificationHelper {
     private const val CHANNEL_NAME = "ইসলামিক পোস্ট ও নসীহত"
     private const val CHANNEL_DESC = "নতুন ইসলামিক আপডেট, ব্লগ ও ফটো কার্ডের নোটিফিকেশন"
 
+    private const val PREFS_NOTIFIED = "notified_posts_prefs"
+    private const val KEY_NOTIFIED_IDS = "notified_ids"
+
+    fun saveSystemNotificationToFirestore(
+        context: Context,
+        title: String,
+        content: String,
+        category: String = "নোটিফিকেশন",
+        author: String = "ইসলামিক এডমিন",
+        imageUrl: String = "",
+        navigateTo: String = ""
+    ) {
+        if (title.isBlank() && content.isBlank()) return
+        val notifKey = (title + content).hashCode().toString()
+        if (isAlreadyNotified(context, "saved_notif_$notifKey")) return
+        markAsNotified(context, "saved_notif_$notifKey")
+
+        val now = System.currentTimeMillis()
+        val data = hashMapOf<String, Any>(
+            "title" to title,
+            "name" to title,
+            "content" to content,
+            "text" to content,
+            "body" to content,
+            "category" to category,
+            "author" to author,
+            "imageUrl" to imageUrl,
+            "image" to imageUrl,
+            "readTime" to "${(content.length / 300).coerceAtLeast(1)} মিনিট",
+            "timestamp" to now,
+            "createdAt" to com.google.firebase.Timestamp.now()
+        )
+        if (navigateTo.isNotBlank()) {
+            data["navigate_to"] = navigateTo
+        }
+
+        try {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("notifications")
+                .add(data)
+                .addOnSuccessListener {
+                    android.util.Log.d("PostNotificationHelper", "Notification saved to Firestore: ${it.id}")
+                }
+                .addOnFailureListener { e ->
+                    android.util.Log.e("PostNotificationHelper", "Error saving notification to notifications collection, fallback to blog_posts", e)
+                    try {
+                        com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                            .collection("blog_posts")
+                            .add(data)
+                    } catch (ex: Exception) {
+                        ex.printStackTrace()
+                    }
+                }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun isAlreadyNotified(context: Context, id: String): Boolean {
+        if (id.isBlank()) return false
+        val prefs = context.getSharedPreferences(PREFS_NOTIFIED, Context.MODE_PRIVATE)
+        val set = prefs.getStringSet(KEY_NOTIFIED_IDS, emptySet()) ?: emptySet()
+        return set.contains(id)
+    }
+
+    fun markAsNotified(context: Context, id: String) {
+        if (id.isBlank()) return
+        val prefs = context.getSharedPreferences(PREFS_NOTIFIED, Context.MODE_PRIVATE)
+        val set = (prefs.getStringSet(KEY_NOTIFIED_IDS, emptySet()) ?: emptySet()).toMutableSet()
+        set.add(id)
+        prefs.edit().putStringSet(KEY_NOTIFIED_IDS, set).apply()
+    }
+
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val importance = NotificationManager.IMPORTANCE_HIGH
@@ -36,6 +109,10 @@ object PostNotificationHelper {
     }
 
     fun showPhotoCardNotification(context: Context, post: ShortPost) {
+        val notifKey = if (post.id.isNotBlank()) post.id else (post.category + post.text)
+        if (isAlreadyNotified(context, notifKey)) return
+        markAsNotified(context, notifKey)
+
         createNotificationChannel(context)
 
         CoroutineScope(Dispatchers.IO).launch {
@@ -116,6 +193,10 @@ object PostNotificationHelper {
     }
 
     fun showBlogPostNotification(context: Context, post: BlogPost) {
+        val notifKey = if (post.id.isNotBlank()) post.id else (post.title + post.content)
+        if (isAlreadyNotified(context, notifKey)) return
+        markAsNotified(context, notifKey)
+
         createNotificationChannel(context)
 
         val reqId = if (post.id.isNotBlank()) post.id.hashCode() else (post.title + post.content).hashCode()

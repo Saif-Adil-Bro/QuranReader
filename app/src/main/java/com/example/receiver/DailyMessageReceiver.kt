@@ -62,6 +62,7 @@ class DailyMessageReceiver : BroadcastReceiver() {
 
         val openIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("navigate_to", "dua")
             putExtra("target_screen", "dua")
             putExtra("dua_id", selectedDua.id)
         }
@@ -72,14 +73,32 @@ class DailyMessageReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val duaTitle = "কুরআনিক দুআ"
+        val duaTitle = "কুরআন থেকে আজকের দুআ"
         val duaSubtitle = selectedDua.title
+        val segmentTranslation = selectedDua.segments.firstOrNull()?.translation ?: ""
+        val fullContent = if (segmentTranslation.isNotBlank()) "$duaSubtitle\n\n$segmentTranslation" else duaSubtitle
+
+        try {
+            com.example.utils.PostNotificationHelper.saveSystemNotificationToFirestore(
+                context = context,
+                title = duaTitle,
+                content = fullContent,
+                category = "নোটিফিকেশন",
+                author = "কুরআনিক দুআ",
+                navigateTo = "dua"
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         val iconRes = com.example.R.mipmap.ic_launcher
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(iconRes)
             .setContentTitle(duaTitle)
             .setContentText(duaSubtitle)
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(fullContent)
+            )
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
