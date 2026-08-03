@@ -1,4 +1,7 @@
 package com.example.receiver
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -62,14 +65,17 @@ class ReminderReceiver : BroadcastReceiver() {
         val message = messages.random()
 
         try {
-            com.example.utils.PostNotificationHelper.saveSystemNotificationToFirestore(
-                context = context,
+            val db = com.example.data.local.NotificationDatabase.getDatabase(context)
+            val entity = com.example.data.local.entity.LocalNotificationEntity(
                 title = title,
                 content = message,
                 category = "নোটিফিকেশন",
                 author = "কুরআন প্ল্যানার",
-                navigateTo = "planner"
+                timestamp = System.currentTimeMillis()
             )
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                db.localNotificationDao().insertNotification(entity)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }

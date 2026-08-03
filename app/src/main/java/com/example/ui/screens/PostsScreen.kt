@@ -1,4 +1,5 @@
 package com.example.ui.screens
+import com.example.utils.DateUtil
 
 import android.graphics.Bitmap
 import android.net.Uri
@@ -560,7 +561,7 @@ fun BlogPostCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = formatPostDate(post.timestamp),
+                        text = getRelativeTimeBengali(post.timestamp),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -737,9 +738,7 @@ fun ShortPostCard(
 @Composable
 fun BlogPostDetailScreen(
     post: BlogPost,
-    onBackClick: () -> Unit,
-    onNavigateToDua: (() -> Unit)? = null,
-    onNavigateToPlanner: (() -> Unit)? = null
+    onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
     var textSizeSp by remember { mutableFloatStateOf(16f) }
@@ -826,7 +825,7 @@ fun BlogPostDetailScreen(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = formatPostDate(post.timestamp),
+                        text = getRelativeTimeBengali(post.timestamp),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -922,53 +921,6 @@ fun BlogPostDetailScreen(
                 lineHeight = (textSizeSp * 1.6f).sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
-
-            val isDuaTarget = post.author == "কুরআনিক দুআ" || post.title.contains("দুআ") || post.content.contains("দুআ") || post.category.contains("দুআ")
-            val isPlannerTarget = post.author == "কুরআন প্ল্যানার" || post.title.contains("প্ল্যানার") || post.title.contains("লক্ষ্য") || post.content.contains("প্ল্যান")
-
-            if (isDuaTarget && onNavigateToDua != null) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = { onNavigateToDua() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                        contentDescription = null,
-                        tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "দুআ সেকশনে সরাসরি যান",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-            } else if (isPlannerTarget && onNavigateToPlanner != null) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = { onNavigateToPlanner() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = null,
-                        tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "কুরআন প্ল্যানারে সরাসরি যান",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -2099,17 +2051,20 @@ fun AdminPasswordDialog(
 @Composable
 fun NotificationCard(
     post: BlogPost,
-    onClick: () -> Unit
+    isRead: Boolean = true,
+    onClick: () -> Unit,
+    onDeleteClick: (() -> Unit)? = null
 ) {
+    val backgroundColor = if (isRead) MaterialTheme.colorScheme.surface else PrimaryGreen.copy(alpha = 0.05f)
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = backgroundColor
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isRead) 1.dp else 3.dp)
     ) {
         Row(
             modifier = Modifier
@@ -2130,6 +2085,16 @@ fun NotificationCard(
                     tint = PrimaryGreen,
                     modifier = Modifier.size(24.dp)
                 )
+                if (!isRead) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(Color.Red)
+                            .padding(2.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -2143,14 +2108,30 @@ fun NotificationCard(
                     Text(
                         text = "📢 নোটিফিকেশন",
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = if (isRead) FontWeight.Medium else FontWeight.Bold,
                         color = PrimaryGreen
                     )
-                    Text(
-                        text = formatPostDate(post.timestamp),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = getRelativeTimeBengali(post.timestamp),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (onDeleteClick != null) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            IconButton(
+                                onClick = onDeleteClick,
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "মুছে ফেলুন",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -2158,7 +2139,7 @@ fun NotificationCard(
                 Text(
                     text = post.title,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = if (isRead) FontWeight.SemiBold else FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -2169,7 +2150,7 @@ fun NotificationCard(
                 Text(
                     text = post.content,
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                     lineHeight = 18.sp
@@ -2196,5 +2177,22 @@ fun NotificationCard(
                 }
             }
         }
+    }
+}
+
+fun getRelativeTimeBengali(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    
+    val minute = 60 * 1000L
+    val hour = 60 * minute
+    val day = 24 * hour
+    
+    return when {
+        diff < minute -> "এইমাত্র"
+        diff < hour -> "${DateUtil.toBengaliNumerals((diff / minute).toInt())} মিনিট আগে"
+        diff < day -> "${DateUtil.toBengaliNumerals((diff / hour).toInt())} ঘণ্টা আগে"
+        diff < 2 * day -> "গতকাল"
+        else -> "${DateUtil.toBengaliNumerals((diff / day).toInt())} দিন আগে"
     }
 }

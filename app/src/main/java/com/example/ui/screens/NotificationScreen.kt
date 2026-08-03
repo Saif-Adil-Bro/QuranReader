@@ -5,20 +5,25 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import com.example.utils.DateUtil
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.BlogPost
 import com.example.ui.theme.PrimaryGreen
 import com.example.ui.viewmodels.PostsViewModel
+import com.example.utils.NotificationStateHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,44 +33,114 @@ fun NotificationScreen(
     onNavigateToDua: ((Int?) -> Unit)? = null,
     onNavigateToPlanner: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
     val blogPosts by viewModel.rawBlogPosts.collectAsState(initial = emptyList())
     val isLoading by viewModel.isLoading.collectAsState(initial = false)
     val pendingPost by viewModel.pendingBlogPost.collectAsState(initial = null)
-
+    
     var selectedPostForReader by remember { mutableStateOf<BlogPost?>(null) }
     var showAdminPasswordDialog by remember { mutableStateOf(false) }
     var showAddNotificationDialog by remember { mutableStateOf(false) }
     var isAdminUnlocked by remember { mutableStateOf(false) }
-
     var adminClickCount by remember { mutableIntStateOf(0) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
+    
+    var readIds by remember { mutableStateOf(setOf<String>()) }
+    var hiddenIds by remember { mutableStateOf(setOf<String>()) }
+    var forceUpdate by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableStateOf("All") } // "All" or "Unread"
+    var expandedGroupAuthor by remember { mutableStateOf<String?>(null) }
+    var localNotifications by remember { mutableStateOf(emptyList<BlogPost>()) }
+
+    LaunchedEffect(Unit) {
+        val db = com.example.data.local.NotificationDatabase.getDatabase(context)
+        db.localNotificationDao().getAllNotifications().collect { entities ->
+            localNotifications = entities.map { entity ->
+                BlogPost(
+                    id = "local_${entity.id}",
+                    title = entity.title,
+                    content = entity.content,
+                    category = entity.category,
+                    author = entity.author,
+                    timestamp = entity.timestamp
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(forceUpdate) {
+        val prefs = context.getSharedPreferences("notification_states", android.content.Context.MODE_PRIVATE)
+        readIds = prefs.getStringSet("read_notifications", emptySet())?.toSet() ?: emptySet()
+        hiddenIds = prefs.getStringSet("hidden_notifications", emptySet())?.toSet() ?: emptySet()
+    }
 
     // Handle incoming pending notification post
     LaunchedEffect(pendingPost) {
         val currentPending = pendingPost
         if (currentPending != null && (currentPending.category == "নোটিফিকেশন" || currentPending.category == "নোটিশ")) {
             selectedPostForReader = currentPending
+            NotificationStateHelper.markAsRead(context, currentPending.id.ifBlank { (currentPending.title + currentPending.content).hashCode().toString() })
+            forceUpdate++
             viewModel.setPendingBlogPost(null)
         }
     }
 
-    val notificationPosts = remember(blogPosts) {
-        blogPosts.filter { it.category == "নোটিফিকেশন" || it.category == "নোটিশ" }
+    val notificationPosts = remember(blogPosts, hiddenIds, localNotifications) {
+        val firestoreNotifs = blogPosts.filter { (it.category == "নোটিফিকেশন" || it.category == "নোটিশ") && !hiddenIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) }
+        val localNotifs = localNotifications.filter { !hiddenIds.contains(it.id) }
+        (firestoreNotifs + localNotifs).sortedByDescending { it.timestamp }
     }
+
+    val filteredNotificationPosts = remember(notificationPosts, selectedTab, readIds) {
+        if (selectedTab == "Unread") {
+            notificationPosts.filter { !readIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) }
+        } else {
+            notificationPosts
+        }
+    }
+    
+    // Grouping: Group consecutive unread notifications from the same author if there are more than 1
+    val displayItems = remember(filteredNotificationPosts, readIds, expandedGroupAuthor) {
+        val result = mutableListOf<Any>()
+        var i = 0
+        while (i < filteredNotificationPosts.size) {
+            val currentPost = filteredNotificationPosts[i]
+            val currentAuthor = currentPost.author
+            val currentId = currentPost.id.ifBlank { (currentPost.title + currentPost.content).hashCode().toString() }
+            val isCurrentRead = readIds.contains(currentId)
+            
+            // Check if we can group
+            if (!isCurrentRead) {
+                var j = i + 1
+                while (j < filteredNotificationPosts.size) {
+                    val nextPost = filteredNotificationPosts[j]
+                    val nextId = nextPost.id.ifBlank { (nextPost.title + nextPost.content).hashCode().toString() }
+                    if (nextPost.author == currentAuthor && !readIds.contains(nextId)) {
+                        j++
+                    } else {
+                        break
+                    }
+                }
+                
+                val groupSize = j - i
+                if (groupSize > 1 && expandedGroupAuthor != currentAuthor) {
+                    result.add(NotificationGroupHeader(author = currentAuthor, count = groupSize, posts = filteredNotificationPosts.subList(i, j)))
+                    i = j
+                    continue
+                }
+            }
+            
+            result.add(currentPost)
+            i++
+        }
+        result
+    }
+
 
     if (selectedPostForReader != null) {
         BlogPostDetailScreen(
             post = selectedPostForReader!!,
-            onBackClick = { selectedPostForReader = null },
-            onNavigateToDua = {
-                val post = selectedPostForReader
-                selectedPostForReader = null
-                onNavigateToDua?.invoke(null)
-            },
-            onNavigateToPlanner = {
-                selectedPostForReader = null
-                onNavigateToPlanner?.invoke()
-            }
+            onBackClick = { selectedPostForReader = null }
         )
         return
     }
@@ -114,6 +189,20 @@ fun NotificationScreen(
                     }
                 },
                 actions = {
+                    if (notificationPosts.isNotEmpty()) {
+                        IconButton(onClick = {
+                            val allIds = notificationPosts.map { it.id.ifBlank { (it.title + it.content).hashCode().toString() } }
+                            NotificationStateHelper.markAllAsRead(context, allIds)
+                            forceUpdate++
+                            android.widget.Toast.makeText(context, "সব নোটিফিকেশন পড়া হয়েছে", android.widget.Toast.LENGTH_SHORT).show()
+                        }) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = "সব পড়া হয়েছে",
+                                tint = PrimaryGreen
+                            )
+                        }
+                    }
                     if (isAdminUnlocked) {
                         IconButton(onClick = { showAddNotificationDialog = true }) {
                             Icon(
@@ -140,22 +229,85 @@ fun NotificationScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = PrimaryGreen)
                 }
-            } else if (notificationPosts.isEmpty()) {
+            } else if (displayItems.isEmpty()) {
                 EmptyStateView("কোন নোটিফিকেশন পাওয়া যায়নি")
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    itemsIndexed(
-                        items = notificationPosts,
-                        key = { index, post -> if (post.id.isNotEmpty()) post.id else "${post.title}_$index" }
-                    ) { _, post ->
-                        NotificationCard(
-                            post = post,
-                            onClick = { selectedPostForReader = post }
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = selectedTab == "All",
+                            onClick = { selectedTab = "All" },
+                            label = { Text("সবগুলো", fontWeight = if (selectedTab == "All") FontWeight.Bold else FontWeight.Normal) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f),
+                                selectedLabelColor = PrimaryGreen
+                            )
                         )
+                        FilterChip(
+                            selected = selectedTab == "Unread",
+                            onClick = { selectedTab = "Unread" },
+                            label = { Text("আনরিড", fontWeight = if (selectedTab == "Unread") FontWeight.Bold else FontWeight.Normal) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f),
+                                selectedLabelColor = PrimaryGreen
+                            )
+                        )
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        itemsIndexed(
+                            items = displayItems,
+                            key = { index, item -> 
+                                if (item is BlogPost) {
+                                    if (item.id.isNotEmpty()) item.id else "${item.title}_$index"
+                                } else {
+                                    "group_${(item as NotificationGroupHeader).author}_$index"
+                                }
+                            }
+                        ) { _, item ->
+                            if (item is NotificationGroupHeader) {
+                                NotificationGroupCard(
+                                    header = item,
+                                    onClick = { expandedGroupAuthor = if (expandedGroupAuthor == item.author) null else item.author }
+                                )
+                            } else if (item is BlogPost) {
+                                val post = item
+                                val nId = post.id.ifBlank { (post.title + post.content).hashCode().toString() }
+                                val isRead = readIds.contains(nId)
+                                
+                                NotificationCard(
+                                    post = post,
+                                    isRead = isRead,
+                            onClick = { 
+                                NotificationStateHelper.markAsRead(context, nId)
+                                forceUpdate++
+                                val isDuaTarget = post.author == "কুরআনিক দুআ" || post.title.contains("দুআ") || post.content.contains("দুআ") || post.category.contains("দুআ")
+                                val isPlannerTarget = post.author == "কুরআন প্ল্যানার" || post.title.contains("প্ল্যানার") || post.title.contains("লক্ষ্য") || post.content.contains("প্ল্যান")
+                                
+                                if (isDuaTarget && onNavigateToDua != null) {
+                                    onNavigateToDua(null)
+                                } else if (isPlannerTarget && onNavigateToPlanner != null) {
+                                    onNavigateToPlanner()
+                                } else {
+                                    selectedPostForReader = post 
+                                }
+                            },
+                            onDeleteClick = {
+                                NotificationStateHelper.hideNotification(context, nId)
+                                forceUpdate++
+                            }
+                        )
+                    }
+                        }
                     }
                 }
             }
@@ -179,5 +331,64 @@ fun NotificationScreen(
             defaultCategory = "নোটিফিকেশন",
             onDismiss = { showAddNotificationDialog = false }
         )
+    }
+}
+
+data class NotificationGroupHeader(
+    val author: String,
+    val count: Int,
+    val posts: List<BlogPost>
+)
+
+@Composable
+fun NotificationGroupCard(
+    header: NotificationGroupHeader,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = PrimaryGreen.copy(alpha = 0.05f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(PrimaryGreen.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = PrimaryGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${header.author} এবং আরও ${DateUtil.toBengaliNumerals(header.count - 1)}টি নতুন নোটিফিকেশন",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "বিস্তারিত দেখতে ট্যাপ করুন",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }

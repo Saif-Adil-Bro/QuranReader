@@ -1,4 +1,7 @@
 package com.example.receiver
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -79,14 +82,17 @@ class DailyMessageReceiver : BroadcastReceiver() {
         val fullContent = if (segmentTranslation.isNotBlank()) "$duaSubtitle\n\n$segmentTranslation" else duaSubtitle
 
         try {
-            com.example.utils.PostNotificationHelper.saveSystemNotificationToFirestore(
-                context = context,
+            val db = com.example.data.local.NotificationDatabase.getDatabase(context)
+            val entity = com.example.data.local.entity.LocalNotificationEntity(
                 title = duaTitle,
                 content = fullContent,
                 category = "নোটিফিকেশন",
                 author = "কুরআনিক দুআ",
-                navigateTo = "dua"
+                timestamp = System.currentTimeMillis()
             )
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                db.localNotificationDao().insertNotification(entity)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }

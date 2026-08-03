@@ -1,4 +1,6 @@
 package com.example.receiver
+import kotlinx.coroutines.GlobalScope
+
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -110,15 +112,17 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         try {
-            com.example.utils.PostNotificationHelper.saveSystemNotificationToFirestore(
-                context = this,
+            val db = com.example.data.local.NotificationDatabase.getDatabase(this)
+            val entity = com.example.data.local.entity.LocalNotificationEntity(
                 title = finalTitle,
                 content = finalText,
                 category = "নোটিফিকেশন",
                 author = "পুশ নোটিফিকেশন",
-                imageUrl = dataMap["image"] ?: dataMap["imageUrl"] ?: "",
-                navigateTo = dataMap["navigate_to"] ?: "notifications"
+                timestamp = System.currentTimeMillis()
             )
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                db.localNotificationDao().insertNotification(entity)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
