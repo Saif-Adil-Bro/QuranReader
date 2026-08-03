@@ -186,6 +186,20 @@ object PostNotificationHelper {
 
                 val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 notificationManager.notify(reqId, notification)
+                
+                try {
+                    val db = com.example.data.local.NotificationDatabase.getDatabase(context)
+                    val entity = com.example.data.local.entity.LocalNotificationEntity(
+                        title = titleText,
+                        content = post.text,
+                        category = "নোটিফিকেশন",
+                        author = "ফটো কার্ড",
+                        timestamp = System.currentTimeMillis()
+                    )
+                    db.localNotificationDao().insertNotification(entity)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -250,6 +264,22 @@ object PostNotificationHelper {
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(reqId, notification)
+
+        try {
+            val db = com.example.data.local.NotificationDatabase.getDatabase(context)
+            val entity = com.example.data.local.entity.LocalNotificationEntity(
+                title = titleText,
+                content = post.content,
+                category = "নোটিফিকেশন",
+                author = post.author,
+                timestamp = System.currentTimeMillis()
+            )
+            CoroutineScope(Dispatchers.IO).launch {
+                db.localNotificationDao().insertNotification(entity)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun showPostNotification(context: Context, title: String, message: String, postId: String = "") {
@@ -292,5 +322,21 @@ object PostNotificationHelper {
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(notificationId, builder.build())
+
+        try {
+            val db = com.example.data.local.NotificationDatabase.getDatabase(context)
+            val entity = com.example.data.local.entity.LocalNotificationEntity(
+                title = finalTitle,
+                content = finalText,
+                category = "নোটিফিকেশন",
+                author = "ইসলামিক এডমিন",
+                timestamp = System.currentTimeMillis()
+            )
+            CoroutineScope(Dispatchers.IO).launch {
+                db.localNotificationDao().insertNotification(entity)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

@@ -76,16 +76,14 @@ class DailyMessageReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val duaTitle = "কুরআন থেকে আজকের দুআ"
+        val duaTitle = "কুরআনিক দোয়া"
         val duaSubtitle = selectedDua.title
-        val segmentTranslation = selectedDua.segments.firstOrNull()?.translation ?: ""
-        val fullContent = if (segmentTranslation.isNotBlank()) "$duaSubtitle\n\n$segmentTranslation" else duaSubtitle
 
         try {
             val db = com.example.data.local.NotificationDatabase.getDatabase(context)
             val entity = com.example.data.local.entity.LocalNotificationEntity(
                 title = duaTitle,
-                content = fullContent,
+                content = duaSubtitle,
                 category = "নোটিফিকেশন",
                 author = "কুরআনিক দুআ",
                 timestamp = System.currentTimeMillis()
@@ -102,9 +100,6 @@ class DailyMessageReceiver : BroadcastReceiver() {
             .setSmallIcon(iconRes)
             .setContentTitle(duaTitle)
             .setContentText(duaSubtitle)
-            .setStyle(
-                NotificationCompat.BigTextStyle().bigText(fullContent)
-            )
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

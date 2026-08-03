@@ -237,7 +237,7 @@ fun AppNavGraph(
                 viewModel = postsViewModel,
                 onBackClick = { navController.popBackStack() },
                 onNavigateToDua = { duaId ->
-                    if (duaId != null && duaId > 0) {
+                    if (duaId != null && duaId >= 0) {
                         navController.navigate("settings?subScreen=dua&duaId=$duaId") {
                             launchSingleTop = true
                         }

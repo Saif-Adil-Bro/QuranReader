@@ -290,15 +290,37 @@ fun NotificationScreen(
                             onClick = { 
                                 NotificationStateHelper.markAsRead(context, nId)
                                 forceUpdate++
-                                val isDuaTarget = post.author == "কুরআনিক দুআ" || post.title.contains("দুআ") || post.content.contains("দুআ") || post.category.contains("দুআ")
-                                val isPlannerTarget = post.author == "কুরআন প্ল্যানার" || post.title.contains("প্ল্যানার") || post.title.contains("লক্ষ্য") || post.content.contains("প্ল্যান")
+                                val isSystemNotification = post.id.startsWith("local_")
                                 
-                                if (isDuaTarget && onNavigateToDua != null) {
-                                    onNavigateToDua(null)
-                                } else if (isPlannerTarget && onNavigateToPlanner != null) {
-                                    onNavigateToPlanner()
+                                if (isSystemNotification) {
+                                    val isDuaTarget = post.author == "কুরআনিক দুআ"
+                                    val isPlannerTarget = post.author == "কুরআন প্ল্যানার"
+                                    
+                                    if (isDuaTarget && onNavigateToDua != null) {
+                                        var duaId: Int? = null
+                                        try {
+                                            if (com.example.data.DuaData.richDuas.isEmpty()) {
+                                                com.example.data.DuaData.initialize(context)
+                                            }
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                        val possibleTitle = post.content.lines().firstOrNull()?.trim() ?: ""
+                                        val foundDua = com.example.data.DuaData.richDuas.find { 
+                                            it.title.trim() == possibleTitle || post.content.contains(it.title) || post.title.contains(it.title)
+                                        }
+                                        if (foundDua != null) {
+                                            duaId = foundDua.id
+                                        }
+                                        onNavigateToDua(duaId)
+                                    } else if (isPlannerTarget && onNavigateToPlanner != null) {
+                                        onNavigateToPlanner()
+                                    } else {
+                                        selectedPostForReader = post 
+                                    }
                                 } else {
-                                    selectedPostForReader = post 
+                                    // Firebase posts always use the notification detail screen
+                                    selectedPostForReader = post
                                 }
                             },
                             onDeleteClick = {
