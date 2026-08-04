@@ -28,6 +28,12 @@ class QuranApplication : Application(), ImageLoaderFactory {
             val notificationManager = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
+
+        try {
+            com.example.receiver.IslamicEventReceiver.scheduleNextAlarm(this)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun newImageLoader(): ImageLoader {

@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,8 +15,10 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -43,6 +47,15 @@ fun IslamicCalendarView(
     var currentYearMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var showOffsetDialog by remember { mutableStateOf(false) }
+    var showGuidanceDialogPair by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var isNotifEnabled by remember {
+        mutableStateOf(
+            context.getSharedPreferences("quran_menu_prefs", android.content.Context.MODE_PRIVATE)
+                .getBoolean("islamic_events_reminder_enabled", true)
+        )
+    }
 
     val today = LocalDate.now()
 
@@ -178,6 +191,28 @@ fun IslamicCalendarView(
                                     fontWeight = FontWeight.Medium,
                                     color = Color.White.copy(alpha = 0.95f)
                                 )
+                            }
+
+                            if (selectedHijriInfo.isSunnahFast || selectedHijriInfo.specialEvents.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = {
+                                        val title = selectedHijriInfo.specialEvents.firstOrNull() ?: selectedHijriInfo.sunnahFastReason ?: "সুন্নাত আমল"
+                                        showGuidanceDialogPair = com.example.utils.IslamicEventGuidanceHelper.getGuidanceForDateAndTitle(selectedDate, title, selectedHijriInfo)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White.copy(alpha = 0.2f),
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "📖 আমল ও শরীঈ বিধান দেখুন",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
@@ -406,6 +441,11 @@ fun IslamicCalendarView(
                 items(monthEvents) { (date, info) ->
                     val isPast = date.isBefore(today)
                     val isCurrentDay = date.isEqual(today)
+                    val title = if (info.specialEvents.isNotEmpty()) {
+                        info.specialEvents.joinToString(", ")
+                    } else {
+                        info.sunnahFastReason ?: "সুন্নাত আমল"
+                    }
 
                     Card(
                         shape = RoundedCornerShape(16.dp),
@@ -413,7 +453,10 @@ fun IslamicCalendarView(
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { selectedDate = date }
+                            .clickable {
+                                selectedDate = date
+                                showGuidanceDialogPair = com.example.utils.IslamicEventGuidanceHelper.getGuidanceForDateAndTitle(date, title, info)
+                            }
                     ) {
                         Row(
                             modifier = Modifier
@@ -444,12 +487,6 @@ fun IslamicCalendarView(
                                 Spacer(modifier = Modifier.width(12.dp))
 
                                 Column {
-                                    val title = if (info.specialEvents.isNotEmpty()) {
-                                        info.specialEvents.joinToString(", ")
-                                    } else {
-                                        info.sunnahFastReason ?: "সুন্নাত আমল"
-                                    }
-
                                     Text(
                                         text = title,
                                         fontSize = 14.sp,
@@ -492,6 +529,154 @@ fun IslamicCalendarView(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                                 )
                             }
+                        }
+                    }
+                }
+            }
+
+            // 6. SECTION HEADER 3: নোটিফিকেশন সেটিংস
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "রোজা ও দিবস নোটিফিকেশন",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "সোম-বৃহস্পতি, আইয়ামে বীজ ও দিবস রিমাইন্ডার",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "রবি ও বুধবার সন্ধ্যায় সোম-বৃহস্পতিবারের রোজা, ১২ হিজরী সন্ধ্যায় আইয়ামে বীজ ও বিশেষ দিবসের নোটিফিকেশন আসবে।",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Switch(
+                            checked = isNotifEnabled,
+                            onCheckedChange = { checked ->
+                                isNotifEnabled = checked
+                                context.getSharedPreferences("quran_menu_prefs", android.content.Context.MODE_PRIVATE)
+                                    .edit()
+                                    .putBoolean("islamic_events_reminder_enabled", checked)
+                                    .apply()
+
+                                if (checked) {
+                                    com.example.receiver.IslamicEventReceiver.scheduleNextAlarm(context)
+                                } else {
+                                    com.example.receiver.IslamicEventReceiver.cancelAlarm(context)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF10B981)
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // SHARIA GUIDANCE DIALOG
+    val currentGuidance = showGuidanceDialogPair
+    if (currentGuidance != null) {
+        Dialog(onDismissRequest = { showGuidanceDialogPair = null }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = currentGuidance.first,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF10B981),
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { showGuidanceDialogPair = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "বন্ধ করুন", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val scrollState = rememberScrollState()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 420.dp)
+                            .verticalScroll(scrollState)
+                    ) {
+                        Text(
+                            text = currentGuidance.second,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = 22.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Button(
+                            onClick = { showGuidanceDialogPair = null },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("ঠিক আছে", color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

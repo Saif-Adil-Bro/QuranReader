@@ -147,9 +147,57 @@ fun HomeScreen(
     onNavigateToPlayer: () -> Unit,
     onNavigateToPosts: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
-    onNavigateToCalendar: () -> Unit = {}
+    onNavigateToCalendar: () -> Unit = {},
+    postsViewModel: com.example.ui.viewmodels.PostsViewModel? = null
 ) {
     val context = LocalContext.current
+    val rawBlogPosts by (postsViewModel?.rawBlogPosts ?: kotlinx.coroutines.flow.flowOf(emptyList())).collectAsState(initial = emptyList())
+    var notifReadIds by remember { mutableStateOf(setOf<String>()) }
+    var notifHiddenIds by remember { mutableStateOf(setOf<String>()) }
+    var localNotifsList by remember { mutableStateOf(emptyList<com.example.data.model.BlogPost>()) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+    LaunchedEffect(Unit) {
+        val db = com.example.data.local.NotificationDatabase.getDatabase(context)
+        db.localNotificationDao().getAllNotifications().collect { entities ->
+            localNotifsList = entities.map { entity ->
+                com.example.data.model.BlogPost(
+                    id = "local_${entity.id}",
+                    title = entity.title,
+                    content = entity.content,
+                    category = entity.category,
+                    author = entity.author,
+                    timestamp = entity.timestamp
+                )
+            }
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                notifReadIds = com.example.utils.NotificationStateHelper.getReadIds(context)
+                notifHiddenIds = com.example.utils.NotificationStateHelper.getHiddenIds(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val unreadNotificationCount = remember(rawBlogPosts, localNotifsList, notifReadIds, notifHiddenIds) {
+        val firestoreNotifs = rawBlogPosts.filter { 
+            (it.category == "নোটিফিকেশন" || it.category == "নোটিশ") && 
+            !notifHiddenIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) 
+        }
+        val localNotifs = localNotifsList.filter { !notifHiddenIds.contains(it.id) }
+        val allNotifs = firestoreNotifs + localNotifs
+        allNotifs.count { post ->
+            val nId = post.id.ifBlank { (post.title + post.content).hashCode().toString() }
+            !notifReadIds.contains(nId)
+        }
+    }
     val lastReadSurah by viewModel.lastReadSurah.collectAsState()
     val lastReadPage by viewModel.lastReadPage.collectAsState()
     val lastReadMode by viewModel.lastReadMode.collectAsState()
@@ -402,11 +450,32 @@ fun HomeScreen(
                 },
                 actions = {
                     IconButton(onClick = onNavigateToNotifications) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "নোটিফিকেশন সেন্টার",
-                            tint = Color(0xFF10B981)
-                        )
+                        if (unreadNotificationCount > 0) {
+                            BadgedBox(
+                                badge = {
+                                    Badge(containerColor = Color(0xFFE53935)) {
+                                        Text(
+                                            text = if (unreadNotificationCount > 99) "99+" else unreadNotificationCount.toString(),
+                                            color = Color.White,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "নোটিফিকেশন সেন্টার",
+                                    tint = Color(0xFF10B981)
+                                )
+                            }
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "নোটিফিকেশন সেন্টার",
+                                tint = Color(0xFF10B981)
+                            )
+                        }
                     }
                     IconButton(onClick = { viewModel.toggleTheme() }) {
                         Icon(

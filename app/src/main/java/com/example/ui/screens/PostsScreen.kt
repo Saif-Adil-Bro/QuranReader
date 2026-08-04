@@ -184,9 +184,56 @@ fun PostsScreen(
     var adminClickCount by remember { mutableIntStateOf(0) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
+    val rawBlogPosts by viewModel.rawBlogPosts.collectAsState(initial = emptyList())
+    var notifReadIds by remember { mutableStateOf(setOf<String>()) }
+    var notifHiddenIds by remember { mutableStateOf(setOf<String>()) }
+    var localNotifsList by remember { mutableStateOf(emptyList<BlogPost>()) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+    LaunchedEffect(Unit) {
+        val db = com.example.data.local.NotificationDatabase.getDatabase(context)
+        db.localNotificationDao().getAllNotifications().collect { entities ->
+            localNotifsList = entities.map { entity ->
+                BlogPost(
+                    id = "local_${entity.id}",
+                    title = entity.title,
+                    content = entity.content,
+                    category = entity.category,
+                    author = entity.author,
+                    timestamp = entity.timestamp
+                )
+            }
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                notifReadIds = com.example.utils.NotificationStateHelper.getReadIds(context)
+                notifHiddenIds = com.example.utils.NotificationStateHelper.getHiddenIds(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val unreadNotificationCount = remember(rawBlogPosts, localNotifsList, notifReadIds, notifHiddenIds) {
+        val firestoreNotifs = rawBlogPosts.filter { 
+            (it.category == "নোটিফিকেশন" || it.category == "নোটিশ") && 
+            !notifHiddenIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) 
+        }
+        val localNotifs = localNotifsList.filter { !notifHiddenIds.contains(it.id) }
+        val allNotifs = firestoreNotifs + localNotifs
+        allNotifs.count { post ->
+            val nId = post.id.ifBlank { (post.title + post.content).hashCode().toString() }
+            !notifReadIds.contains(nId)
+        }
+    }
+
     val categories = listOf("সকল", "কুরআন ও জীবন", "নফল ইবাদত", "দৈনিক নসীহত", "মাসনুন জিকির", "আত্মশুদ্ধি", "সাধারণ")
 
-    val notificationPosts = remember(blogPosts) { blogPosts.filter { it.category == "নোটিফিকেশন" || it.category == "নোটিশ" } }
     val regularBlogPosts = remember(blogPosts) { blogPosts.filter { it.category != "নোটিফিকেশন" && it.category != "নোটিশ" } }
 
     if (selectedBlogPostForReader != null) {
@@ -233,15 +280,26 @@ fun PostsScreen(
                     },
                     actions = {
                         IconButton(onClick = { onNavigateToNotifications?.invoke() }) {
-                            BadgedBox(
-                                badge = {
-                                    if (notificationPosts.isNotEmpty()) {
+                            if (unreadNotificationCount > 0) {
+                                BadgedBox(
+                                    badge = {
                                         Badge(containerColor = PrimaryGreen) {
-                                            Text(notificationPosts.size.toString(), color = Color.White, fontSize = 10.sp)
+                                            Text(
+                                                text = if (unreadNotificationCount > 99) "99+" else unreadNotificationCount.toString(),
+                                                color = Color.White,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
                                         }
                                     }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Notifications,
+                                        contentDescription = "নোটিফিকেশন সেন্টার",
+                                        tint = PrimaryGreen
+                                    )
                                 }
-                            ) {
+                            } else {
                                 Icon(
                                     Icons.Default.Notifications,
                                     contentDescription = "নোটিফিকেশন সেন্টার",
@@ -2055,7 +2113,9 @@ fun NotificationCard(
     onClick: () -> Unit,
     onDeleteClick: (() -> Unit)? = null
 ) {
-    val backgroundColor = if (isRead) MaterialTheme.colorScheme.surface else PrimaryGreen.copy(alpha = 0.05f)
+    val backgroundColor = if (isRead) MaterialTheme.colorScheme.surface else PrimaryGreen.copy(alpha = 0.04f)
+    val borderColor = if (isRead) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f) else PrimaryGreen.copy(alpha = 0.3f)
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -2064,26 +2124,27 @@ fun NotificationCard(
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isRead) 1.dp else 3.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.Top
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(42.dp)
                     .clip(CircleShape)
-                    .background(PrimaryGreen.copy(alpha = 0.12f)),
+                    .background(PrimaryGreen.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Notifications,
                     contentDescription = null,
                     tint = PrimaryGreen,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
                 if (!isRead) {
                     Box(
@@ -2091,8 +2152,7 @@ fun NotificationCard(
                             .align(Alignment.TopEnd)
                             .size(10.dp)
                             .clip(CircleShape)
-                            .background(Color.Red)
-                            .padding(2.dp)
+                            .background(Color(0xFFE53935))
                     )
                 }
             }
@@ -2105,12 +2165,19 @@ fun NotificationCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "📢 নোটিফিকেশন",
-                        fontSize = 12.sp,
-                        fontWeight = if (isRead) FontWeight.Medium else FontWeight.Bold,
-                        color = PrimaryGreen
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = PrimaryGreen.copy(alpha = 0.1f)
+                    ) {
+                        Text(
+                            text = if (post.category.isNotBlank()) "📢 ${post.category}" else "📢 নোটিফিকেশন",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryGreen,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = getRelativeTimeBengali(post.timestamp),
@@ -2121,42 +2188,42 @@ fun NotificationCard(
                             Spacer(modifier = Modifier.width(4.dp))
                             IconButton(
                                 onClick = onDeleteClick,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(22.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "মুছে ফেলুন",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp)
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
                     text = post.title,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = if (isRead) FontWeight.SemiBold else FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = post.content,
                     fontSize = 13.sp,
-                    color = if (isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                     lineHeight = 18.sp
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

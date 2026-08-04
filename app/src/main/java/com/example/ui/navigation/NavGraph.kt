@@ -220,7 +220,8 @@ fun AppNavGraph(
                 },
                 onNavigateToCalendar = {
                     navController.navigate("settings?subScreen=calendar")
-                }
+                },
+                postsViewModel = postsViewModel
             )
         }
 

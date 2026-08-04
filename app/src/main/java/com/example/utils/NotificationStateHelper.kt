@@ -12,10 +12,18 @@ object NotificationStateHelper {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    fun isNotificationRead(context: Context, id: String): Boolean {
+    fun getReadIds(context: Context): Set<String> {
         val prefs = getPrefs(context)
-        val readIds = prefs.getStringSet(KEY_READ_NOTIFICATIONS, emptySet()) ?: emptySet()
-        return readIds.contains(id)
+        return prefs.getStringSet(KEY_READ_NOTIFICATIONS, emptySet())?.toSet() ?: emptySet()
+    }
+
+    fun getHiddenIds(context: Context): Set<String> {
+        val prefs = getPrefs(context)
+        return prefs.getStringSet(KEY_HIDDEN_NOTIFICATIONS, emptySet())?.toSet() ?: emptySet()
+    }
+
+    fun isNotificationRead(context: Context, id: String): Boolean {
+        return getReadIds(context).contains(id)
     }
 
     fun markAsRead(context: Context, id: String) {

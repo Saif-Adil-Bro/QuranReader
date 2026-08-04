@@ -225,12 +225,10 @@ fun NotificationScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            if (isLoading && blogPosts.isEmpty()) {
+            if (isLoading && blogPosts.isEmpty() && localNotifications.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = PrimaryGreen)
                 }
-            } else if (displayItems.isEmpty()) {
-                EmptyStateView("কোন নোটিফিকেশন পাওয়া যায়নি")
             } else {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Row(
@@ -244,8 +242,9 @@ fun NotificationScreen(
                             onClick = { selectedTab = "All" },
                             label = { Text("সবগুলো", fontWeight = if (selectedTab == "All") FontWeight.Bold else FontWeight.Normal) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f),
-                                selectedLabelColor = PrimaryGreen
+                                selectedContainerColor = PrimaryGreen.copy(alpha = 0.15f),
+                                selectedLabelColor = PrimaryGreen,
+                                containerColor = MaterialTheme.colorScheme.surface
                             )
                         )
                         FilterChip(
@@ -253,82 +252,131 @@ fun NotificationScreen(
                             onClick = { selectedTab = "Unread" },
                             label = { Text("আনরিড", fontWeight = if (selectedTab == "Unread") FontWeight.Bold else FontWeight.Normal) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f),
-                                selectedLabelColor = PrimaryGreen
+                                selectedContainerColor = PrimaryGreen.copy(alpha = 0.15f),
+                                selectedLabelColor = PrimaryGreen,
+                                containerColor = MaterialTheme.colorScheme.surface
                             )
                         )
                     }
 
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        itemsIndexed(
-                            items = displayItems,
-                            key = { index, item -> 
-                                if (item is BlogPost) {
-                                    if (item.id.isNotEmpty()) item.id else "${item.title}_$index"
-                                } else {
-                                    "group_${(item as NotificationGroupHeader).author}_$index"
+                    if (displayItems.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(32.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(72.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(PrimaryGreen.copy(alpha = 0.1f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        tint = PrimaryGreen,
+                                        modifier = Modifier.size(36.dp)
+                                    )
                                 }
-                            }
-                        ) { _, item ->
-                            if (item is NotificationGroupHeader) {
-                                NotificationGroupCard(
-                                    header = item,
-                                    onClick = { expandedGroupAuthor = if (expandedGroupAuthor == item.author) null else item.author }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = if (selectedTab == "Unread") "কোন অপঠিত (আনরিড) নোটিফিকেশন নেই" else "কোন নোটিফিকেশন পাওয়া যায়নি",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            } else if (item is BlogPost) {
-                                val post = item
-                                val nId = post.id.ifBlank { (post.title + post.content).hashCode().toString() }
-                                val isRead = readIds.contains(nId)
-                                
-                                NotificationCard(
-                                    post = post,
-                                    isRead = isRead,
-                            onClick = { 
-                                NotificationStateHelper.markAsRead(context, nId)
-                                forceUpdate++
-                                val isSystemNotification = post.id.startsWith("local_")
-                                
-                                if (isSystemNotification) {
-                                    val isDuaTarget = post.author == "কুরআনিক দুআ"
-                                    val isPlannerTarget = post.author == "কুরআন প্ল্যানার"
-                                    
-                                    if (isDuaTarget && onNavigateToDua != null) {
-                                        var duaId: Int? = null
-                                        try {
-                                            if (com.example.data.DuaData.richDuas.isEmpty()) {
-                                                com.example.data.DuaData.initialize(context)
-                                            }
-                                        } catch (e: Exception) {
-                                            e.printStackTrace()
-                                        }
-                                        val possibleTitle = post.content.lines().firstOrNull()?.trim() ?: ""
-                                        val foundDua = com.example.data.DuaData.richDuas.find { 
-                                            it.title.trim() == possibleTitle || post.content.contains(it.title) || post.title.contains(it.title)
-                                        }
-                                        if (foundDua != null) {
-                                            duaId = foundDua.id
-                                        }
-                                        onNavigateToDua(duaId)
-                                    } else if (isPlannerTarget && onNavigateToPlanner != null) {
-                                        onNavigateToPlanner()
-                                    } else {
-                                        selectedPostForReader = post 
+                                if (selectedTab == "Unread") {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    OutlinedButton(
+                                        onClick = { selectedTab = "All" },
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryGreen),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryGreen),
+                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+                                    ) {
+                                        Text("সবগুলো নোটিফিকেশন দেখুন", fontWeight = FontWeight.Bold)
                                     }
-                                } else {
-                                    // Firebase posts always use the notification detail screen
-                                    selectedPostForReader = post
                                 }
-                            },
-                            onDeleteClick = {
-                                NotificationStateHelper.hideNotification(context, nId)
-                                forceUpdate++
                             }
-                        )
-                    }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            itemsIndexed(
+                                items = displayItems,
+                                key = { index, item -> 
+                                    if (item is BlogPost) {
+                                        if (item.id.isNotEmpty()) item.id else "${item.title}_$index"
+                                    } else {
+                                        "group_${(item as NotificationGroupHeader).author}_$index"
+                                    }
+                                }
+                            ) { _, item ->
+                                if (item is NotificationGroupHeader) {
+                                    NotificationGroupCard(
+                                        header = item,
+                                        onClick = { expandedGroupAuthor = if (expandedGroupAuthor == item.author) null else item.author }
+                                    )
+                                } else if (item is BlogPost) {
+                                    val post = item
+                                    val nId = post.id.ifBlank { (post.title + post.content).hashCode().toString() }
+                                    val isRead = readIds.contains(nId)
+                                    
+                                    NotificationCard(
+                                        post = post,
+                                        isRead = isRead,
+                                        onClick = { 
+                                            NotificationStateHelper.markAsRead(context, nId)
+                                            forceUpdate++
+                                            val isSystemNotification = post.id.startsWith("local_")
+                                            
+                                            if (isSystemNotification) {
+                                                val isDuaTarget = post.author == "কুরআনিক দুআ"
+                                                val isPlannerTarget = post.author == "কুরআন প্ল্যানার"
+                                                
+                                                if (isDuaTarget && onNavigateToDua != null) {
+                                                    var duaId: Int? = null
+                                                    try {
+                                                        if (com.example.data.DuaData.richDuas.isEmpty()) {
+                                                            com.example.data.DuaData.initialize(context)
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                    }
+                                                    val possibleTitle = post.content.lines().firstOrNull()?.trim() ?: ""
+                                                    val foundDua = com.example.data.DuaData.richDuas.find { 
+                                                        it.title.trim() == possibleTitle || post.content.contains(it.title) || post.title.contains(it.title)
+                                                    }
+                                                    if (foundDua != null) {
+                                                        duaId = foundDua.id
+                                                    }
+                                                    onNavigateToDua(duaId)
+                                                } else if (isPlannerTarget && onNavigateToPlanner != null) {
+                                                    onNavigateToPlanner()
+                                                } else {
+                                                    selectedPostForReader = post 
+                                                }
+                                            } else {
+                                                // Firebase posts always use the notification detail screen
+                                                selectedPostForReader = post
+                                            }
+                                        },
+                                        onDeleteClick = {
+                                            NotificationStateHelper.hideNotification(context, nId)
+                                            forceUpdate++
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -373,28 +421,29 @@ fun NotificationGroupCard(
             .clickable { onClick() },
         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = PrimaryGreen.copy(alpha = 0.05f)
+            containerColor = PrimaryGreen.copy(alpha = 0.04f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.3f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(42.dp)
                     .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(PrimaryGreen.copy(alpha = 0.12f)),
+                    .background(PrimaryGreen.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Notifications,
                     contentDescription = null,
                     tint = PrimaryGreen,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
