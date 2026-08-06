@@ -2293,7 +2293,7 @@ fun SubjectwiseDialogContent(
                                             color = MaterialTheme.colorScheme.onSurface,
                                             lineHeight = 38.sp,
                                             textAlign = TextAlign.Center,
-                                            fontFamily = com.example.ui.theme.scheherazadeFont,
+                                            fontFamily = com.example.ui.theme.meQuranFont,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(horizontal = 16.dp, vertical = 16.dp)
@@ -2679,7 +2679,7 @@ fun DuaDialogContent(
                                             fontFamily = arabicFont,
                                             fontWeight = FontWeight.Medium,
                                             color = MaterialTheme.colorScheme.onSurface,
-                                            textAlign = if (isBismillah) TextAlign.Center else TextAlign.Right,
+                                            textAlign = TextAlign.Center,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(vertical = 16.dp),

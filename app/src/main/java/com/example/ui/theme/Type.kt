@@ -16,6 +16,12 @@ val provider = GoogleFont.Provider(
     certificates = R.array.com_google_android_gms_fonts_certs
 )
 
+
+val meQuranFont = FontFamily(ResourceFont(R.font.me_quran))
+val pdmsSaleemFont = FontFamily(ResourceFont(R.font.pdms_saleem))
+val noorehiraFont = FontFamily(ResourceFont(R.font.noorehira))
+
+
 val uthmanTahaFont = FontFamily(
     ResourceFont(R.font.uthman_taha)
 )
@@ -50,6 +56,9 @@ val tajawalFont = FontFamily(
     GoogleFontFile(googleFont = GoogleFont("Tajawal"), fontProvider = provider)
 )
 
+
+
+
 val solaimanLipiFont = FontFamily(
     ResourceFont(R.font.solaimanlipi, FontWeight.Normal),
     ResourceFont(R.font.solaimanlipi_bold, FontWeight.Bold)
@@ -64,13 +73,9 @@ val shorifShishirFont = FontFamily(
 )
 
 val arabicFontsList = listOf(
-    "Uthman Taha",
-    "Amiri Quran",
-    "Amiri",
-    "Scheherazade New",
-    "Lateef",
-    "Almarai",
-    "Tajawal"
+    "Me Quran",
+    "PDMS Saleem",
+    "Noorehira"
 )
 
 fun getArabicFont(name: String): FontFamily {
@@ -82,14 +87,17 @@ fun getArabicFont(name: String): FontFamily {
         "Lateef" -> lateefFont
         "Almarai" -> almaraiFont
         "Tajawal" -> tajawalFont
+        "Me Quran" -> meQuranFont
+        "PDMS Saleem" -> pdmsSaleemFont
+        "Noorehira" -> noorehiraFont
         else -> uthmanTahaFont
     }
 }
 
 // Set of Material typography styles to start with
 private val defaultTextStyle = TextStyle(
-    fontFamily = solaimanLipiFont
-    // fontFamily = FontFamily.Default
+    // fontFamily = solaimanLipiFont
+    fontFamily = FontFamily.Default
 )
 
 val Typography = Typography(
