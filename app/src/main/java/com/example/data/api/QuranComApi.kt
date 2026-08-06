@@ -12,7 +12,7 @@ interface QuranComApi {
         @Path("chapter_number") chapterNumber: Int,
         @Query("words") words: Boolean = true,
         @Query("word_fields") wordFields: String = "text_uthmani,translation,transliteration,position,location,audio_url",
-        @Query("translations") translations: Int = 161,
+        @Query("translations") translations: String = "161",
         @Query("language") language: String = "bn",
         @Query("word_translation_language") wordTranslationLanguage: String = "bn",
         @Query("fields") fields: String = "text_uthmani_tajweed",
@@ -25,7 +25,7 @@ interface QuranComApi {
         @Path("juz_number") juzNumber: Int,
         @Query("words") words: Boolean = true,
         @Query("word_fields") wordFields: String = "text_uthmani,translation,transliteration,position,location,audio_url",
-        @Query("translations") translations: Int = 161,
+        @Query("translations") translations: String = "161",
         @Query("language") language: String = "bn",
         @Query("word_translation_language") wordTranslationLanguage: String = "bn",
         @Query("fields") fields: String = "text_uthmani_tajweed",
@@ -38,7 +38,7 @@ interface QuranComApi {
         @Path("page_number") pageNumber: Int,
         @Query("words") words: Boolean = true,
         @Query("word_fields") wordFields: String = "text_uthmani,translation,transliteration,position,location,audio_url",
-        @Query("translations") translations: Int = 161,
+        @Query("translations") translations: String = "161",
         @Query("language") language: String = "bn",
         @Query("word_translation_language") wordTranslationLanguage: String = "bn",
         @Query("fields") fields: String = "text_uthmani_tajweed",
@@ -71,4 +71,9 @@ interface QuranComApi {
     suspend fun getAvailableTafsirs(
         @Query("language") language: String = "bn"
     ): com.example.data.model.TafsirResourceResponse
+
+    @GET("resources/translations")
+    suspend fun getAvailableTranslations(
+        @Query("language") language: String = "bn"
+    ): com.example.data.model.TranslationResourceResponse
 }

@@ -526,17 +526,19 @@ fun SearchResultItem(
                     query = searchQuery,
                     highlightColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
                 )
-                Text(
-                    text = highlightedArabic,
-                    fontFamily = com.example.ui.theme.getArabicFont(arabicFontName),
-                    fontSize = 24.sp,
-                    lineHeight = 38.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    textAlign = TextAlign.End
-                )
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+                    Text(
+                        text = highlightedArabic,
+                        fontFamily = com.example.ui.theme.getArabicFont(arabicFontName),
+                        fontSize = 24.sp,
+                        lineHeight = 38.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        textAlign = TextAlign.Right
+                    )
+                }
             }
 
             // Bengali Translation Section with Keyword Highlighting!

@@ -97,6 +97,7 @@ data class CombinedAyah(
     val surahNumber: Int = 0, // Surah number of the Ayah
     val arabicText: String,
     val bengaliText: String,
+    val translations: List<QuranComTranslation> = emptyList(),
     val tafsirText: String? = null,
     val audioUrl: String? = null,
     val words: List<QuranComWord> = emptyList(),
@@ -249,4 +250,16 @@ data class TafsirResourceDto(
 data class TranslatedName(
     @SerializedName("name") val name: String? = null,
     @SerializedName("language_name") val languageName: String
+)
+data class TranslationResourceResponse(
+    @SerializedName("translations") val translations: List<TranslationResourceDto>
+)
+
+data class TranslationResourceDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("author_name") val authorName: String? = null,
+    @SerializedName("slug") val slug: String? = null,
+    @SerializedName("language_name") val languageName: String,
+    @SerializedName("translated_name") val translatedName: TranslatedName? = null
 )

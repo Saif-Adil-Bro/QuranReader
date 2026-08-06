@@ -46,6 +46,9 @@ class SurahDetailViewModel(
     private val _availableTafsirs = MutableStateFlow<List<com.example.data.model.TafsirResourceDto>>(emptyList())
     val availableTafsirs: StateFlow<List<com.example.data.model.TafsirResourceDto>> = _availableTafsirs.asStateFlow()
 
+    private val _availableTranslations = MutableStateFlow<List<com.example.data.model.TranslationResourceDto>>(emptyList())
+    val availableTranslations: StateFlow<List<com.example.data.model.TranslationResourceDto>> = _availableTranslations.asStateFlow()
+
     val selectedTafsirNames: StateFlow<List<String>> = kotlinx.coroutines.flow.combine(
         selectedTafsirIds,
         availableTafsirs
@@ -92,6 +95,7 @@ class SurahDetailViewModel(
         viewModelScope.launch {
             try {
                 _availableTafsirs.value = repository.getAvailableTafsirs("bn")
+                _availableTranslations.value = repository.getAvailableTranslations("bn")
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -120,6 +124,20 @@ class SurahDetailViewModel(
     private var downloadJob: Job? = null
 
     // Observe translation toggle
+    val keepScreenOn: StateFlow<Boolean> = settingsRepository.keepScreenOnFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    val selectedTranslationIds: StateFlow<Set<String>> = settingsRepository.selectedTranslationIdsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = setOf("161")
+        )
+
     val showTranslation: StateFlow<Boolean> = settingsRepository.showTranslationFlow
         .stateIn(
             scope = viewModelScope,
@@ -216,6 +234,28 @@ class SurahDetailViewModel(
                     )
                 )
             }
+        }
+    }
+
+    fun setKeepScreenOn(keep: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setKeepScreenOn(keep)
+        }
+    }
+
+    fun setSelectedTranslationIds(ids: Set<String>) {
+        viewModelScope.launch {
+            settingsRepository.setSelectedTranslationIds(ids)
+            val surah = (_uiState.value as? UiState.Success)?.data?.firstOrNull()?.surahNumber
+            if (surah != null) loadSurah(surah)
+        }
+    }
+
+    fun setSelectedTafsirIds(ids: Set<String>) {
+        viewModelScope.launch {
+            settingsRepository.setSelectedTafsirIds(ids)
+            val surah = (_uiState.value as? UiState.Success)?.data?.firstOrNull()?.surahNumber
+            if (surah != null) loadSurah(surah)
         }
     }
 

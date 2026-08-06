@@ -66,18 +66,7 @@ fun RecitationPlayerScreen(
         QuranData.surahNames.find { it.first == surahNum }?.second?.second ?: ""
     } ?: ""
 
-    val qariName = when (selectedQariId) {
-        "ar.alafasy" -> "মিশারি রশিদ আলাফাসি"
-        "ar.abdulbasitmurattal" -> "আব্দুল বাসিদ"
-        "ar.abdullahbasfar" -> "আব্দুল্লাহ বাসফার"
-        "ar.abdurrahmaansudais" -> "আব্দুর রহমান আস-সুদাইস"
-        "ar.hudhaify" -> "আলী আল-হুদাইফি"
-        "ar.husary" -> "মাহমুদ খলিল আল-হুসারি"
-        "ar.mahermuaiqly" -> "মাহের আল-মুআইকিলী"
-        "ar.minshawi" -> "মুহাম্মাদ সিদ্দিক আল-মিনশাবি"
-        "ar.muhammadayyoub" -> "মুহাম্মাদ আইয়ুব"
-        else -> "মিশারি রশিদ আলাফাসি"
-    }
+    val qariName = com.example.util.QariData.getQariNameBengali(selectedQariId)
 
     Scaffold(
         topBar = {

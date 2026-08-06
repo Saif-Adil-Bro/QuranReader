@@ -1,0 +1,2 @@
+#!/bin/bash
+sed -i 's/val selectedTafsirNames by viewModel.selectedTafsirNames.collectAsState()/val selectedTafsirNames by viewModel.selectedTafsirNames.collectAsState()\n    val keepScreenOn by viewModel.keepScreenOn.collectAsState()\n    val availableTranslations by viewModel.availableTranslations.collectAsState()\n    val availableTafsirs by viewModel.availableTafsirs.collectAsState()\n    val selectedTranslationIds by viewModel.selectedTranslationIds.collectAsState()/g' app/src/main/java/com/example/ui/screens/SurahDetailScreen.kt

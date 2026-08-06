@@ -252,6 +252,21 @@ fun AppNavGraph(
                     navController.navigate("settings?subScreen=planner") {
                         launchSingleTop = true
                     }
+                },
+                onNavigateToManzil = {
+                    navController.navigate("settings?subScreen=manzil") {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToSubjectwise = {
+                    navController.navigate("settings?subScreen=subjectwise") {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToCalendar = {
+                    navController.navigate("settings?subScreen=calendar") {
+                        launchSingleTop = true
+                    }
                 }
             )
         }

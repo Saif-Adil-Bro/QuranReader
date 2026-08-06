@@ -31,7 +31,10 @@ fun NotificationScreen(
     viewModel: PostsViewModel,
     onBackClick: () -> Unit,
     onNavigateToDua: ((Int?) -> Unit)? = null,
-    onNavigateToPlanner: (() -> Unit)? = null
+    onNavigateToPlanner: (() -> Unit)? = null,
+    onNavigateToManzil: (() -> Unit)? = null,
+    onNavigateToSubjectwise: (() -> Unit)? = null,
+    onNavigateToCalendar: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val blogPosts by viewModel.rawBlogPosts.collectAsState(initial = emptyList())
@@ -45,8 +48,8 @@ fun NotificationScreen(
     var adminClickCount by remember { mutableIntStateOf(0) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
     
-    var readIds by remember { mutableStateOf(setOf<String>()) }
-    var hiddenIds by remember { mutableStateOf(setOf<String>()) }
+    var readIds by remember { mutableStateOf(NotificationStateHelper.getReadIds(context)) }
+    var hiddenIds by remember { mutableStateOf(NotificationStateHelper.getHiddenIds(context)) }
     var forceUpdate by remember { mutableIntStateOf(0) }
     var selectedTab by remember { mutableStateOf("All") } // "All" or "Unread"
     var expandedGroupAuthor by remember { mutableStateOf<String?>(null) }
@@ -342,6 +345,9 @@ fun NotificationScreen(
                                             if (isSystemNotification) {
                                                 val isDuaTarget = post.author == "কুরআনিক দুআ"
                                                 val isPlannerTarget = post.author == "কুরআন প্ল্যানার"
+                                                val isManzilTarget = post.author == "মানযিল" || post.title.contains("মানযিল")
+                                                val isSubjectwiseTarget = post.author == "বিষয়ভিত্তিক কুরআন" || post.title.contains("বিষয়ভিত্তিক")
+                                                val isCalendarTarget = post.author == "ক্যালেন্ডার" || post.title.contains("ক্যালেন্ডার")
                                                 
                                                 if (isDuaTarget && onNavigateToDua != null) {
                                                     var duaId: Int? = null
@@ -362,6 +368,12 @@ fun NotificationScreen(
                                                     onNavigateToDua(duaId)
                                                 } else if (isPlannerTarget && onNavigateToPlanner != null) {
                                                     onNavigateToPlanner()
+                                                } else if (isManzilTarget && onNavigateToManzil != null) {
+                                                    onNavigateToManzil()
+                                                } else if (isSubjectwiseTarget && onNavigateToSubjectwise != null) {
+                                                    onNavigateToSubjectwise()
+                                                } else if (isCalendarTarget && onNavigateToCalendar != null) {
+                                                    onNavigateToCalendar()
                                                 } else {
                                                     selectedPostForReader = post 
                                                 }

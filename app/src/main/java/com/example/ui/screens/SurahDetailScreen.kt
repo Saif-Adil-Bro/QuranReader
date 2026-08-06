@@ -94,6 +94,7 @@ fun SurahDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val showTranslation by viewModel.showTranslation.collectAsState()
     val showTransliteration by viewModel.showTransliteration.collectAsState()
+    val availableTranslations by viewModel.availableTranslations.collectAsState()
     val showTajweed by viewModel.showTajweed.collectAsState()
     val bookmarkList by viewModel.bookmarks.collectAsState()
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
@@ -116,7 +117,23 @@ fun SurahDetailScreen(
 
     val selectedTafsirIds by viewModel.selectedTafsirIds.collectAsState()
     val selectedTafsirNames by viewModel.selectedTafsirNames.collectAsState()
+    val keepScreenOn by viewModel.keepScreenOn.collectAsState()
+    val availableTafsirs by viewModel.availableTafsirs.collectAsState()
+    val selectedTranslationIds by viewModel.selectedTranslationIds.collectAsState()
     
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity
+    DisposableEffect(keepScreenOn) {
+        if (keepScreenOn) {
+            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
     val parsedViewMode = when (initialViewMode) {
         "MUSHAF" -> ViewMode.MUSHAF
         "READING" -> ViewMode.READING
@@ -125,6 +142,24 @@ fun SurahDetailScreen(
     }
     var viewMode by remember { mutableStateOf(parsedViewMode) }
     var isTafsirSwitching by remember { mutableStateOf(false) }
+
+    val pageOrder = remember { listOf(ViewMode.LIST, ViewMode.READING, ViewMode.TAFSIR, ViewMode.MUSHAF) }
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = pageOrder.indexOf(parsedViewMode).takeIf { it >= 0 } ?: 0,
+        pageCount = { 4 }
+    )
+
+    LaunchedEffect(pagerState.targetPage) {
+        val newMode = pageOrder[pagerState.targetPage]
+        if (viewMode != newMode) {
+            if (newMode == ViewMode.TAFSIR && viewMode != ViewMode.TAFSIR) {
+                isTafsirSwitching = true
+            } else {
+                isTafsirSwitching = false
+            }
+            viewMode = newMode
+        }
+    }
 
     LaunchedEffect(viewMode) {
         if (viewMode == ViewMode.TAFSIR) {
@@ -246,7 +281,7 @@ fun SurahDetailScreen(
                     }
                 }
                 is UiState.Success -> {
-                    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    val listStates = remember { List(4) { androidx.compose.foundation.lazy.LazyListState() } }
                     val coroutineScope = rememberCoroutineScope()
                     var searchQuery by remember { mutableStateOf("") }
                     
@@ -290,6 +325,7 @@ fun SurahDetailScreen(
                     LaunchedEffect(displayedData) {
                         if (initialAyah > 0) {
                             val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) 2 else 1
+                            val currentListState = listStates[pageOrder.indexOf(viewMode).takeIf { it >= 0 } ?: 0]
                             if (viewMode == ViewMode.MUSHAF) {
                                 val targetAyah = displayedData.find { it.numberInSurah == initialAyah }
                                 if (targetAyah != null) {
@@ -297,13 +333,13 @@ fun SurahDetailScreen(
                                     val pagesList = ayahsByPage.keys.toList()
                                     val pageIndex = pagesList.indexOf(targetAyah.page)
                                     if (pageIndex != -1) {
-                                        listState.scrollToItem(pageIndex + headerCount)
+                                        currentListState.scrollToItem(pageIndex + headerCount)
                                     }
                                 }
                             } else {
                                 val ayahIndex = displayedData.indexOfFirst { it.numberInSurah == initialAyah }
                                 if (ayahIndex != -1) {
-                                    listState.scrollToItem(ayahIndex + headerCount)
+                                    currentListState.scrollToItem(ayahIndex + headerCount)
                                 }
                             }
                         }
@@ -316,24 +352,26 @@ fun SurahDetailScreen(
                             val targetAyah = displayedData.find { it.numberInSurah == playingAyahNum }
                             if (targetAyah != null) {
                                 val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) 2 else 1
+                                val currentListState = listStates[pageOrder.indexOf(viewMode).takeIf { it >= 0 } ?: 0]
                                 if (viewMode == ViewMode.MUSHAF) {
                                     val ayahsByPage = displayedData.groupBy { it.page }
                                     val pagesList = ayahsByPage.keys.toList()
                                     val pageIndex = pagesList.indexOf(targetAyah.page)
                                     if (pageIndex != -1) {
-                                        listState.animateScrollToItem(pageIndex + headerCount)
+                                        currentListState.animateScrollToItem(pageIndex + headerCount)
                                     }
                                 } else {
                                     val ayahIndex = displayedData.indexOfFirst { it.numberInSurah == playingAyahNum }
                                     if (ayahIndex != -1) {
-                                        listState.animateScrollToItem(ayahIndex + headerCount)
+                                        currentListState.animateScrollToItem(ayahIndex + headerCount)
                                     }
                                 }
                             }
                         }
                     }
                     
-                    val firstVisibleItemIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+                    val currentListState = listStates[pageOrder.indexOf(viewMode).takeIf { it >= 0 } ?: 0]
+                    val firstVisibleItemIndex by remember(currentListState) { derivedStateOf { currentListState.firstVisibleItemIndex } }
                     LaunchedEffect(firstVisibleItemIndex, viewMode, displayedData) {
                         val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) 2 else 1
                         if (viewMode == ViewMode.MUSHAF) {
@@ -357,12 +395,20 @@ fun SurahDetailScreen(
                         }
                     }
                     
-                    LazyColumn(
-                        state = listState,
+                    androidx.compose.foundation.pager.HorizontalPager(
+                        state = pagerState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+                        verticalAlignment = Alignment.Top
+                    ) { page ->
+                        val pageViewMode = pageOrder[page]
+                        val pageListState = listStates[page]
+                        
+                        LazyColumn(
+                            state = pageListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
                         item {
                             val surahData = com.example.data.QuranData.surahNames.find { it.first == surahNumber }
                             val surahName = surahData?.second?.first ?: "সূরা $surahNumber"
@@ -386,24 +432,21 @@ fun SurahDetailScreen(
                                 info1 = info1,
                                 info2 = info2,
                                 info3 = info3,
-                                viewMode = viewMode, 
+                                viewMode = pageViewMode, 
                                 onModeChange = { mode ->
-                                     if (mode == ViewMode.TAFSIR && viewMode != ViewMode.TAFSIR) {
-                                         isTafsirSwitching = true
-                                     } else {
-                                         isTafsirSwitching = false
+                                     coroutineScope.launch {
+                                         pagerState.animateScrollToPage(pageOrder.indexOf(mode))
                                      }
-                                     viewMode = mode
                                  },
                                 searchQuery = searchQuery,
                                 onSearchQueryChange = { searchQuery = it },
                                 onSearch = {
-                                    if (viewMode != ViewMode.MUSHAF) {
+                                    if (pageViewMode != ViewMode.MUSHAF) {
                                         val ayahIndex = displayedData.indexOfFirst { it.numberInSurah.toString() == searchQuery }
                                         if (ayahIndex != -1) {
                                             val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) 2 else 1
                                             coroutineScope.launch {
-                                                listState.animateScrollToItem(ayahIndex + headerCount)
+                                                pageListState.animateScrollToItem(ayahIndex + headerCount)
                                             }
                                         }
                                     }
@@ -419,7 +462,7 @@ fun SurahDetailScreen(
                                 BismillahSection(arabicFontName = arabicFontName)
                             }
                         }
-                        if (viewMode == ViewMode.TAFSIR && isTafsirSwitching) {
+                        if (pageViewMode == ViewMode.TAFSIR && isTafsirSwitching) {
                             items(3) { index ->
                                 Card(
                                     modifier = Modifier
@@ -464,7 +507,7 @@ fun SurahDetailScreen(
                                     }
                                 }
                             }
-                        } else if (viewMode == ViewMode.MUSHAF) {
+                        } else if (pageViewMode == ViewMode.MUSHAF) {
                             val ayahsByPage = displayedData.groupBy { it.page }
                             ayahsByPage.forEach { (page, ayahs) ->
                                 item {
@@ -493,7 +536,7 @@ fun SurahDetailScreen(
                                 val isBookmarked = bookmarkList.any { it.type == "AYAH" && it.referenceId == ayah.number }
                                 AyahCard(
                                     ayah = ayah,
-                                    viewMode = viewMode,
+                                    viewMode = pageViewMode,
                                     surahNumber = surahNumber,
                                     playAudio = { viewModel.togglePlayPause(ayah, surahNumber) },
                                     onPlayWord = { viewModel.playWord(it) },
@@ -513,6 +556,7 @@ fun SurahDetailScreen(
                             }
                         }
                     }
+                    } // End of HorizontalPager
                 }
             }
         }
@@ -541,6 +585,14 @@ fun SurahDetailScreen(
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
                 ReaderSettingsBottomSheetContent(
+                    keepScreenOn = keepScreenOn,
+                    onKeepScreenOnToggle = { viewModel.setKeepScreenOn(it) },
+                    availableTranslations = availableTranslations,
+                    availableTafsirs = availableTafsirs,
+                    selectedTranslationIds = selectedTranslationIds,
+                    onSelectedTranslationIdsChange = { viewModel.setSelectedTranslationIds(it) },
+                    selectedTafsirIds = selectedTafsirIds,
+                    onSelectedTafsirIdsChange = { viewModel.setSelectedTafsirIds(it) },
                     showTranslation = showTranslation,
                     onShowTranslationToggle = { viewModel.toggleTranslation() },
                     showWaqfSigns = showWaqfSigns,
@@ -771,6 +823,7 @@ fun AyahCard(
     showTransliteration: Boolean = false,
     showTajweed: Boolean = false,
     arabicFontSize: Float,
+    availableTranslations: List<com.example.data.model.TranslationResourceDto> = emptyList(),
     bengaliFontSize: Float,
     arabicFontName: String = "Amiri Quran",
     currentPlayingWordUrl: String? = null,
@@ -1020,15 +1073,60 @@ fun AyahCard(
                         lineSpacing = arabicLineSpacing
                     )
                 }
-                if (showTranslation) {
+                                if (showTranslation) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = ayah.bengaliText,
-                        fontSize = bengaliFontSize.sp,
-                        fontFamily = com.example.ui.theme.solaimanLipiFont,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (ayah.translations.isNotEmpty()) {
+                        ayah.translations.forEach { trans ->
+                                                        val translationInfo = availableTranslations.find { it.id == trans.resourceId }
+                            val translatorName = translationInfo?.translatedName?.name
+                                ?: translationInfo?.name
+                                ?: "Unknown"
+                            
+                            androidx.compose.foundation.layout.Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                    Text(
+                                        text = translatorName,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        fontFamily = com.example.ui.theme.solaimanLipiFont
+                                    )
+                                    if (translationInfo != null) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        androidx.compose.foundation.layout.Box(
+                                            modifier = Modifier
+                                                .background(PrimaryGreen.copy(alpha = 0.1f), androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = translationInfo.languageName.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
+                                                fontSize = 9.sp,
+                                                color = PrimaryGreen,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                fontFamily = com.example.ui.theme.solaimanLipiFont
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = android.text.Html.fromHtml(trans.text, android.text.Html.FROM_HTML_MODE_LEGACY).toString(),
+                                    fontSize = bengaliFontSize.sp,
+                                    fontFamily = com.example.ui.theme.solaimanLipiFont,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = android.text.Html.fromHtml(ayah.bengaliText, android.text.Html.FROM_HTML_MODE_LEGACY).toString(),
+                            fontSize = bengaliFontSize.sp,
+                            fontFamily = com.example.ui.theme.solaimanLipiFont,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             } else if (viewMode == ViewMode.TAFSIR) {
                 if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
@@ -1102,15 +1200,60 @@ fun AyahCard(
                     modifier = Modifier.fillMaxWidth(),
                     lineSpacing = arabicLineSpacing
                 )
-                if (showTranslation) {
+                                if (showTranslation) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = ayah.bengaliText,
-                        fontSize = bengaliFontSize.sp,
-                        fontFamily = com.example.ui.theme.solaimanLipiFont,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (ayah.translations.isNotEmpty()) {
+                        ayah.translations.forEach { trans ->
+                                                        val translationInfo = availableTranslations.find { it.id == trans.resourceId }
+                            val translatorName = translationInfo?.translatedName?.name
+                                ?: translationInfo?.name
+                                ?: "Unknown"
+                            
+                            androidx.compose.foundation.layout.Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                    Text(
+                                        text = translatorName,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        fontFamily = com.example.ui.theme.solaimanLipiFont
+                                    )
+                                    if (translationInfo != null) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        androidx.compose.foundation.layout.Box(
+                                            modifier = Modifier
+                                                .background(PrimaryGreen.copy(alpha = 0.1f), androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = translationInfo.languageName.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
+                                                fontSize = 9.sp,
+                                                color = PrimaryGreen,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                fontFamily = com.example.ui.theme.solaimanLipiFont
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = android.text.Html.fromHtml(trans.text, android.text.Html.FROM_HTML_MODE_LEGACY).toString(),
+                                    fontSize = bengaliFontSize.sp,
+                                    fontFamily = com.example.ui.theme.solaimanLipiFont,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = android.text.Html.fromHtml(ayah.bengaliText, android.text.Html.FROM_HTML_MODE_LEGACY).toString(),
+                            fontSize = bengaliFontSize.sp,
+                            fontFamily = com.example.ui.theme.solaimanLipiFont,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
@@ -1339,6 +1482,14 @@ fun PlayerBottomSheetContent(
 
 @Composable
 fun ReaderSettingsBottomSheetContent(
+    keepScreenOn: Boolean = false,
+    onKeepScreenOnToggle: (Boolean) -> Unit = {},
+    availableTranslations: List<com.example.data.model.TranslationResourceDto> = emptyList(),
+    availableTafsirs: List<com.example.data.model.TafsirResourceDto> = emptyList(),
+    selectedTranslationIds: Set<String> = emptySet(),
+    onSelectedTranslationIdsChange: (Set<String>) -> Unit = {},
+    selectedTafsirIds: Set<String> = emptySet(),
+    onSelectedTafsirIdsChange: (Set<String>) -> Unit = {},
     showTranslation: Boolean,
     onShowTranslationToggle: (Boolean) -> Unit,
     showWaqfSigns: Boolean = true,
@@ -1384,6 +1535,31 @@ fun ReaderSettingsBottomSheetContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        // Keep Screen On Toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "স্ক্রিন চালু রাখুন (Always On Display)",
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Switch(
+                checked = keepScreenOn,
+                onCheckedChange = onKeepScreenOnToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = White,
+                    checkedTrackColor = PrimaryGreen,
+                    uncheckedThumbColor = GrayText,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Translation Toggle
         Row(
@@ -1481,6 +1657,84 @@ fun ReaderSettingsBottomSheetContent(
             }
         )
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Translation Selection
+        Text(
+            text = "অনুবাদ নির্বাচন করুন",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        var translationExpanded by remember { mutableStateOf(false) }
+        val selectedTranslation = availableTranslations.find { selectedTranslationIds.contains(it.id.toString()) }?.name ?: "Select Translation"
+        
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { translationExpanded = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            ) {
+                Text(text = selectedTranslation, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+            }
+            DropdownMenu(
+                expanded = translationExpanded,
+                onDismissRequest = { translationExpanded = false },
+                modifier = Modifier.fillMaxWidth(0.9f)
+            ) {
+                availableTranslations.forEach { translation ->
+                    DropdownMenuItem(
+                        text = { Text(translation.name ?: "Unknown") },
+                        onClick = {
+                            onSelectedTranslationIdsChange(setOf(translation.id.toString()))
+                            translationExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Tafsir Selection
+        Text(
+            text = "তাফসির নির্বাচন করুন",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        var tafsirExpanded by remember { mutableStateOf(false) }
+        val selectedTafsir = availableTafsirs.find { selectedTafsirIds.contains(it.id.toString()) }?.name ?: "Select Tafsir"
+        
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { tafsirExpanded = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            ) {
+                Text(text = selectedTafsir, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+            }
+            DropdownMenu(
+                expanded = tafsirExpanded,
+                onDismissRequest = { tafsirExpanded = false },
+                modifier = Modifier.fillMaxWidth(0.9f)
+            ) {
+                availableTafsirs.forEach { tafsir ->
+                    DropdownMenuItem(
+                        text = { Text(tafsir.name ?: "Unknown") },
+                        onClick = {
+                            onSelectedTafsirIdsChange(setOf(tafsir.id.toString()))
+                            tafsirExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+        
         Spacer(modifier = Modifier.height(24.dp))
 
         // Arabic Font Style Selection

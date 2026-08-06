@@ -187,17 +187,25 @@ class MainActivity : ComponentActivity() {
                       currentIntentState.value = null
                   } else if (navigateTo == "dua") {
                       val duaId = targetIntent.getIntExtra("dua_id", -1)
+                      if (currentRoute != "notifications") {
+                          navController.navigate("notifications") { launchSingleTop = true }
+                      }
                       navController.navigate("settings?subScreen=dua&duaId=$duaId") {
                           launchSingleTop = true
                       }
                       targetIntent.removeExtra("target_screen")
+                      targetIntent.removeExtra("navigate_to")
                       targetIntent.removeExtra("dua_id")
                       currentIntentState.value = null
-                  } else if (navigateTo == "planner") {
-                      navController.navigate("settings?subScreen=planner") {
+                  } else if (navigateTo == "planner" || navigateTo == "manzil" || navigateTo == "subjectwise" || navigateTo == "calendar") {
+                      if (currentRoute != "notifications") {
+                          navController.navigate("notifications") { launchSingleTop = true }
+                      }
+                      navController.navigate("settings?subScreen=$navigateTo") {
                           launchSingleTop = true
                       }
                       targetIntent.removeExtra("target_screen")
+                      targetIntent.removeExtra("navigate_to")
                       currentIntentState.value = null
                   }
               }

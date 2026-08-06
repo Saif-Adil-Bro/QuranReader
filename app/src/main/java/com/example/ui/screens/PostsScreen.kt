@@ -185,8 +185,8 @@ fun PostsScreen(
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
     val rawBlogPosts by viewModel.rawBlogPosts.collectAsState(initial = emptyList())
-    var notifReadIds by remember { mutableStateOf(setOf<String>()) }
-    var notifHiddenIds by remember { mutableStateOf(setOf<String>()) }
+    var notifReadIds by remember { mutableStateOf(com.example.utils.NotificationStateHelper.getReadIds(context)) }
+    var notifHiddenIds by remember { mutableStateOf(com.example.utils.NotificationStateHelper.getHiddenIds(context)) }
     var localNotifsList by remember { mutableStateOf(emptyList<BlogPost>()) }
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
@@ -973,11 +973,11 @@ fun BlogPostDetailScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Body Content
-            Text(
+            com.example.ui.components.FormattedIslamicText(
                 text = post.content,
-                fontSize = textSizeSp.sp,
-                lineHeight = (textSizeSp * 1.6f).sp,
-                color = MaterialTheme.colorScheme.onSurface
+                baseFontSize = textSizeSp.sp,
+                baseColor = MaterialTheme.colorScheme.onSurface,
+                arabicColor = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(32.dp))

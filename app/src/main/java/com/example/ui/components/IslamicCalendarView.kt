@@ -10,17 +10,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -657,11 +660,11 @@ fun IslamicCalendarView(
                             .heightIn(max = 420.dp)
                             .verticalScroll(scrollState)
                     ) {
-                        Text(
+                        FormattedIslamicText(
                             text = currentGuidance.second,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            lineHeight = 22.sp
+                            baseFontSize = 14.sp,
+                            baseColor = MaterialTheme.colorScheme.onSurface,
+                            arabicColor = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -669,14 +672,53 @@ fun IslamicCalendarView(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        OutlinedButton(
+                            onClick = {
+                                val fullText = "${currentGuidance.first}\n\n${currentGuidance.second}"
+                                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                val clip = android.content.ClipData.newPlainText("Guidance", fullText)
+                                clipboard.setPrimaryClip(clip)
+                                android.widget.Toast.makeText(context, "অনুলিপি করা হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFF10B981))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "অনুলিপি করুন",
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("কপি", color = Color(0xFF10B981), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+
                         Button(
-                            onClick = { showGuidanceDialogPair = null },
+                            onClick = {
+                                val fullText = "${currentGuidance.first}\n\n${currentGuidance.second}"
+                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, currentGuidance.first)
+                                    putExtra(android.content.Intent.EXTRA_TEXT, fullText)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(shareIntent, "শেয়ার করুন"))
+                            },
+                            modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("ঠিক আছে", color = Color.White, fontWeight = FontWeight.Bold)
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "শেয়ার করুন",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("শেয়ার", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 }

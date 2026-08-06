@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -66,6 +67,12 @@ data class MenuItem(
     val color: Color
 )
 
+data class MenuCategory(
+    val title: String,
+    val icon: ImageVector,
+    val items: List<MenuItem>
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -83,7 +90,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
     
     val showTranslation by viewModel.showTranslation.collectAsState()
     val showTransliteration by viewModel.showTransliteration.collectAsState()
@@ -98,26 +105,51 @@ fun SettingsScreen(
     
     var activeDialog by remember(initialSubScreen) { mutableStateOf<String?>(initialSubScreen) }
     
-    val menuItems = listOf(
-        MenuItem("calendar", "ক্যালেন্ডার", Icons.Default.CalendarMonth, Color(0xFF10B981)),
-        MenuItem("bookmark", "বুকমার্ক", Icons.Default.Bookmark, Color(0xFFEF4444)),
-        MenuItem("note", "নোট", Icons.Default.Edit, Color(0xFF0D9488)),
-        MenuItem("planner", "কুরআন প্ল্যানার", Icons.Default.DateRange, Color(0xFF10B981)),
-        MenuItem("subjectwise", "বিষয়ভিত্তিক কুরআন", Icons.Default.Category, Color(0xFF3B82F6)),
-        MenuItem("manzil", "মানযিল", Icons.Default.AutoAwesome, Color(0xFF10B981)),
-        MenuItem("dua", "কুরআনিক দুআ", Icons.Default.Schedule, Color(0xFF8B5CF6)),
-        MenuItem("morning_evening_dua", "সকাল সন্ধ্যার দুআ", Icons.Default.WbSunny, Color(0xFFF59E0B)),
-        MenuItem("game", "ওয়ার্ড গেম", Icons.Default.PlayCircle, Color(0xFFEC4899)),
-        MenuItem("player", "কুরআন প্লেয়ার", Icons.Default.MusicNote, Color(0xFF06B6D4)),
-        MenuItem("hifz", "কুরআন হিফজ", Icons.Default.CheckCircle, Color(0xFF6366F1)),
-        MenuItem("learn", "কুরআন শিক্ষা", Icons.Default.Book, Color(0xFF4F46E5)),
-        MenuItem("video", "কুরআন ভিডিও", Icons.Default.Videocam, Color(0xFFEF4444)),
-        MenuItem("offline_sync", "অফলাইন ডাউনলোড", Icons.Default.Download, Color(0xFFF59E0B)),
-        MenuItem("backup", "ব্যাকআপ", Icons.Default.Cloud, Color(0xFF6B7280)),
-        MenuItem("notifications", "নোটিফিকেশন", Icons.Default.Notifications, Color(0xFFFBBF24)),
-        MenuItem("theme", "অ্যাপ থিম", Icons.Default.Palette, Color(0xFF9C27B0)),
-        MenuItem("about", "সম্পর্কে", Icons.Default.Info, Color(0xFF4CAF50)),
-        MenuItem("contact", "যোগাযোগ", Icons.Default.ContactMail, Color(0xFFF97316))
+    val menuCategories = listOf(
+        MenuCategory(
+            title = "কুরআন শিক্ষা ও মিডিয়া",
+            icon = Icons.Default.MenuBook,
+            items = listOf(
+                MenuItem("subjectwise", "বিষয়ভিত্তিক কুরআন", Icons.Default.Category, Color(0xFF3B82F6)),
+                MenuItem("learn", "কুরআন শিক্ষা", Icons.Default.Book, Color(0xFF4F46E5)),
+                MenuItem("hifz", "কুরআন হিফজ", Icons.Default.CheckCircle, Color(0xFF6366F1)),
+                MenuItem("player", "কুরআন প্লেয়ার", Icons.Default.MusicNote, Color(0xFF06B6D4)),
+                MenuItem("video", "কুরআন ভিডিও", Icons.Default.Videocam, Color(0xFFEF4444))
+            )
+        ),
+        MenuCategory(
+            title = "দুআ ও ইবাদত",
+            icon = Icons.Default.AutoAwesome,
+            items = listOf(
+                MenuItem("dua", "কুরআনিক দুআ", Icons.Default.Schedule, Color(0xFF8B5CF6)),
+                MenuItem("morning_evening_dua", "সকাল সন্ধ্যার দুআ", Icons.Default.WbSunny, Color(0xFFF59E0B)),
+                MenuItem("manzil", "মানযিল", Icons.Default.AutoAwesome, Color(0xFF10B981)),
+                MenuItem("qibla", "কিবলা কম্পাস", Icons.Default.Explore, Color(0xFFEAB308)),
+                MenuItem("calendar", "ক্যালেন্ডার", Icons.Default.CalendarMonth, Color(0xFF10B981)),
+                MenuItem("planner", "কুরআন প্ল্যানার", Icons.Default.DateRange, Color(0xFF10B981))
+            )
+        ),
+        MenuCategory(
+            title = "ব্যক্তিগত টুলস",
+            icon = Icons.Default.Person,
+            items = listOf(
+                MenuItem("bookmark", "বুকমার্ক", Icons.Default.Bookmark, Color(0xFFEF4444)),
+                MenuItem("note", "নোট", Icons.Default.Edit, Color(0xFF0D9488)),
+                MenuItem("game", "ওয়ার্ড গেম", Icons.Default.PlayCircle, Color(0xFFEC4899))
+            )
+        ),
+        MenuCategory(
+            title = "অ্যাপ সিস্টেম ও সেটিংস",
+            icon = Icons.Default.Settings,
+            items = listOf(
+                MenuItem("theme", "অ্যাপ থিম", Icons.Default.Palette, Color(0xFF9C27B0)),
+                MenuItem("notifications", "নোটিফিকেশন", Icons.Default.Notifications, Color(0xFFFBBF24)),
+                MenuItem("offline_sync", "অফলাইন ডাউনলোড", Icons.Default.Download, Color(0xFFF59E0B)),
+                MenuItem("backup", "ব্যাকআপ", Icons.Default.Cloud, Color(0xFF6B7280)),
+                MenuItem("about", "সম্পর্কে", Icons.Default.Info, Color(0xFF4CAF50)),
+                MenuItem("contact", "যোগাযোগ", Icons.Default.ContactMail, Color(0xFFF97316))
+            )
+        )
     )
     
     Scaffold(
@@ -347,76 +379,111 @@ fun SettingsScreen(
                 }
             }
             
-            // 2. Menu Items Grid (Custom Chunked Layout)
-            val chunkedItems = menuItems.chunked(3)
-            chunkedItems.forEach { rowItems ->
+            // 2. Categorized Menu Items Grid
+            menuCategories.forEachIndexed { categoryIndex, category ->
+                if (categoryIndex > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                
+                // Category Title Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    rowItems.forEach { item ->
-                        val isBackup = item.id == "backup"
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .shadow(if (isBackup) 0.dp else 2.dp, RoundedCornerShape(16.dp))
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    if (isBackup) MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-                                    else MaterialTheme.colorScheme.surface
-                                )
-                                .clickable {
-                                    if (isBackup) {
-                                        android.widget.Toast.makeText(context, "শীঘ্রই আসছে!", android.widget.Toast.LENGTH_SHORT).show()
-                                    } else if (item.id == "player") {
-                                        onNavigateToPlayer()
-                                    } else {
-                                        activeDialog = item.id
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(PrimaryGreen.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = category.icon,
+                            contentDescription = null,
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = category.title,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                val chunkedItems = category.items.chunked(3)
+                chunkedItems.forEach { rowItems ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        rowItems.forEach { item ->
+                            val isBackup = item.id == "backup"
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .shadow(if (isBackup) 0.dp else 2.dp, RoundedCornerShape(16.dp))
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        if (isBackup) MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                                        else MaterialTheme.colorScheme.surface
+                                    )
+                                    .clickable {
+                                        if (isBackup) {
+                                            android.widget.Toast.makeText(context, "শীঘ্রই আসছে!", android.widget.Toast.LENGTH_SHORT).show()
+                                        } else if (item.id == "player") {
+                                            onNavigateToPlayer()
+                                        } else {
+                                            activeDialog = item.id
+                                        }
                                     }
-                                }
-                                .alpha(if (isBackup) 0.5f else 1f)
-                                .padding(12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxWidth()
+                                    .alpha(if (isBackup) 0.5f else 1f)
+                                    .padding(12.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .background(item.color.copy(alpha = 0.1f), CircleShape),
-                                    contentAlignment = Alignment.Center
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = item.title,
-                                        tint = item.color,
-                                        modifier = Modifier.size(24.dp)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .background(item.color.copy(alpha = 0.1f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = item.title,
+                                            tint = item.color,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        text = item.title,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Text(
-                                    text = item.title,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
                             }
                         }
-                    }
-                    
-                    // Symmetrical spaces if chunk contains less than 3 items
-                    if (rowItems.size < 3) {
-                        repeat(3 - rowItems.size) {
-                            Spacer(modifier = Modifier.weight(1f))
+                        
+                        // Symmetrical spaces if chunk contains less than 3 items
+                        if (rowItems.size < 3) {
+                            repeat(3 - rowItems.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -476,8 +543,8 @@ fun SettingsScreen(
                             Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = PrimaryGreen, modifier = Modifier.size(16.dp))
                         }
                         Text(
-                            text = if (hijriOffset > 0) "+${com.example.utils.DateUtil.toBengaliNumerals(hijriOffset)}" 
-                                   else if (hijriOffset < 0) "-${com.example.utils.DateUtil.toBengaliNumerals(-hijriOffset)}" 
+                            text = if (combinedHijriOffset > 0) "+${com.example.utils.DateUtil.toBengaliNumerals(combinedHijriOffset)}" 
+                                   else if (combinedHijriOffset < 0) "-${com.example.utils.DateUtil.toBengaliNumerals(-combinedHijriOffset)}" 
                                    else "০",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
@@ -719,6 +786,8 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             val availableTafsirs by viewModel.availableTafsirs.collectAsState()
+    val availableTranslations by viewModel.availableTranslations.collectAsState()
+    val selectedTranslationIds by viewModel.selectedTranslationIds.collectAsState()
             val selectedTafsirIds by viewModel.selectedTafsirIds.collectAsState()
             val downloadedTafsirIds by viewModel.downloadedTafsirIds.collectAsState()
             val downloadingTafsirIds by viewModel.downloadingTafsirIds.collectAsState()
@@ -726,20 +795,6 @@ fun SettingsScreen(
             val selectedQariId by viewModel.selectedQariId.collectAsState()
             var showTafsirDialog by remember { mutableStateOf(false) }
             var showQariDialog by remember { mutableStateOf(false) }
-
-            val qariList = listOf(
-                "ar.alafasy" to "Mishary Rashid Alafasy",
-                "ar.abdulbasitmurattal" to "Abdul Basit",
-                "ar.abdullahbasfar" to "Abdullah Basfar",
-                "ar.abdurrahmaansudais" to "Abdurrahmaan As-Sudais",
-                "ar.hudhaify" to "Ali Al-Hudhaify",
-                "ar.husary" to "Mahmoud Khalil Al-Husary",
-                "ar.husarymujawwad" to "Mahmoud Khalil Al-Husary Mujawwad",
-                "ar.mahermuaiqly" to "Maher Al Muaiqly",
-                "ar.minshawi" to "Mohamed Siddiq al-Minshawi",
-                "ar.muhammadayyoub" to "Muhammad Ayyoub",
-                "ar.muhammadjibreel" to "Muhammad Jibreel"
-            )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -765,7 +820,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                     ) {
-                        val selectedQariName = qariList.find { it.first == selectedQariId }?.second ?: "Mishary Rashid Alafasy"
+                        val selectedQariName = com.example.util.QariData.getQariDisplayName(selectedQariId)
                         Text(text = selectedQariName, modifier = Modifier.weight(1f))
                         Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Qari")
                     }
@@ -774,40 +829,27 @@ fun SettingsScreen(
                     
                     
                     if (showQariDialog) {
-                        AlertDialog(
-                            onDismissRequest = { showQariDialog = false },
-                            title = { Text("ক্বারী নির্বাচন করুন") },
-                            text = {
-                                LazyColumn {
-                                    items(qariList) { qari ->
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    viewModel.setSelectedQariId(qari.first)
-                                                    showQariDialog = false
-                                                }
-                                                .padding(vertical = 12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            RadioButton(
-                                                selected = selectedQariId == qari.first,
-                                                onClick = {
-                                                    viewModel.setSelectedQariId(qari.first)
-                                                    showQariDialog = false
-                                                }
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(text = qari.second)
-                                        }
-                                    }
-                                }
+                        val selectionItems = com.example.util.QariData.list.map { item ->
+                            com.example.ui.components.SelectionItem(
+                                id = item.id,
+                                title = item.nameEnglish,
+                                subtitle = item.nameBengali,
+                                icon = androidx.compose.material.icons.Icons.Default.RecordVoiceOver
+                            )
+                        }
+                        com.example.ui.components.SmartSelectionDialog(
+                            title = "ক্বারী নির্বাচন করুন",
+                            subtitle = "আপনার পছন্দের তেলাওয়াতকারী বেছে নিন",
+                            headerIcon = androidx.compose.material.icons.Icons.Default.RecordVoiceOver,
+                            items = selectionItems,
+                            selectedId = selectedQariId,
+                            onSelectItem = { qariId ->
+                                viewModel.setSelectedQariId(qariId)
+                                showQariDialog = false
                             },
-                            confirmButton = {
-                                androidx.compose.material3.TextButton(onClick = { showQariDialog = false }) {
-                                    Text("বন্ধ করুন")
-                                }
-                            }
+                            onDismiss = { showQariDialog = false },
+                            showSearch = true,
+                            searchPlaceholder = "ক্বারী খুঁজুন..."
                         )
                     }
 
@@ -892,7 +934,13 @@ fun SettingsScreen(
         MenuDetailDialog(
             type = activeDialog!!,
             viewModel = viewModel,
-            onDismiss = { activeDialog = null },
+            onDismiss = {
+                if (initialSubScreen != null) {
+                    onNavigateBack()
+                } else {
+                    activeDialog = null
+                }
+            },
             onNavigateToSurah = onNavigateToSurah,
             onNavigateToPage = onNavigateToPage,
             onNavigateToJuz = onNavigateToJuz,
@@ -954,11 +1002,30 @@ fun MenuDetailDialog(
         onDismissRequest = handleBack,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        val isDark = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
+        val bgGradient = if (isDark) {
+            androidx.compose.ui.graphics.Brush.verticalGradient(
+                colors = listOf(
+                    Color(0xFF1E2A22),
+                    Color(0xFF15201A),
+                    Color(0xFF0F1713)
+                )
+            )
+        } else {
+            androidx.compose.ui.graphics.Brush.verticalGradient(
+                colors = listOf(
+                    Color(0xFFE8F5E9),
+                    Color(0xFFEEF7F0),
+                    Color(0xFFDAECE0)
+                )
+            )
+        }
+        
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            color = MaterialTheme.colorScheme.background
+                .let { if (type == "qibla") it.background(bgGradient) else it.background(MaterialTheme.colorScheme.background) },
+            color = if (type == "qibla") Color.Transparent else MaterialTheme.colorScheme.background
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Dialog Header
@@ -972,6 +1039,7 @@ fun MenuDetailDialog(
                     "manzil" -> "মানযিল"
                     "dua" -> "কুরআনিক দুআ"
                     "morning_evening_dua" -> "সকাল সন্ধ্যার দুআ"
+                    "qibla" -> "কিবলা কম্পাস"
                     "game" -> "ওয়ার্ড গেম"
                     "player" -> "কুরআন অডিও প্লেয়ার"
                     "hifz" -> "হিফজ ট্র্যাকার"
@@ -990,7 +1058,6 @@ fun MenuDetailDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .background(MaterialTheme.colorScheme.surface)
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -1007,14 +1074,16 @@ fun MenuDetailDialog(
                     Spacer(modifier = Modifier.size(48.dp)) // Symmetrical spacer
                 }
                 
-                HorizontalDivider(color = Border)
+                if (type != "qibla") {
+                    HorizontalDivider(color = Border)
+                }
                 
                 // Dialog Content Body
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f)
-                        .padding(16.dp)
+                        .padding(if (type == "qibla") 0.dp else 16.dp)
                 ) {
                     when (type) {
                         "calendar" -> com.example.ui.components.IslamicCalendarView(
@@ -1061,6 +1130,8 @@ fun MenuDetailDialog(
                             onSelectedDuaChange = { selectedDuaForDuaTab = it },
                             isMorningEvening = false
                         )
+                        "qibla" -> QiblaDialogContent()
+                        "qibla" -> QiblaDialogContent()
                         "morning_evening_dua" -> DuaDialogContent(
                             viewModel = viewModel,
                             selectedDua = selectedDuaForDuaTab,
@@ -2209,7 +2280,7 @@ fun SubjectwiseDialogContent(
                             if (verse.arabicText.isNotEmpty()) {
                                 Surface(
                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(bottom = 12.dp)
@@ -2217,15 +2288,15 @@ fun SubjectwiseDialogContent(
                                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                         Text(
                                             text = verse.arabicText,
-                                            fontSize = 24.sp,
+                                            fontSize = 22.sp,
                                             fontWeight = FontWeight.Medium,
-                                            color = PrimaryGreen,
-                                            lineHeight = 40.sp,
-                                            textAlign = TextAlign.Right,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            lineHeight = 38.sp,
+                                            textAlign = TextAlign.Center,
                                             fontFamily = com.example.ui.theme.scheherazadeFont,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(14.dp)
+                                                .padding(horizontal = 16.dp, vertical = 16.dp)
                                         )
                                     }
                                 }
@@ -2596,20 +2667,25 @@ fun DuaDialogContent(
                                     Spacer(modifier = Modifier.height(20.dp))
                                 }
                                 
-                                // Arabic Text - large, centered, elegant high-contrast display exactly like the screenshot
+                                // Arabic Text - large, RTL aligned display
                                 if (segment.arabic.isNotEmpty() && segment.arabic != "null") {
-                                    Text(
-                                        text = segment.arabic,
-                                        fontSize = 26.sp,
-                                        fontFamily = arabicFont,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 16.dp),
-                                        lineHeight = 44.sp
-                                    )
+                                    val cleanForBismillah = segment.arabic.replace(Regex("[\\s\\u064B-\\u065F\\u0670\\u06D6-\\u06ED]"), "")
+                                    val isBismillah = cleanForBismillah == "بسماللهالرحمنالرحيم" || cleanForBismillah == "بسمٱللهٱلرحمنٱلرحيم"
+                                    
+                                    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+                                        Text(
+                                            text = segment.arabic,
+                                            fontSize = 26.sp,
+                                            fontFamily = arabicFont,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            textAlign = if (isBismillah) TextAlign.Center else TextAlign.Right,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 16.dp),
+                                            lineHeight = 44.sp
+                                        )
+                                    }
                                 }
                                 
                                 // Translation with Left-Border Accent Bar exactly like the screenshot
@@ -2908,7 +2984,7 @@ fun GameSetupScreen(viewModel: SettingsViewModel) {
         }
     }
     
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
     val inactiveBg = MaterialTheme.colorScheme.surface
     val inactiveBorder = if (isDark) Color(0xFF2A3E39) else Border
     val textInactive = MaterialTheme.colorScheme.onSurface
@@ -3062,7 +3138,7 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     val context = androidx.compose.ui.platform.LocalContext.current
     
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
     
     val vibrator = androidx.compose.runtime.remember {
         context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
@@ -3243,7 +3319,7 @@ fun GameResultScreen(viewModel: SettingsViewModel) {
         else -> "ইনশাআল্লাহ! পরবর্তীতে আরো ভালো হবে।"
     }
     
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
     val outerCardBg = if (isDark) Color(0xFF0C241F) else Color(0xFFE8F5E9)
     val innerCardBg = if (isDark) Color(0xFF061A16) else Color(0xFFE8F5E9)
 
@@ -3655,10 +3731,14 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
 
     // Tafsir States
     val availableTafsirs by viewModel.availableTafsirs.collectAsState()
+    val availableTranslations by viewModel.availableTranslations.collectAsState()
+    val selectedTranslationIds by viewModel.selectedTranslationIds.collectAsState()
     val selectedTafsirIds by viewModel.selectedTafsirIds.collectAsState()
     val downloadedTafsirIds by viewModel.downloadedTafsirIds.collectAsState()
     val downloadingTafsirIds by viewModel.downloadingTafsirIds.collectAsState()
     val tafsirDownloadProgress by viewModel.tafsirDownloadProgress.collectAsState()
+
+    var expandedSection by remember { mutableStateOf<Int?>(0) }
 
     // Refresh states
     LaunchedEffect(Unit) {
@@ -3704,15 +3784,16 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
         
         // Word by Word & Tajweed Card
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { expandedSection = if (expandedSection == 0) null else 0 }.padding(16.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -3727,7 +3808,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "শব্দার্থ ও তাজবীদ ডাটা",
                             fontWeight = FontWeight.Bold,
@@ -3740,7 +3821,15 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Icon(
+                        imageVector = if (expandedSection == 0) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = "Expand/Collapse",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
+                
+                androidx.compose.animation.AnimatedVisibility(visible = expandedSection == 0) {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Download Status UI
@@ -3881,15 +3970,16 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
 
         // 2. Audio Cache Card
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { expandedSection = if (expandedSection == 1) null else 1 }.padding(16.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -3904,7 +3994,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "অডিও প্লেব্যাক অফলাইন ক্যাশ",
                             fontWeight = FontWeight.Bold,
@@ -3917,7 +4007,15 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Icon(
+                        imageVector = if (expandedSection == 1) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = "Expand/Collapse",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
+                
+                androidx.compose.animation.AnimatedVisibility(visible = expandedSection == 1) {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -4072,17 +4170,183 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 3. Tafsir Data Card
+        // 3. Translation Data Card
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 2.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+        ) {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { expandedSection = if (expandedSection == 2) null else 2 }.padding(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(PrimaryGreen.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Translate,
+                            contentDescription = null,
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "অনুবাদ ডাটা",
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "আপনার পছন্দের বাংলা অনুবাদ নির্বাচন করুন",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = if (expandedSection == 2) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = "Expand/Collapse",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                androidx.compose.animation.AnimatedVisibility(visible = expandedSection == 2) {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "আপনি চাইলে একাধিক অনুবাদ একসাথে নির্বাচন করতে পারেন।",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
+                    availableTranslations.forEach { translation ->
+                        val translationId = translation.id.toString()
+                        val isSelected = selectedTranslationIds.contains(translationId)
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.toggleTranslationId(translationId) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = { viewModel.toggleTranslationId(translationId) },
+                                colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = PrimaryGreen)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = translation.translatedName?.name ?: translation.name ?: "Unknown",
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        modifier = Modifier.weight(1f),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .background(PrimaryGreen.copy(alpha = 0.1f), androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = translation.languageName.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
+                                            fontSize = 9.sp,
+                                            color = PrimaryGreen,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = translation.authorName ?: "",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            
+                            val downloadedTranslations by viewModel.downloadedTranslations.collectAsState()
+                            val translationDownloadProgress by viewModel.translationDownloadProgress.collectAsState()
+                            
+                            val isDownloaded = downloadedTranslations.contains(translationId)
+                            val isDownloading = viewModel.downloadingTranslationIds.collectAsState().value.contains(translationId)
+                            val progress = translationDownloadProgress[translationId] ?: 0f
+                            
+                            if (!isDownloaded) {
+                                if (isDownloading) {
+                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp).padding(2.dp)) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            progress = { progress },
+                                            color = PrimaryGreen,
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                } else {
+                                    androidx.compose.material3.IconButton(
+                                        onClick = { viewModel.downloadTranslation(translationId) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            androidx.compose.material.icons.Icons.Default.Download,
+                                            contentDescription = "Download Translation",
+                                            tint = PrimaryGreen
+                                        )
+                                    }
+                                }
+                            } else {
+                                Icon(
+                                    androidx.compose.material.icons.Icons.Default.CheckCircle,
+                                    contentDescription = "Downloaded",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                    if (availableTranslations.isEmpty()) {
+                        Text(
+                            text = "অনুবাদ ডাটা লোড হচ্ছে...",
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 4. Tafsir Data Card
         androidx.compose.material3.Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { expandedSection = if (expandedSection == 3) null else 3 }.padding(16.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -4097,7 +4361,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "তাফসীর ডাটা",
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -4110,7 +4374,15 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Icon(
+                        imageVector = if (expandedSection == 3) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = "Expand/Collapse",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
+                
+                androidx.compose.animation.AnimatedVisibility(visible = expandedSection == 3) {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "একসাথে সর্বোচ্চ ৩টি তাফসীর নির্বাচন করতে পারবেন",
@@ -4159,7 +4431,9 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                         modifier = Modifier.weight(1f),
                                         color = MaterialTheme.colorScheme.onSurface,
-                                        fontSize = 13.sp
+                                        fontSize = 13.sp,
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Box(
@@ -4175,7 +4449,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                                         )
                                     }
                                 }
-                                Text(text = tafsir.authorName ?: "Unknown", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = tafsir.authorName ?: "Unknown", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             if (!isDownloaded) {
@@ -4216,7 +4490,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
             }
         }
 
-        // 4. Offline Features Info Card
+        // 5. Offline Features Info Card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -4225,10 +4499,11 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
             border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.25f)),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { expandedSection = if (expandedSection == 4) null else 4 }.padding(16.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -4243,7 +4518,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "অফলাইনে কি কি সুবিধা পাবেন?",
                             fontWeight = FontWeight.Bold,
@@ -4256,7 +4531,15 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Icon(
+                        imageVector = if (expandedSection == 4) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = "Expand/Collapse",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
+                
+                androidx.compose.animation.AnimatedVisibility(visible = expandedSection == 4) {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
 
                 Spacer(modifier = Modifier.height(14.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -4322,10 +4605,11 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
             border = BorderStroke(1.dp, onlineAccentColor.copy(alpha = 0.25f)),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { expandedSection = if (expandedSection == 5) null else 5 }.padding(16.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -4340,7 +4624,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "অনলাইন কানেকশনে কি কি পাবেন?",
                             fontWeight = FontWeight.Bold,
@@ -4353,7 +4637,15 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Icon(
+                        imageVector = if (expandedSection == 5) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = "Expand/Collapse",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
+                
+                androidx.compose.animation.AnimatedVisibility(visible = expandedSection == 5) {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
 
                 Spacer(modifier = Modifier.height(14.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -4408,6 +4700,18 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+                    }
+                }
+                    }
+                }
+                    }
+                }
+                    }
+                }
+                    }
+                }
+                    }
+                }
     }
 
     // Searchable Surah Selector Dialog

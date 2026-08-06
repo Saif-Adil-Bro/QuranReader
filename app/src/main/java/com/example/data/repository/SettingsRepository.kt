@@ -52,6 +52,7 @@ class SettingsRepository(val context: Context) {
     
     // Tafsir Settings
     private val SELECTED_TAFSIR_IDS_KEY = stringSetPreferencesKey("selected_tafsir_ids")
+    private val SELECTED_TRANSLATION_IDS_KEY = stringSetPreferencesKey("selected_translation_ids")
     
     // Qari Settings
     private val SELECTED_QARI_ID_KEY = stringPreferencesKey("selected_qari_id")
@@ -117,6 +118,9 @@ class SettingsRepository(val context: Context) {
 
     val selectedTafsirIdsFlow: Flow<Set<String>> = context.dataStore.data
         .map { preferences -> preferences[SELECTED_TAFSIR_IDS_KEY] ?: setOf("164") }
+
+    val selectedTranslationIdsFlow: Flow<Set<String>> = context.dataStore.data
+        .map { preferences -> preferences[SELECTED_TRANSLATION_IDS_KEY] ?: setOf("161") }
 
     val selectedQariIdFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[SELECTED_QARI_ID_KEY] ?: "ar.alafasy" }
@@ -272,5 +276,12 @@ class SettingsRepository(val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[intPreferencesKey("offset_$mushafId")] = offset
         }
+
     }
+    suspend fun setSelectedTranslationIds(ids: Set<String>) {
+        context.dataStore.edit { preferences ->
+            preferences[SELECTED_TRANSLATION_IDS_KEY] = ids
+        }
+    }
+
 }

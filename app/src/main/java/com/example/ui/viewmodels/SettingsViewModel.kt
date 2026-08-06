@@ -120,9 +120,50 @@ class SettingsViewModel(
         }
     }
 
-    // ---------------- Offline Sync States ----------------
+    
+
+    private val _downloadingTranslationIds = MutableStateFlow<Set<String>>(emptySet())
+    val downloadingTranslationIds: StateFlow<Set<String>> = _downloadingTranslationIds.asStateFlow()
+
+    private val _translationDownloadProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val translationDownloadProgress: StateFlow<Map<String, Float>> = _translationDownloadProgress.asStateFlow()
+
+    private val _downloadedTranslations = MutableStateFlow<Set<String>>(emptySet())
+    val downloadedTranslations: StateFlow<Set<String>> = _downloadedTranslations.asStateFlow()
+
+    private fun updateDownloadedTranslations() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val downloaded = _availableTranslations.value.filter {
+                quranRepository.isTranslationDownloaded(it.id.toString())
+            }.map { it.id.toString() }.toSet()
+            _downloadedTranslations.value = downloaded
+        }
+    }
+
+    fun downloadTranslation(id: String) {
+        if (_downloadingTranslationIds.value.contains(id)) return
+        _downloadingTranslationIds.value = _downloadingTranslationIds.value + id
+        _translationDownloadProgress.value = _translationDownloadProgress.value.toMutableMap().apply { put(id, 0f) }
+        
+        viewModelScope.launch {
+            try {
+                quranRepository.downloadTranslation(id) { progress ->
+                    _translationDownloadProgress.value = _translationDownloadProgress.value.toMutableMap().apply { put(id, progress) }
+                }
+                updateDownloadedTranslations()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _downloadingTranslationIds.value = _downloadingTranslationIds.value - id
+                _translationDownloadProgress.value = _translationDownloadProgress.value.toMutableMap().apply { remove(id) }
+            }
+        }
+    }
 
     // ---------------- Offline Sync States ----------------
+
+    
+// ---------------- Offline Sync States ----------------
     private val _isDownloadingQuran = MutableStateFlow(false)
     val isDownloadingQuran: StateFlow<Boolean> = _isDownloadingQuran.asStateFlow()
 
@@ -395,6 +436,32 @@ class SettingsViewModel(
 
     private val _availableTafsirs = MutableStateFlow<List<com.example.data.model.TafsirResourceDto>>(emptyList())
     val availableTafsirs: StateFlow<List<com.example.data.model.TafsirResourceDto>> = _availableTafsirs.asStateFlow()
+
+    private val _availableTranslations = MutableStateFlow<List<com.example.data.model.TranslationResourceDto>>(emptyList())
+    val availableTranslations: StateFlow<List<com.example.data.model.TranslationResourceDto>> = _availableTranslations.asStateFlow()
+
+    val selectedTranslationIds: StateFlow<Set<String>> = repository.selectedTranslationIdsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = setOf("161")
+        )
+
+    fun setSelectedTranslationIds(ids: Set<String>) {
+        viewModelScope.launch { repository.setSelectedTranslationIds(ids) }
+    }
+
+    fun toggleTranslationId(id: String) {
+        val current = selectedTranslationIds.value.toMutableSet()
+        if (current.contains(id)) {
+            if (current.size > 1) { // Prevent deselecting all
+                current.remove(id)
+            }
+        } else {
+            current.add(id)
+        }
+        setSelectedTranslationIds(current)
+    }
 
     val selectedTafsirIds: StateFlow<Set<String>> = repository.selectedTafsirIdsFlow
         .stateIn(
@@ -918,7 +985,9 @@ class SettingsViewModel(
         
         viewModelScope.launch {
             _availableTafsirs.value = quranRepository.getAvailableTafsirs("bn")
+            _availableTranslations.value = quranRepository.getAvailableTranslations("bn")
             updateDownloadedTafsirs()
+            updateDownloadedTranslations()
         }
     }
 }

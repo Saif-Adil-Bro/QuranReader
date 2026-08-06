@@ -152,10 +152,28 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val rawBlogPosts by (postsViewModel?.rawBlogPosts ?: kotlinx.coroutines.flow.flowOf(emptyList())).collectAsState(initial = emptyList())
-    var notifReadIds by remember { mutableStateOf(setOf<String>()) }
-    var notifHiddenIds by remember { mutableStateOf(setOf<String>()) }
+    var notifReadIds by remember { mutableStateOf(com.example.utils.NotificationStateHelper.getReadIds(context)) }
+    var notifHiddenIds by remember { mutableStateOf(com.example.utils.NotificationStateHelper.getHiddenIds(context)) }
     var localNotifsList by remember { mutableStateOf(emptyList<com.example.data.model.BlogPost>()) }
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    
+    var backPressedOnce by remember { mutableStateOf(false) }
+
+    androidx.activity.compose.BackHandler {
+        if (backPressedOnce) {
+            (context as? android.app.Activity)?.finish()
+        } else {
+            backPressedOnce = true
+            android.widget.Toast.makeText(context, "অ্যাপ থেকে বের হতে আবার ব্যাক প্রেস করুন", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(backPressedOnce) {
+        if (backPressedOnce) {
+            kotlinx.coroutines.delay(2000L)
+            backPressedOnce = false
+        }
+    }
 
     LaunchedEffect(Unit) {
         val db = com.example.data.local.NotificationDatabase.getDatabase(context)
@@ -655,8 +673,8 @@ fun HomeScreen(
                             )
                         }
 
-                        val offsetDisplay = if (hijriOffset > 0) "+${com.example.utils.DateUtil.toBengaliNumerals(hijriOffset)}"
-                                           else if (hijriOffset < 0) "-${com.example.utils.DateUtil.toBengaliNumerals(-hijriOffset)}"
+                        val offsetDisplay = if (combinedHijriOffset > 0) "+${com.example.utils.DateUtil.toBengaliNumerals(combinedHijriOffset)}"
+                                           else if (combinedHijriOffset < 0) "-${com.example.utils.DateUtil.toBengaliNumerals(-combinedHijriOffset)}"
                                            else com.example.utils.DateUtil.toBengaliNumerals(0)
 
                         Text(
@@ -2055,74 +2073,25 @@ fun QariSelectorDialog(
     onDismiss: () -> Unit,
     onSelectQari: (String) -> Unit
 ) {
-    val qariList = listOf(
-        "ar.alafasy" to "Mishary Rashid Alafasy",
-        "ar.abdulbasitmurattal" to "Abdul Basit",
-        "ar.abdullahbasfar" to "Abdullah Basfar",
-        "ar.abdurrahmaansudais" to "Abdurrahmaan As-Sudais",
-        "ar.hudhaify" to "Ali Al-Hudhaify",
-        "ar.husary" to "Mahmoud Khalil Al-Husary",
-        "ar.mahermuaiqly" to "Maher Al Muaiqly",
-        "ar.minshawi" to "Mohamed Siddiq al-Minshawi",
-        "ar.muhammadayyoub" to "Muhammad Ayyoub"
-    )
+    val selectionItems = com.example.util.QariData.list.map { item ->
+        com.example.ui.components.SelectionItem(
+            id = item.id,
+            title = item.nameEnglish,
+            subtitle = item.nameBengali,
+            icon = Icons.Default.RecordVoiceOver
+        )
+    }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "ক্বারী নির্বাচন করুন",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        text = {
-            Box(modifier = Modifier.height(300.dp)) {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(qariList) { qari ->
-                        val isSelected = selectedQariId == qari.first
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelectQari(qari.first) },
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                            ),
-                            border = BorderStroke(1.dp, if (isSelected) PrimaryGreen else Border)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.AccountCircle,
-                                    contentDescription = null,
-                                    tint = if (isSelected) PrimaryGreen else GrayText,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = qari.second,
-                                    fontSize = 14.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("বন্ধ করুন", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(24.dp)
+    com.example.ui.components.SmartSelectionDialog(
+        title = "ক্বারী নির্বাচন করুন",
+        subtitle = "আপনার পছন্দের তেলাওয়াতকারী বেছে নিন",
+        headerIcon = Icons.Default.RecordVoiceOver,
+        items = selectionItems,
+        selectedId = selectedQariId,
+        onSelectItem = onSelectQari,
+        onDismiss = onDismiss,
+        showSearch = true,
+        searchPlaceholder = "ক্বারী খুঁজুন..."
     )
 }
 
@@ -2262,18 +2231,6 @@ fun RecitationPlayerPanel(
     onToggleRepeatSurah: () -> Unit,
     onSpeedClick: (Float) -> Unit
 ) {
-    val qariList = listOf(
-        "ar.alafasy" to "Mishary Rashid Alafasy",
-        "ar.abdulbasitmurattal" to "Abdul Basit",
-        "ar.abdullahbasfar" to "Abdullah Basfar",
-        "ar.abdurrahmaansudais" to "Abdurrahmaan As-Sudais",
-        "ar.hudhaify" to "Ali Al-Hudhaify",
-        "ar.husary" to "Mahmoud Khalil Al-Husary",
-        "ar.mahermuaiqly" to "Maher Al Muaiqly",
-        "ar.minshawi" to "Mohamed Siddiq al-Minshawi",
-        "ar.muhammadayyoub" to "Muhammad Ayyoub"
-    )
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -2298,7 +2255,7 @@ fun RecitationPlayerPanel(
             Column(modifier = Modifier.padding(16.dp)) {
                 if (currentPlayingSurah != null) {
                     val surahName = QuranData.surahNames.find { it.first == currentPlayingSurah }?.second?.first ?: "সূরা"
-                    val qariName = qariList.find { it.first == selectedQariId }?.second ?: "Alafasy"
+                    val qariName = com.example.util.QariData.getQariNameEnglish(selectedQariId)
                     val totalAyahs = currentPlayingAyahs.size
                     val progress = if (totalAyahs > 0) (currentPlayingAyahIndex.toFloat() / totalAyahs.toFloat()) else 0f
                     
@@ -2953,18 +2910,23 @@ fun DuaDetailDialog(
                                 
                                 // Arabic Text
                                 if (segment.arabic.isNotEmpty() && segment.arabic != "null") {
-                                    Text(
-                                        text = segment.arabic,
-                                        fontSize = 24.sp,
-                                        fontFamily = arabicFont,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 12.dp),
-                                        lineHeight = 40.sp
-                                    )
+                                    val cleanForBismillah = segment.arabic.replace(Regex("[\\s\\u064B-\\u065F\\u0670\\u06D6-\\u06ED]"), "")
+                                    val isBismillah = cleanForBismillah == "بسماللهالرحمنالرحيم" || cleanForBismillah == "بسمٱللهٱلرحمنٱلرحيم"
+                                    
+                                    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+                                        Text(
+                                            text = segment.arabic,
+                                            fontSize = 24.sp,
+                                            fontFamily = arabicFont,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            textAlign = if (isBismillah) TextAlign.Center else TextAlign.Right,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 12.dp),
+                                            lineHeight = 40.sp
+                                        )
+                                    }
                                 }
                                 
                                 // Translation
