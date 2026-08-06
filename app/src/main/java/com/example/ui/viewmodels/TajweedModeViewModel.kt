@@ -55,7 +55,7 @@ class TajweedModeViewModel(
         .stateIn(viewModelScope, SharingStarted.Lazily, true) // Force true or use settings
 
     val arabicFontSize: StateFlow<Float> = settingsRepository.arabicFontSizeFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, 18f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 20f)
 
     val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, "Me Quran")
@@ -67,7 +67,7 @@ class TajweedModeViewModel(
         .stateIn(viewModelScope, SharingStarted.Lazily, true)
 
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, 2.5f)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 2.0f)
 
     private var playlist: List<CombinedAyah> = emptyList()
 

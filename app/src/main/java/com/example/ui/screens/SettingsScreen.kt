@@ -2293,17 +2293,23 @@ fun SubjectwiseDialogContent(
                                         .padding(bottom = 12.dp)
                                 ) {
                                     val annotatedArabicText = androidx.compose.ui.text.buildAnnotatedString {
-                                        val cleanText = verse.arabicText.replace(Regex("[\\u06D6-\\u06DB]"), "")
-                                        val regex = Regex("﴿.*?﴾")
+                                        val regex = Regex("﴿.*?﴾|[\\u06D6-\\u06ED]")
                                         var lastIndex = 0
-                                        regex.findAll(cleanText).forEach { matchResult ->
-                                            append(cleanText.substring(lastIndex, matchResult.range.first))
-                                            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
+                                        regex.findAll(verse.arabicText).forEach { matchResult ->
+                                            append(verse.arabicText.substring(lastIndex, matchResult.range.first))
+                                            val isWaqf = matchResult.value.length == 1
+                                            withStyle(
+                                                androidx.compose.ui.text.SpanStyle(
+                                                    fontFamily = com.example.ui.theme.amiriFont,
+                                                    fontSize = if (isWaqf) 14.sp else 22.sp,
+                                                    baselineShift = if (isWaqf) androidx.compose.ui.text.style.BaselineShift(-0.3f) else androidx.compose.ui.text.style.BaselineShift.None
+                                                )
+                                            ) {
                                                 append(matchResult.value)
                                             }
-                                            lastIndex = matchResult.range.last + 1
+                                            lastIndex = matchResult.range.last + matchResult.value.length
                                         }
-                                        append(cleanText.substring(lastIndex))
+                                        append(verse.arabicText.substring(lastIndex))
                                     }
                                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                         Text(

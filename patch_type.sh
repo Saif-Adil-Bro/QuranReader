@@ -1,0 +1,1 @@
+sed -i 's/\/\/ Temporarily inactive Arabic custom fonts/\nval meQuranFont = FontFamily(ResourceFont(R.font.me_quran))\nval pdmsSaleemFont = FontFamily(ResourceFont(R.font.pdms_saleem))\nval noorehiraFont = FontFamily(ResourceFont(R.font.noorehira))\n/' app/src/main/java/com/example/ui/theme/Type.kt

@@ -1117,7 +1117,7 @@ fun TajweedPageContent(
                                                 }
                                             }
                                         }
-                                        appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns)
+                                        appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns, arabicFontName)
                                         val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
                                         append("﴿$numInSurahStr﴾")
                                     }

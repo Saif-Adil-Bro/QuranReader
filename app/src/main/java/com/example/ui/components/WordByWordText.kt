@@ -32,6 +32,7 @@ fun WordByWordText(
     ayahNumber: Int = 1,
     arabicFontSize: Float = 28f,
     arabicFont: androidx.compose.ui.text.font.FontFamily = androidx.compose.ui.text.font.FontFamily.Default,
+    arabicFontName: String = "Me Quran",
     showTransliteration: Boolean = false,
     onWordPlay: ((String) -> Unit)? = null,
     currentPlayingWordUrl: String? = null,
@@ -111,7 +112,7 @@ fun WordByWordText(
                                 // Arabic text
                                 Text(
                                     text = androidx.compose.ui.text.buildAnnotatedString {
-                                        appendStyledWaqfText(word.textUthmani ?: "", arabicFontSize, true)
+                                        appendStyledWaqfText(word.textUthmani ?: "", arabicFontSize, true, arabicFontName)
                                     },
                                     fontSize = arabicFontSize.sp,
                                     fontFamily = arabicFont,

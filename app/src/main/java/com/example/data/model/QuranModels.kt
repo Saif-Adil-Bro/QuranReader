@@ -204,7 +204,12 @@ fun String.formatWaqfSigns(): String {
     return this
 }
 
-fun AnnotatedString.Builder.appendStyledWaqfText(text: String, fontSize: Float, showWaqfSigns: Boolean = true) {
+fun AnnotatedString.Builder.appendStyledWaqfText(
+    text: String,
+    fontSize: Float,
+    showWaqfSigns: Boolean = true,
+    arabicFontName: String = "Me Quran"
+) {
     if (!showWaqfSigns) {
         append(text.removeWaqfSigns())
         return
@@ -217,15 +222,26 @@ fun AnnotatedString.Builder.appendStyledWaqfText(text: String, fontSize: Float, 
             if (i > lastIndex) {
                 append(text.substring(lastIndex, i))
             }
-            // Style the waqf sign
-            withStyle(
-                style = SpanStyle(
-                    fontFamily = com.example.ui.theme.amiriFont,
-                    fontSize = (fontSize * 0.55f).sp, // Significantly smaller
-                    baselineShift = BaselineShift(-0.4f) // Shift downwards
-                )
-            ) {
-                append(char.toString())
+            // Style the waqf sign: Use Amiri waqf shape system for Saleem font, use default font shape for Me Quran
+            if (arabicFontName.contains("Saleem", ignoreCase = true)) {
+                withStyle(
+                    style = SpanStyle(
+                        fontFamily = com.example.ui.theme.amiriFont,
+                        fontSize = (fontSize * 0.55f).sp, // Significantly smaller
+                        baselineShift = BaselineShift(-0.4f) // Shift downwards
+                    )
+                ) {
+                    append(char.toString())
+                }
+            } else {
+                withStyle(
+                    style = SpanStyle(
+                        fontSize = (fontSize * 0.65f).sp,
+                        baselineShift = BaselineShift(-0.2f)
+                    )
+                ) {
+                    append(char.toString())
+                }
             }
             lastIndex = i + 1
         }

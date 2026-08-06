@@ -2272,7 +2272,8 @@ fun AyahInlineText(
     fontFamily: androidx.compose.ui.text.font.FontFamily,
     color: Color,
     modifier: Modifier = Modifier,
-    lineSpacing: Float = 2.0f
+    lineSpacing: Float = 2.0f,
+    arabicFontName: String = "Me Quran"
 ) {
     // The standard Uthmani way to display ayah numbers: 
     // Arabic text followed by U+FD3F (Ornate Left Parenthesis), ayah number in Arabic digits, U+FD3E (Ornate Right Parenthesis)
@@ -2283,8 +2284,12 @@ fun AyahInlineText(
     // Let's use \u06DD + digits.
     
     val annotatedText = androidx.compose.ui.text.buildAnnotatedString {
-        appendStyledWaqfText(arabicText, fontSize, showWaqfSigns = true)
-        withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = amiriFont)) {
+        appendStyledWaqfText(arabicText, fontSize, showWaqfSigns = true, arabicFontName = arabicFontName)
+        if (arabicFontName.contains("Saleem", ignoreCase = true)) {
+            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = amiriFont)) {
+                append(" ﴿$ayahNumberStr﴾")
+            }
+        } else {
             append(" ﴿$ayahNumberStr﴾")
         }
     }

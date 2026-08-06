@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -989,9 +990,15 @@ fun HafeziPageContent(
                                                 }
                                             }
                                         }
-                                        appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns)
+                                        appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns, arabicFontName)
                                         val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
-                                        append("﴿$numInSurahStr﴾")
+                                        if (arabicFontName.contains("Saleem", ignoreCase = true)) {
+                                            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
+                                                append(" ﴿$numInSurahStr﴾")
+                                            }
+                                        } else {
+                                            append(" ﴿$numInSurahStr﴾")
+                                        }
                                     }
                                     
                                     val end = length
