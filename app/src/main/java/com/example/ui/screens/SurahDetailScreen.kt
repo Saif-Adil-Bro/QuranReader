@@ -597,17 +597,20 @@ fun SurahDetailScreen(
                         // Floating Menu
                         androidx.compose.animation.AnimatedVisibility(
                             visible = showFloatingMenu,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
-                            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { it }),
-                            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 16.dp, start = 16.dp, end = 16.dp),
+                            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
+                            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { -it })
                         ) {
                             Row(
                                 modifier = Modifier
+                                    .fillMaxWidth()
                                     .shadow(8.dp, RoundedCornerShape(100.dp))
                                     .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
                                     .border(1.dp, Border, RoundedCornerShape(100.dp))
                                     .padding(4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 val currentMode = pageOrder[pagerState.currentPage]
                                 ViewModeToggle("লিস্ট", Icons.Default.List, currentMode == ViewMode.LIST) { 

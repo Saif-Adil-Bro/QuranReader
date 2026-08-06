@@ -1,0 +1,100 @@
+cat << 'INNER_EOF' >> app/src/main/java/com/example/data/repository/QuranRepository.kt
+
+    /**
+     * Searches the Quran by a keyword
+     */
+    suspend fun searchQuran(keyword: String, edition: String = "bn.bengali"): com.example.data.model.SearchResponse {
+        return withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val response = api.searchQuranWithEdition(keyword, edition)
+            if (response.code == 200) {
+                response.data
+            } else {
+                throw Exception("Search failed: ${response.status}")
+            }
+        }
+    }
+
+    private var cachedTafsirs: List<com.example.data.model.TafsirResourceDto>? = null
+    private var cachedTranslations: List<com.example.data.model.TranslationResourceDto>? = null
+
+    private fun getTranslationsCacheFile() = java.io.File(context.filesDir, "translations_meta_cache.json")
+    private fun getTafsirsCacheFile() = java.io.File(context.filesDir, "tafsirs_meta_cache.json")
+
+    suspend fun getAvailableTranslations(language: String = "bn"): List<com.example.data.model.TranslationResourceDto> {
+        if (cachedTranslations != null) return cachedTranslations!!
+        val cacheFile = getTranslationsCacheFile()
+        return try {
+            val response = quranComApi.getAvailableTranslations(language)
+            val filtered = response.translations.filter { item ->
+                val langMatch = item.languageName.equals("bengali", ignoreCase = true) ||
+                        item.languageName.equals("english", ignoreCase = true) ||
+                        item.languageName.equals("urdu", ignoreCase = true)
+                val nameLower = (item.name ?: "").lowercase()
+                val transNameLower = (item.translatedName?.name ?: "").lowercase()
+                val isTafsirOrCommentary = nameLower.contains("tafsir") || nameLower.contains("tafseer") ||
+                        nameLower.contains("tafhim") || nameLower.contains("tafheem") ||
+                        nameLower.contains("commentary") || nameLower.contains("transliteration") ||
+                        nameLower.contains("zilal") || nameLower.contains("bayan-ul-quran") ||
+                        transNameLower.contains("tafsir") || transNameLower.contains("tafseer") ||
+                        transNameLower.contains("tafhim") || transNameLower.contains("tafheem") ||
+                        transNameLower.contains("commentary") || transNameLower.contains("transliteration")
+                langMatch && !isTafsirOrCommentary
+            }
+            cachedTranslations = filtered
+            try {
+                cacheFile.writeText(com.google.gson.Gson().toJson(filtered))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            filtered
+        } catch (e: Exception) {
+            e.printStackTrace()
+            try {
+                if (cacheFile.exists()) {
+                    val type = object : com.google.gson.reflect.TypeToken<List<com.example.data.model.TranslationResourceDto>>() {}.type
+                    val list: List<com.example.data.model.TranslationResourceDto> = com.google.gson.Gson().fromJson(cacheFile.readText(), type)
+                    cachedTranslations = list
+                    return list
+                }
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+            }
+            emptyList()
+        }
+    }
+
+    suspend fun getAvailableTafsirs(language: String = "bn"): List<com.example.data.model.TafsirResourceDto> {
+        if (cachedTafsirs != null) return cachedTafsirs!!
+        val cacheFile = getTafsirsCacheFile()
+        return try {
+            val response = quranComApi.getAvailableTafsirs(language)
+            val filtered = response.tafsirs.filter {
+                it.languageName.equals("bengali", ignoreCase = true) ||
+                        it.languageName.equals("english", ignoreCase = true) ||
+                        it.languageName.equals("urdu", ignoreCase = true) ||
+                        it.languageName.equals("arabic", ignoreCase = true)
+            }
+            cachedTafsirs = filtered
+            try {
+                cacheFile.writeText(com.google.gson.Gson().toJson(filtered))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            filtered
+        } catch (e: Exception) {
+            e.printStackTrace()
+            try {
+                if (cacheFile.exists()) {
+                    val type = object : com.google.gson.reflect.TypeToken<List<com.example.data.model.TafsirResourceDto>>() {}.type
+                    val list: List<com.example.data.model.TafsirResourceDto> = com.google.gson.Gson().fromJson(cacheFile.readText(), type)
+                    cachedTafsirs = list
+                    return list
+                }
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+            }
+            emptyList()
+        }
+    }
+}
+INNER_EOF
