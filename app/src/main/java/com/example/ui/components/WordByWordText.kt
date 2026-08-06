@@ -60,9 +60,9 @@ fun WordByWordText(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "\u06DD${ayahNumber.toArabicDigits()}",
+                                text = "﴿${ayahNumber.toArabicDigits()}﴾",
                                 fontSize = (arabicFontSize * 1.1f).sp,
-                                fontFamily = arabicFont,
+                                fontFamily = com.example.ui.theme.amiriFont,
                                 color = PrimaryGreen,
                                 textAlign = TextAlign.Center
                             )

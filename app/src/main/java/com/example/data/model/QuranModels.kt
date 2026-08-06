@@ -220,6 +220,7 @@ fun AnnotatedString.Builder.appendStyledWaqfText(text: String, fontSize: Float, 
             // Style the waqf sign
             withStyle(
                 style = SpanStyle(
+                    fontFamily = com.example.ui.theme.amiriFont,
                     fontSize = (fontSize * 0.55f).sp, // Significantly smaller
                     baselineShift = BaselineShift(-0.4f) // Shift downwards
                 )

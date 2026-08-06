@@ -1,6 +1,13 @@
 package com.example.ui.screens
 
+
+import androidx.compose.ui.text.withStyle
+
+import androidx.compose.ui.text.withStyle
+
+
 import android.widget.Toast
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
@@ -2285,9 +2292,22 @@ fun SubjectwiseDialogContent(
                                         .fillMaxWidth()
                                         .padding(bottom = 12.dp)
                                 ) {
+                                    val annotatedArabicText = androidx.compose.ui.text.buildAnnotatedString {
+                                        val cleanText = verse.arabicText.replace(Regex("[\\u06D6-\\u06DB]"), "")
+                                        val regex = Regex("﴿.*?﴾")
+                                        var lastIndex = 0
+                                        regex.findAll(cleanText).forEach { matchResult ->
+                                            append(cleanText.substring(lastIndex, matchResult.range.first))
+                                            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
+                                                append(matchResult.value)
+                                            }
+                                            lastIndex = matchResult.range.last + 1
+                                        }
+                                        append(cleanText.substring(lastIndex))
+                                    }
                                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                         Text(
-                                            text = verse.arabicText,
+                                            text = annotatedArabicText,
                                             fontSize = 22.sp,
                                             fontWeight = FontWeight.Medium,
                                             color = MaterialTheme.colorScheme.onSurface,

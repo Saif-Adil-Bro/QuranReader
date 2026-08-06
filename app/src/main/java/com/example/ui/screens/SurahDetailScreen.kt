@@ -2124,7 +2124,9 @@ fun MushafPageView(
                     }
                     
                     val ayahNumberStr = ayah.numberInSurah.toArabicNumerals()
-                    append("﴿$ayahNumberStr﴾")
+                    withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = amiriFont)) {
+                        append(" ﴿$ayahNumberStr﴾")
+                    }
                     
                     // Add a space between ayahs
                     if (index < ayahs.lastIndex) {
@@ -2282,7 +2284,9 @@ fun AyahInlineText(
     
     val annotatedText = androidx.compose.ui.text.buildAnnotatedString {
         appendStyledWaqfText(arabicText, fontSize, showWaqfSigns = true)
-        append("﴿$ayahNumberStr﴾")
+        withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = amiriFont)) {
+            append(" ﴿$ayahNumberStr﴾")
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
