@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -395,68 +396,63 @@ fun SurahDetailScreen(
                         }
                     }
                     
-                    androidx.compose.foundation.pager.HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize(),
-                        verticalAlignment = Alignment.Top
-                    ) { page ->
-                        val pageViewMode = pageOrder[page]
-                        val pageListState = listStates[page]
-                        
-                        LazyColumn(
-                            state = pageListState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                        item {
-                            val surahData = com.example.data.QuranData.surahNames.find { it.first == surahNumber }
-                            val surahName = surahData?.second?.first ?: "সূরা $surahNumber"
-                            val title = if (isJuz) {
-                                "পারা $surahNumber"
-                            } else if (surahNumber == 2 && initialAyah == 255) {
-                                "আয়াতুল কুরসি"
-                            } else if (surahNumber == 2 && initialAyah == 285) {
-                                "বাকারার শেষ ২ আয়াত"
-                            } else {
-                                surahName
+                    val surahData = com.example.data.QuranData.surahNames.find { it.first == surahNumber }
+                    val surahName = surahData?.second?.first ?: "সূরা $surahNumber"
+                    val title = if (isJuz) {
+                        "পারা $surahNumber"
+                    } else if (surahNumber == 2 && initialAyah == 255) {
+                        "আয়াতুল কুরসি"
+                    } else if (surahNumber == 2 && initialAyah == 285) {
+                        "বাকারার শেষ ২ আয়াত"
+                    } else {
+                        surahName
+                    }
+                    val subtitle = if (isJuz) "" else if (surahNumber == 2 && initialAyah == 255) "সূরা আল-বাকারাহ, আয়াত ২৫৫" else if (surahNumber == 2 && initialAyah == 285) "সূরা আল-বাকারাহ, আয়াত ২৮৫-২৮৬" else (surahData?.second?.second ?: "")
+                    val info1 = if (isJuz) "পারা: $surahNumber" else "সূরা: $surahNumber"
+                    val info2 = if (isJuz) "" else com.example.data.QuranData.getSurahType(surahNumber)
+                    val info3 = if (surahNumber == 2 && initialAyah == 255) "১টি আয়াত" else if (surahNumber == 2 && initialAyah == 285) "২টি আয়াত" else "মোট আয়াত: ${displayedData.size}"
+
+                    var headerHeightPx by remember { mutableFloatStateOf(0f) }
+                    val headerHeightDp = with(androidx.compose.ui.platform.LocalDensity.current) { headerHeightPx.toDp() }
+                    
+                    val headerOffsetPx = if (currentListState.firstVisibleItemIndex == 0) {
+                        -currentListState.firstVisibleItemScrollOffset.toFloat()
+                    } else {
+                        -headerHeightPx
+                    }
+                    
+                    var showFloatingMenu by remember { mutableStateOf(false) }
+                    LaunchedEffect(currentListState.isScrollInProgress, headerOffsetPx, headerHeightPx) {
+                        if (headerHeightPx > 0 && headerOffsetPx <= -headerHeightPx) {
+                            if (currentListState.isScrollInProgress) {
+                                showFloatingMenu = true
+                            } else if (showFloatingMenu) {
+                                kotlinx.coroutines.delay(2500)
+                                showFloatingMenu = false
                             }
-                            val subtitle = if (isJuz) "" else if (surahNumber == 2 && initialAyah == 255) "সূরা আল-বাকারাহ, আয়াত ২৫৫" else if (surahNumber == 2 && initialAyah == 285) "সূরা আল-বাকারাহ, আয়াত ২৮৫-২৮৬" else (surahData?.second?.second ?: "")
-                            val info1 = if (isJuz) "পারা: $surahNumber" else "সূরা: $surahNumber"
-                            val info2 = if (isJuz) "" else com.example.data.QuranData.getSurahType(surahNumber)
-                            val info3 = if (surahNumber == 2 && initialAyah == 255) "১টি আয়াত" else if (surahNumber == 2 && initialAyah == 285) "২টি আয়াত" else "মোট আয়াত: ${displayedData.size}"
-                            
-                            HeaderCard(
-                                title = title,
-                                subtitle = subtitle,
-                                info1 = info1,
-                                info2 = info2,
-                                info3 = info3,
-                                viewMode = pageViewMode, 
-                                onModeChange = { mode ->
-                                     coroutineScope.launch {
-                                         pagerState.animateScrollToPage(pageOrder.indexOf(mode))
-                                     }
-                                 },
-                                searchQuery = searchQuery,
-                                onSearchQueryChange = { searchQuery = it },
-                                onSearch = {
-                                    if (pageViewMode != ViewMode.MUSHAF) {
-                                        val ayahIndex = displayedData.indexOfFirst { it.numberInSurah.toString() == searchQuery }
-                                        if (ayahIndex != -1) {
-                                            val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) 2 else 1
-                                            coroutineScope.launch {
-                                                pageListState.animateScrollToItem(ayahIndex + headerCount)
-                                            }
-                                        }
-                                    }
-                                },
-                                onPlayerClick = {
-                                    val currentAyah = currentPlayingAyah ?: displayedData.firstOrNull()
-                                    viewModel.togglePlayPause(currentAyah, surahNumber)
-                                }
-                            )
+                        } else {
+                            showFloatingMenu = false
                         }
+                    }
+
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        androidx.compose.foundation.pager.HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.Top
+                        ) { page ->
+                            val pageViewMode = pageOrder[page]
+                            val pageListState = listStates[page]
+                            
+                            LazyColumn(
+                                state = pageListState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                            item {
+                                Spacer(modifier = Modifier.height(headerHeightDp + 16.dp))
+                            }
                         if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) {
                             item {
                                 BismillahSection(arabicFontName = arabicFontName)
@@ -557,10 +553,82 @@ fun SurahDetailScreen(
                         }
                     }
                     } // End of HorizontalPager
+
+                        // HeaderCard
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { headerHeightPx = it.size.height.toFloat() }
+                                .offset { androidx.compose.ui.unit.IntOffset(0, kotlin.math.round(headerOffsetPx).toInt()) }
+                                .padding(16.dp)
+                        ) {
+                            HeaderCard(
+                                title = title,
+                                subtitle = subtitle,
+                                info1 = info1,
+                                info2 = info2,
+                                info3 = info3,
+                                viewMode = pageOrder[pagerState.currentPage], 
+                                onModeChange = { mode ->
+                                     coroutineScope.launch {
+                                         pagerState.animateScrollToPage(pageOrder.indexOf(mode))
+                                     }
+                                 },
+                                searchQuery = searchQuery,
+                                onSearchQueryChange = { searchQuery = it },
+                                onSearch = {
+                                    if (pageOrder[pagerState.currentPage] != ViewMode.MUSHAF) {
+                                        val ayahIndex = displayedData.indexOfFirst { it.numberInSurah.toString() == searchQuery }
+                                        if (ayahIndex != -1) {
+                                            val headerCount = 1
+                                            coroutineScope.launch {
+                                                currentListState.animateScrollToItem(ayahIndex + headerCount)
+                                            }
+                                        }
+                                    }
+                                },
+                                onPlayerClick = {
+                                    val currentAyah = currentPlayingAyah ?: displayedData.firstOrNull()
+                                    viewModel.togglePlayPause(currentAyah, surahNumber)
+                                }
+                            )
+                        }
+
+                        // Floating Menu
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = showFloatingMenu,
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
+                            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { it }),
+                            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .shadow(8.dp, RoundedCornerShape(100.dp))
+                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
+                                    .border(1.dp, Border, RoundedCornerShape(100.dp))
+                                    .padding(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                val currentMode = pageOrder[pagerState.currentPage]
+                                ViewModeToggle("লিস্ট", Icons.Default.List, currentMode == ViewMode.LIST) { 
+                                    coroutineScope.launch { pagerState.animateScrollToPage(pageOrder.indexOf(ViewMode.LIST)) } 
+                                }
+                                ViewModeToggle("শব্দার্থ", Icons.Outlined.Book, currentMode == ViewMode.READING) { 
+                                    coroutineScope.launch { pagerState.animateScrollToPage(pageOrder.indexOf(ViewMode.READING)) } 
+                                }
+                                ViewModeToggle("তাফসির", Icons.Outlined.Info, currentMode == ViewMode.TAFSIR) { 
+                                    coroutineScope.launch { pagerState.animateScrollToPage(pageOrder.indexOf(ViewMode.TAFSIR)) } 
+                                }
+                                ViewModeToggle("মুসহাফ", Icons.Outlined.MenuBook, currentMode == ViewMode.MUSHAF) { 
+                                    coroutineScope.launch { pagerState.animateScrollToPage(pageOrder.indexOf(ViewMode.MUSHAF)) } 
+                                }
+                            }
+                        }
                 }
             }
         }
         
+        }
         if (showPlayerBottomSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showPlayerBottomSheet = false },
@@ -774,10 +842,18 @@ fun InfoChip(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun RowScope.ViewModeToggle(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, isSelected: Boolean, onClick: () -> Unit) {
+    val bgColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.surface,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 300)
+    )
+    val contentColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) White else GrayText,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 300)
+    )
     Box(
         modifier = Modifier
             .weight(1f)
-            .background(if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.surface, RoundedCornerShape(100.dp))
+            .background(bgColor, RoundedCornerShape(100.dp))
             .clickable { onClick() }
             .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center

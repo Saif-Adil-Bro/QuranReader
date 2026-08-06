@@ -82,6 +82,8 @@ fun QiblaDialogContent() {
     val context = LocalContext.current
     var qiblaBearing by remember { mutableFloatStateOf(0f) }
     var currentAzimuth by remember { mutableFloatStateOf(0f) }
+    var currentPitch by remember { mutableFloatStateOf(0f) }
+    var currentRoll by remember { mutableFloatStateOf(0f) }
     var hasLocationPermission by remember { 
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
@@ -133,8 +135,13 @@ fun QiblaDialogContent() {
                         val azimuthInRadians = orientation[0]
                         var azimuthInDegrees = (Math.toDegrees(azimuthInRadians.toDouble()) + 360).toFloat() % 360
                         
+                        val pitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
+                        val roll = Math.toDegrees(orientation[2].toDouble()).toFloat()
+                        
                         // Low pass filter for smoother compass
                         currentAzimuth = currentAzimuth + 0.2f * (azimuthInDegrees - currentAzimuth)
+                        currentPitch = currentPitch + 0.2f * (pitch - currentPitch)
+                        currentRoll = currentRoll + 0.2f * (roll - currentRoll)
                     }
                 }
             }
@@ -272,7 +279,9 @@ fun QiblaDialogContent() {
         
         QiblaCompassUI(
             azimuth = currentAzimuth,
-            qiblaBearing = qiblaBearing
+            qiblaBearing = qiblaBearing,
+            pitch = currentPitch,
+            roll = currentRoll
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -312,7 +321,7 @@ fun QiblaDialogContent() {
 }
 
 @Composable
-fun QiblaCompassUI(azimuth: Float, qiblaBearing: Float) {
+fun QiblaCompassUI(azimuth: Float, qiblaBearing: Float, pitch: Float = 0f, roll: Float = 0f) {
     val animatedAzimuth by animateFloatAsState(
         targetValue = -azimuth,
         animationSpec = tween(durationMillis = 300),
@@ -424,7 +433,7 @@ fun QiblaCompassUI(azimuth: Float, qiblaBearing: Float) {
             }
             
             // Draw Needle (Rotating with azimuth)
-            rotate(degrees = animatedAzimuth, pivot = center) {
+            rotate(degrees = animatedAzimuth + qiblaBearing, pivot = center) {
                 // North pointing half (Green)
                 drawPath(
                     path = Path().apply {
@@ -511,7 +520,7 @@ fun QiblaCompassUI(azimuth: Float, qiblaBearing: Float) {
             }
         }
 
-        // Location/My Location button floating on bottom right of compass
+        // Bubble level / tilt indicator
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -522,12 +531,63 @@ fun QiblaCompassUI(azimuth: Float, qiblaBearing: Float) {
                 .background(if (isDark) MaterialTheme.colorScheme.surface else Color.White),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.MyLocation,
-                contentDescription = "My Location",
-                tint = Color(0xFF389E6E),
-                modifier = Modifier.size(24.dp)
-            )
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val center = size.center
+                val radius = size.width / 2f
+                
+                // Draw background circle
+                drawCircle(
+                    color = Color.Gray.copy(alpha = 0.2f),
+                    radius = radius - 4.dp.toPx(),
+                    center = center
+                )
+                
+                // Draw center crosshairs
+                drawLine(
+                    color = Color.Gray.copy(alpha = 0.5f),
+                    start = Offset(center.x, center.y - 8.dp.toPx()),
+                    end = Offset(center.x, center.y + 8.dp.toPx()),
+                    strokeWidth = 1.dp.toPx()
+                )
+                drawLine(
+                    color = Color.Gray.copy(alpha = 0.5f),
+                    start = Offset(center.x - 8.dp.toPx(), center.y),
+                    end = Offset(center.x + 8.dp.toPx(), center.y),
+                    strokeWidth = 1.dp.toPx()
+                )
+                
+                // Draw center target circle
+                drawCircle(
+                    color = Color.Gray.copy(alpha = 0.5f),
+                    radius = 4.dp.toPx(),
+                    center = center,
+                    style = Stroke(width = 1.dp.toPx())
+                )
+                
+                val maxOffset = radius - 10.dp.toPx()
+                val sensitivity = maxOffset / 30f // 30 degrees to reach edge
+                
+                var bubbleX = center.x - roll * sensitivity
+                var bubbleY = center.y + pitch * sensitivity
+                
+                val dx = bubbleX - center.x
+                val dy = bubbleY - center.y
+                val dist = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                if (dist > maxOffset) {
+                    val ratio = maxOffset / dist
+                    bubbleX = center.x + dx * ratio
+                    bubbleY = center.y + dy * ratio
+                }
+                
+                val isFlat = dist < 4.dp.toPx()
+                val bubbleColor = if (isFlat) Color(0xFF10B981) else Color(0xFFFBBF24)
+                
+                drawCircle(
+                    color = bubbleColor,
+                    radius = 6.dp.toPx(),
+                    center = Offset(bubbleX, bubbleY)
+                )
+            }
         }
     }
 }
