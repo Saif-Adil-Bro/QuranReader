@@ -26,7 +26,7 @@ class ReadingModeViewModel(
         .stateIn(viewModelScope, SharingStarted.Lazily, 18f)
 
     val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "Scheherazade New")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Me Quran")
 
     val bengaliFontSize: StateFlow<Float> = settingsRepository.bengaliFontSizeFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 16f)

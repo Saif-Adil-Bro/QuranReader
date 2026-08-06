@@ -178,7 +178,7 @@ class SurahDetailViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = "Scheherazade New"
+            initialValue = "Me Quran"
         )
 
     val tanzilTextStyle: StateFlow<String> = settingsRepository.tanzilTextStyleFlow

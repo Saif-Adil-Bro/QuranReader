@@ -59,7 +59,7 @@ class HafeziModeViewModel(
         .stateIn(viewModelScope, SharingStarted.Lazily, 18f)
 
     val arabicFontName: StateFlow<String> = settingsRepository.arabicFontNameFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "Scheherazade New")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Me Quran")
 
     val theme: StateFlow<String> = settingsRepository.themeFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, "Light")

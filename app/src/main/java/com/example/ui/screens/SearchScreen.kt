@@ -426,7 +426,7 @@ fun SearchResultItem(
     isDark: Boolean,
     arabicText: String? = null,
     banglaText: String? = null,
-    arabicFontName: String = "Amiri Quran",
+    arabicFontName: String = "Me Quran",
     onClick: () -> Unit
 ) {
     // Look up Bengali Surah Name & Translation Meaning from local QuranData mapping

@@ -93,7 +93,7 @@ class SettingsRepository(val context: Context) {
         .map { preferences -> preferences[BENGALI_FONT_SIZE_KEY] ?: 16f }
 
     val arabicFontNameFlow: Flow<String> = context.dataStore.data
-        .map { preferences -> preferences[ARABIC_FONT_NAME_KEY] ?: "Scheherazade New" }
+        .map { preferences -> preferences[ARABIC_FONT_NAME_KEY] ?: "Me Quran" }
 
     val tanzilTextStyleFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] ?: "quran-simple" }

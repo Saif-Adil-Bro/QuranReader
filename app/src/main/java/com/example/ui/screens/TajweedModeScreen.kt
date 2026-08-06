@@ -765,7 +765,7 @@ fun TajweedModeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val fonts = listOf("Amiri Quran" to "উসমানী", "Amiri" to "আমিরী", "Scheherazade New" to "শাহরাজাদ")
+                        val fonts = listOf("Me Quran" to "মি কুরআন", "PDMS Saleem" to "পিডিএমএস সালীম", "Noorehira" to "নূরেহেরা")
                         fonts.forEach { (fKey, fName) ->
                             val isSel = fKey == arabicFontName
                             Surface(

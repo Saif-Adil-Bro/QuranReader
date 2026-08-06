@@ -870,7 +870,7 @@ fun RowScope.ViewModeToggle(text: String, icon: androidx.compose.ui.graphics.vec
 }
 
 @Composable
-fun BismillahSection(arabicFontName: String = "Amiri Quran") {
+fun BismillahSection(arabicFontName: String = "Me Quran") {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -904,7 +904,7 @@ fun AyahCard(
     arabicFontSize: Float,
     availableTranslations: List<com.example.data.model.TranslationResourceDto> = emptyList(),
     bengaliFontSize: Float,
-    arabicFontName: String = "Amiri Quran",
+    arabicFontName: String = "Me Quran",
     currentPlayingWordUrl: String? = null,
     isBookmarked: Boolean = false,
     onToggleBookmark: () -> Unit = {},
@@ -1157,9 +1157,8 @@ fun AyahCard(
                     if (ayah.translations.isNotEmpty()) {
                         ayah.translations.forEach { trans ->
                                                         val translationInfo = availableTranslations.find { it.id == trans.resourceId }
-                            val translatorName = translationInfo?.translatedName?.name
-                                ?: translationInfo?.name
-                                ?: "Unknown"
+                            val fallbackNames = mapOf(161 to "Taisirul Quran", 162 to "Bayan Foundation", 163 to "Dr. Abu Bakr Muhammad Zakaria", 213 to "Suhel Syed Siraj", 85 to "M.A.S. Abdel Haleem", 131 to "Dr. Mustafa Khattab", 20 to "Saheeh International", 97 to "Mufti Taqi Usmani", 54 to "Maulana Ashraf Ali Thanvi", 136 to "Mufti Taqi Usmani")
+                            val translatorName = translationInfo?.translatedName?.name ?: translationInfo?.name ?: fallbackNames[trans.resourceId] ?: "Unknown" 
                             
                             androidx.compose.foundation.layout.Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -1284,9 +1283,8 @@ fun AyahCard(
                     if (ayah.translations.isNotEmpty()) {
                         ayah.translations.forEach { trans ->
                                                         val translationInfo = availableTranslations.find { it.id == trans.resourceId }
-                            val translatorName = translationInfo?.translatedName?.name
-                                ?: translationInfo?.name
-                                ?: "Unknown"
+                            val fallbackNames = mapOf(161 to "Taisirul Quran", 162 to "Bayan Foundation", 163 to "Dr. Abu Bakr Muhammad Zakaria", 213 to "Suhel Syed Siraj", 85 to "M.A.S. Abdel Haleem", 131 to "Dr. Mustafa Khattab", 20 to "Saheeh International", 97 to "Mufti Taqi Usmani", 54 to "Maulana Ashraf Ali Thanvi", 136 to "Mufti Taqi Usmani")
+                            val translatorName = translationInfo?.translatedName?.name ?: translationInfo?.name ?: fallbackNames[trans.resourceId] ?: "Unknown" 
                             
                             androidx.compose.foundation.layout.Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -1457,7 +1455,7 @@ fun PlayerBottomSheetContent(
     onModeChange: (PlaybackMode) -> Unit,
     onClose: () -> Unit,
     currentAyah: CombinedAyah?,
-    arabicFontName: String = "Amiri Quran"
+    arabicFontName: String = "Me Quran"
 ) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     Column(
@@ -1577,7 +1575,7 @@ fun ReaderSettingsBottomSheetContent(
     onArabicFontSizeChange: (Float) -> Unit,
     bengaliFontSize: Float,
     onBengaliFontSizeChange: (Float) -> Unit,
-    arabicFontName: String = "Amiri Quran",
+    arabicFontName: String = "Me Quran",
     onArabicFontNameChange: (String) -> Unit = {},
     tanzilTextStyle: String = "quran-simple",
     onTanzilTextStyleChange: (String) -> Unit = {},
@@ -2027,7 +2025,7 @@ fun MushafPageView(
     surahNumber: Int,
     onPlayWord: (String) -> Unit,
     onPlayAyah: (CombinedAyah) -> Unit,
-    arabicFontName: String = "Amiri Quran",
+    arabicFontName: String = "Me Quran",
     arabicFontSize: Float = 28f,
     currentPlayingWordUrl: String? = null,
     currentPlayingAyahNumber: Int? = null,

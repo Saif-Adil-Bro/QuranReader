@@ -265,7 +265,7 @@ class QuranRepository(
 
     private fun processArabicText(ayah: com.example.data.model.Ayah, defaultSurahNumber: Int = -1): String {
         val surahNumber = ayah.surah?.number ?: defaultSurahNumber
-        var text = ayah.text
+        var text = ayah.text.replace(Regex("[\uE000-\uF8FF]"), "")
         if (ayah.numberInSurah == 1 && surahNumber != 1 && surahNumber != 9) {
             for (prefix in BISMILLAH_PREFIXES) {
                 if (text.startsWith(prefix)) {
@@ -283,7 +283,7 @@ class QuranRepository(
             val sNum = ayah.surahNumber.takeIf { it > 0 } ?: com.example.data.QuranData.getSurahAndAyahFromGlobal(ayah.number).first
             
             val rawWords = ayah.words
-            var cleanedArabicText = ayah.arabicText
+            var cleanedArabicText = ayah.arabicText.replace(Regex("[\uE000-\uF8FF]"), "")
             if (ayah.numberInSurah == 1 && sNum != 1 && sNum != 9) {
                 for (prefix in BISMILLAH_PREFIXES) {
                     if (cleanedArabicText.startsWith(prefix)) {
