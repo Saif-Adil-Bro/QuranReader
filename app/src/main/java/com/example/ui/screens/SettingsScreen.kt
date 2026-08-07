@@ -2307,7 +2307,7 @@ fun SubjectwiseDialogContent(
                                             ) {
                                                 append(matchResult.value)
                                             }
-                                            lastIndex = matchResult.range.last + matchResult.value.length
+                                            lastIndex = matchResult.range.last + 1
                                         }
                                         append(verse.arabicText.substring(lastIndex))
                                     }

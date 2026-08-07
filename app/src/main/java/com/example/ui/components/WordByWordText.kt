@@ -60,13 +60,23 @@ fun WordByWordText(
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "﴿${ayahNumber.toArabicDigits()}﴾",
-                                fontSize = (arabicFontSize * 1.1f).sp,
-                                fontFamily = com.example.ui.theme.amiriFont,
-                                color = PrimaryGreen,
-                                textAlign = TextAlign.Center
-                            )
+                            if (arabicFontName.contains("Saleem", ignoreCase = true)) {
+                                Text(
+                                    text = "﴿${ayahNumber.toArabicDigits()}﴾",
+                                    fontSize = (arabicFontSize * 1.1f).sp,
+                                    fontFamily = com.example.ui.theme.amiriFont,
+                                    color = PrimaryGreen,
+                                    textAlign = TextAlign.Center
+                                )
+                            } else {
+                                Text(
+                                    text = "﴿${ayahNumber.toArabicDigits()}﴾",
+                                    fontSize = (arabicFontSize * 1.1f).sp,
+                                    fontFamily = arabicFont,
+                                    color = PrimaryGreen,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     } else {
                         val rawAudioUrl = word.audioUrl
