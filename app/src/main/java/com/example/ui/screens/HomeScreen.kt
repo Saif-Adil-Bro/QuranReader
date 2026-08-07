@@ -17,8 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.automirrored.outlined.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -809,7 +809,7 @@ fun HeroSection(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text("পড়ুন", color = White.copy(alpha = 0.9f), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = White.copy(alpha = 0.9f), modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.ArrowForward, contentDescription = null, tint = White.copy(alpha = 0.9f), modifier = Modifier.size(14.dp))
                                 }
                             }
                         }
@@ -869,7 +869,7 @@ fun HeroSection(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        imageVector = Icons.Default.ArrowForward,
                                         contentDescription = null,
                                         tint = White.copy(alpha = 0.9f),
                                         modifier = Modifier.size(14.dp)
@@ -1053,7 +1053,7 @@ fun QuickAccessSection(
                         .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(100.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Outlined.MenuBook, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
@@ -1096,7 +1096,7 @@ fun QuickAccessSection(
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null, tint = if (selectedTab == 0) White else GrayText, modifier = Modifier.size(12.dp))
+                        Icon(Icons.Outlined.MenuBook, contentDescription = null, tint = if (selectedTab == 0) White else GrayText, modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("সূরা", color = if (selectedTab == 0) White else GrayText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
@@ -1630,7 +1630,7 @@ fun SurahCard(
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null, tint = GrayText, modifier = Modifier.size(10.dp))
+                    Icon(Icons.Outlined.MenuBook, contentDescription = null, tint = GrayText, modifier = Modifier.size(10.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("${ayahCount.toBengaliNumerals()} আয়াত", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                     Spacer(modifier = Modifier.width(6.dp))
@@ -1754,7 +1754,7 @@ fun BookmarksAndLastReadSection(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.MenuBook,
+                        imageVector = Icons.Outlined.MenuBook,
                         contentDescription = null,
                         tint = PrimaryGreen,
                         modifier = Modifier.size(20.dp)
@@ -1956,7 +1956,7 @@ fun ModesGridSection(
             ModeItemCard(
                 title = "অনুবাদ ও তাফসীর",
                 subtitle = "গভীর তাফসীর ও অর্থ",
-                icon = Icons.AutoMirrored.Filled.MenuBook,
+                icon = Icons.Default.MenuBook,
                 containerColor = Color(0xFFF5F3FF),
                 iconColor = Color(0xFF8B5CF6),
                 onClick = onTranslationClick,

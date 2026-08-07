@@ -18,8 +18,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,7 +42,7 @@ sealed class BottomNavItem(
     val inactiveIcon: ImageVector
 ) {
     object Home : BottomNavItem("home", "হোম", Icons.Filled.Home, Icons.Outlined.Home)
-    object Mushaf : BottomNavItem("mushaf", "মুসহাফ", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook)
+    object Mushaf : BottomNavItem("mushaf", "মুসহাফ", Icons.Default.MenuBook, Icons.Outlined.MenuBook)
     object Search : BottomNavItem("search", "সার্চ", Icons.Filled.Search, Icons.Outlined.Search)
     object Menu : BottomNavItem("settings", "মেনু", Icons.Filled.Menu, Icons.Outlined.Menu)
 }

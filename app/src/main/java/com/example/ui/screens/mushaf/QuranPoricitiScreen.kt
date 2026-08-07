@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -91,7 +91,7 @@ fun QuranPoricitiScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
                             tint = if (isDark) Color.White else Color.Black
                         )
@@ -207,7 +207,7 @@ fun QuranPoricitiScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                        imageVector = Icons.Default.MenuBook,
                         contentDescription = "Read Index",
                         tint = Color.White
                     )
@@ -350,7 +350,7 @@ fun QuranPoricitiScreen(
                         modifier = Modifier.padding(bottom = 8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                            imageVector = Icons.Default.MenuBook,
                             contentDescription = "Introduction Icon",
                             tint = PrimaryGreen,
                             modifier = Modifier.size(20.dp)

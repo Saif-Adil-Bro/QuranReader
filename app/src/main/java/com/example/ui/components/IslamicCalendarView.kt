@@ -12,8 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
@@ -266,7 +266,7 @@ fun IslamicCalendarView(
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    imageVector = Icons.Default.KeyboardArrowLeft,
                                     contentDescription = "Previous Month",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -292,7 +292,7 @@ fun IslamicCalendarView(
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    imageVector = Icons.Default.KeyboardArrowRight,
                                     contentDescription = "Next Month",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

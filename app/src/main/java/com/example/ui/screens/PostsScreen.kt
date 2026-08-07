@@ -24,8 +24,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.core.*
 import androidx.compose.ui.draw.rotate
@@ -275,7 +275,7 @@ fun PostsScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
                     actions = {
@@ -377,7 +377,7 @@ fun PostsScreen(
                         onClick = { selectedTabIndex = 0 },
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("ব্লগ (${regularBlogPosts.size})", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                             }
@@ -818,7 +818,7 @@ fun BlogPostDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "পিছনে যান")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "পিছনে যান")
                     }
                 },
                 actions = {
@@ -1077,7 +1077,7 @@ fun PhotoCardCustomizerDialog(
                     },
                     navigationIcon = {
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "বন্ধ করুন")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "বন্ধ করুন")
                         }
                     },
                     actions = {

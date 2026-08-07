@@ -19,7 +19,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Tune
@@ -137,7 +137,7 @@ fun MushafViewerScreen(
                         showSelectorSheet = true
                     }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                            imageVector = Icons.Default.ArrowBack, 
                             contentDescription = "Back",
                             tint = if (isDark) Color.White else Color.Black
                         )
@@ -302,7 +302,7 @@ fun MushafViewerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.Default.ArrowBack,
                         contentDescription = "পরিচিতি",
                         tint = Color(0xFF10B981),
                         modifier = Modifier.size(24.dp)

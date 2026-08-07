@@ -13,7 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -799,7 +799,7 @@ fun HeaderCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward, 
+                        Icons.Default.ArrowForward, 
                         contentDescription = "Search Ayah", 
                         tint = GrayText, 
                         modifier = Modifier
@@ -1369,7 +1369,7 @@ fun FloatingAudioPlayer(
                 modifier = Modifier.size(48.dp)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Back",
                     tint = GrayText,
                     modifier = Modifier.size(24.dp)
