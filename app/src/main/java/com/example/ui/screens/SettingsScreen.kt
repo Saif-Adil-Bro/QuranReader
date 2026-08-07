@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -1080,7 +1081,7 @@ fun MenuDetailDialog(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    if (type == "manzil" || type == "subjectwise") {
+                    if (type == "manzil") {
                         IconButton(onClick = { subjectwiseManzilInfoAction?.invoke() }) {
                             Icon(Icons.Default.Info, contentDescription = "মানযিল পরিচিতি", tint = PrimaryGreen)
                         }
@@ -2225,18 +2226,13 @@ fun SubjectwiseDialogContent(
                         }
                     }
                 } else {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "মানযিল • ${topic.verses.size}টি কার্ড (অফলাইন কুরআন থেকে)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        IconButton(onClick = { showManzilInfo = true }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Info, contentDescription = "মানযিল পরিচিতি", tint = PrimaryGreen)
-                        }
-                    }
+                    Text(
+                        text = "মানযিল • ${topic.verses.size}টি কার্ড (অফলাইন কুরআন থেকে)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -5510,6 +5506,7 @@ fun ManzilInfoContent() {
 
 তিন.
 উক্ত ফযিলত ছাড়াও সুস্থতা লাভ কিংবা বিভিন্ন আছর ও যাদু-টোনা আত্মরক্ষার উদ্দেশ্যে কুরআনের আয়াত দ্বারা ঝাড়ফুঁক করাও জায়েয। তাই শুধু এ উদ্দেশ্যে হলেও এ আয়াতগুলো পড়া যেতে পারে। ইবনে তাইমিয়া রহ. বলেন,
+
 وَأَمَّا مُعَالَجَةُ الْمَصْرُوعِ بِالرُّقَى، وَالتَّعَوُّذَاتِ. فَهَذَا عَلَى وَجْهَيْنِ: فَإِنْ كَانَتْ الرُّقَى وَالتَّعَاوِيذُ مِمَّا يُعْرَفُ مَعْنَاهَا، وَمِمَّا يَجُوزُ فِي دِينِ الْإِسْلَامِ أَنْ يَتَكَلَّمَ بِهَا الرَّجُلُ، دَاعِيًا لِلَّهِ، ذَاكِرًا لَهُ، وَمُخَاطِبًا لِخَلْقِهِ، وَنَحْوُ ذَلِكَ، فَإِنَّهُ يَجُوزُ أَنْ يُرْقَى بِهَا الْمَصْرُوعُ، وَيُعَوَّذَ، فَإِنَّهُ قَدْ ثَبَتَ فِي الصَّحِيحِ عَنْ النَّبِيِّ - صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ -: «أَنَّهُ أَذِنَ فِي الرُّقَى، مَا لَمْ تَكُنْ شِرْكًا». وَقَالَ: «مَنْ اسْتَطَاعَ مِنْكُمْ أَنْ يَنْفَعَ أَخَاهُ فَلْيَفْعَلْ»، وَإِنْ كَانَ فِي ذَلِكَ كَلِمَاتٌ مُحَرَّمَةٌ مِثْلُ أَنْ يَكُونَ فِيهَا شِرْكٌ، أَوْ كَانَتْ مَجْهُولَةَ الْمَعْنَى يُحْتَمَلُ أَنْ يَكُونَ فِيهَا كُفْرٌ، فَلَيْسَ لِأَحَدٍ أَنْ يَرْقِيَ بِهَا.
 
 অর্থ: আছরগ্রস্থ ব্যক্তিকে ঝাড়-ফুঁকের মাধ্যমে চিকিৎসা করা দুই প্রকার। তা যদি এমন শব্দ দ্বারা হয় যার অর্থ সুস্পষ্ট এবং তা ইসলামী শরীয়ত অনুযায়ী পড়াও বৈধ (যেমন, আল্লাহর কোন নাম, যিকির বা সৃষ্টিকুলকে লক্ষ করে আল্লাহর কোন সম্বোধন ইত্যাদি) দ্বারা আছরগ্রস্থ ব্যক্তিকে ঝাড়-ফুঁক করা জায়েয। কারণ, সহীহ হাদীসের বর্ণনা মতে রাসূল সা. শিরক না হলে ঝাড়-ফুঁক করার অনুমতি দিয়ে বলেছেন, তোমাদের কেউ যদি তার ভাইকে উপকার করতে সক্ষম হয় তাহলে সে যেন তা করে। আর যদি ঝাড়-ফুঁক হারাম বাক্য দ্বারা হয় (যেমন, কুফর-শিরকযুক্ত বাক্য) অথবা এমন বাক্য যার অর্থ জানা নেই (যাতে কুফর ও শিরকের সম্ভাবনা রয়েছে) তা দ্বারা ঝাড়-ফুঁক করা জায়েয নয়। [আল ফাতাওয়াল কুবরা ৩/১৩; মজমূউল ফাতাওয়া ২৪/২৭৮]
@@ -5524,6 +5521,7 @@ fun ManzilInfoContent() {
 ফযিলত হিসাবে বিশেষ হাদীসের উদ্ধৃতি
 
 মুদ্রিত মানযিলের কোন কোন সংস্করণে মানযিলের ফযিলত হিসাবে একটি বিশেষ হাদীসের উদ্ধৃতি দেওয়া হয়েছে। কোন নুসখায় মুসনাদে আহমদ থেকে কোন নুসখায় ইবনে মাযা থেকে। হাদীসটির বিবরণ এমন,
+
 حَدَّثَنَا هَارُونُ بْنُ حَيَّانَ قَالَ: حَدَّثَنَا إِبْرَاهِيمُ بْنُ مُوسَى قَالَ: أَنْبَأَنَا عَبْدَةُ بْنُ سُلَيْمَانَ قَالَ: حَدَّثَنَا أَبُو جَنَابٍ، عَنْ عَبْدِ الرَّحْمَنِ بْنِ أَبِي لَيْلَى، عَنْ أَبِيهِ أَبِي لَيْلَى قَالَ: كُنْتُ جَالِسًا عِنْدَ النَّبِيِّ صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ إِذْ جَاءَهُ أَعْرَابِيٌّ فَقَالَ: إِنَّ لِي أَخًا وَجِعًا، قَالَ: «مَا وَجَعُ أَخِيكَ؟» قَالَ: بِهِ لَمَمٌ، قَالَ: «اذْهَبْ فَأْتِنِي بِهِ». قَالَ: فَذَهَبَ فَجَاءَ بِهِ، فَأَجْلَسَهُ بَيْنَ يَدَيْهِ، فَسَمِعْتُهُ عَوَّذَهُ بِفَاتِحَةِ الْكِتَابِ، وَأَرْبَعِ آيَاتٍ مِنْ أَوَّلِ الْبَقَرَةِ، وَآيَتَيْنِ مِنْ وَسَطِهَا، {وَإِلَهُكُمْ إِلَهٌ وَاحِدٌ}، وَآيَةِ الْكُرْسِيِّ، وَثَلَاثِ آيَاتٍ مِنْ خَاتِمَتِهَا، وَآيَةٍ مِنْ آلِ عِمْرَانَ أَحْسِبُهُ قَالَ: {شَهِدَ اللَّهُ أَنَّهُ لَا إِلَهَ إِلَّا هُوَ}، وَآيَةٍ مِنَ الْأَعْرَافِ: {إِنَّ رَبَّكُمُ اللَّهُ الَّذِي خَلَقَ} الْآيَةَ، وَآيَةٍ مِنَ الْمُؤْمِنِينَ، {وَمَنْ يَدْعُ مَعَ اللَّهِ إِلَهًا آخَرَ لَا بُرْهَانَ لَهُ بِهِ}، وَآيَةٍ مِنَ الْجِنِّ، {وَأَنَّهُ تَعَالَى جَدُّ رَبِّنَا مَا اتَّخَذَ صَاحِبَةً وَلَا وَلَدًا}، وَعَشْرِ آيَاتٍ مِنْ أَوَّلِ الصَّافَّاتِ، وَثَلَاثِ آيَاتٍ مِنْ آخِرِ الْحَشْرِ، وَقُلْ هُوَ اللَّهُ أَحَدٌ، وَالْمُعَوِّذَتَيْنِ، فَقَامَ الْأَعْرَابِيُّ، قَدْ بَرَأَ لَيْسَ بِهِ بَأْسٌ.
 
 অর্থ: আব্দুর রহমান ইবনে আবি লাইলা রহ. বর্ণনা করেন তাঁর পিতা আবু লাইলা থেকে। তিনি বলেন, আমি নবী সা. এর নিকট বসে থাকা অবস্থায় এক বেদুইন তাঁর নিকটে এসে বললো, আমার এক অসুস্থ ভাই আছে। তিনি বললেন, তোমার ভাই কী রোগে আক্রান্ত? সে বললো, (কোন কিছুর) কুপ্রভাব (আছর)। তিনি বললেন, তুমি যাও এবং তাকে আমার নিকট নিয়ে এসো। আবূ লায়লা রা. বলেন, সে গিয়ে তার ভাইকে নিয়ে আসলে তিনি তাকে নিজের সামনে বসলেন। আমি শুনতে পেলাম, তিনি সূরা ফাতিহা, সূরা বাকারার প্রথম চার আয়াত, সূরা বাকারার মধ্যখানের দু’আয়াত (১৬৩-১৬৪ নং আয়াত), আয়াতুল কুরসী (২৫৫ নং আয়াত) এবং বাকারার শেষ তিন আয়াত (২৮৪-২৮৬ আয়াত) এবং আল ইমরানের একটি আয়াত, আমার মনে হয় তিনি ১৮ নং আয়াত পড়েছিলেন এবং সূরা আরাফের এক আয়াত (৫৪ নং আয়াত), সূরা মুমিনূনের এক আয়াত (১১৭ নং আয়াত), সূরা জিন-এর এক আয়াত (৩ নং আয়াত), সুরা সাফ্ফাত এর প্রথম দশ আয়াত, সুরা হাশরের শেষ তিন (২২, ২৩ ও ২৪) আয়াত, সূরা ইখলাস, সূরা ফালাক ও সূরা নাস পড়ে তাকে ফুঁ দিলেন। তাতে বেদুইন এমনভাবে সুস্থ হয়ে দাঁড়ালো যে, তার কোন রোগই অবশিষ্ট নেই।
@@ -5543,6 +5541,7 @@ fun ManzilInfoContent() {
 মানযিলের এ আমল ‘৩৩ আয়াতের আমল’ নামেও অনেকের মুখে পরিচিত। এ নামকরণের কারণ হচ্ছে, শাহ ওয়ালি উল্লাহ দেহলবী রহ. এর বংশে এ আমল ৩৩ আয়াতের আমল নামে প্রচলিত ছিল। তবে সুস্পষ্ট যে, আয়াত সংখ্যার ব্যাপারে প্রচলিত মানযিল ও উদ্ধৃত হাদীসের সাথে এর গড়মিল রয়েছে। কারণ, প্রচলিত মানযিলের আয়াত সংখ্যা ৭৯ টি, উদ্ধৃত হাদীসের আয়াত সংখ্যা ৫০টি আর এর আয়াত সংখ্যা ৩৩টি।
 
 শাহ ওয়ালি উল্লাহ দেহলভী রহ. তার পিতার কথা উল্লেখ করে লিখেছেন,
+
 وسمعته (يريد والده) يقول: ثلاث وثلاثون آية تنفع من السحر، وتكون حرزا من اللصوص والسباع، أربع آيات من أول البقرة، وآية الكرسي وآيتان بعدها إلى خالدون، وثلاث من آخر البقرة، وثلاث من الأعراف {إن ربكم الله} إلى {المحسنين}، وآخر بني إسرائيل {قل ادعو الله أو ادعو الرحمن}، وعشر آيات من أول الصافات إلى {لازب}، وآيتان من سورة الرحمن {يا معشر الجن} إلى {تنتصران}، وآخر سورة الحشر {لو أنزلنا هذا القرآن}، وآيتان من {قل أوحي} {وأنه تعالى جد ربنا} إلى {شططا}، فهذه هي الآيات المسميات بثلاث وثلاثين آية
 
 আমি আমার পিতাকে বলতে শুনেছি। তিনি বলেছেন, ৩৩ টি আয়াত এমন আছে যা যাদু-টোনা থেকে রক্ষার ক্ষেত্রে উপকারী এবং চোর-ডাকাত ও হিংস্র প্রাণী থেকে আত্মরক্ষার মাধ্যম। আয়াতগুলো এই,
@@ -5580,56 +5579,61 @@ fun ManzilInfoContent() {
             if (isHeading) {
                 TextWithArabicFont(
                     text = trimmed,
-                    fontSize = 17.sp,
-                    arabicFontSize = 18.sp,
+                    fontSize = 18.sp,
+                    arabicFontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp, top = 12.dp)
+                    modifier = Modifier.padding(bottom = 8.dp, top = 14.dp)
                 )
             } else {
-                val arabicCharCount = trimmed.count { char ->
-                    char.code in 0x0600..0x06FF || char.code in 0x0750..0x077F ||
-                    char.code in 0x08A0..0x08FF || char.code in 0xFB50..0xFDFF ||
-                    char.code in 0xFE70..0xFEFF
-                }
-                val isArabicBlock = arabicCharCount > 15 && (arabicCharCount.toFloat() / trimmed.length) > 0.35f
-
-                if (isArabicBlock) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                    ) {
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                            Text(
-                                text = trimmed,
-                                fontSize = 18.sp,
-                                fontFamily = com.example.ui.theme.meQuranFont,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 32.sp,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 14.dp)
-                            )
-                        }
+                // Split sub-lines if the paragraph contains multiple lines
+                val lines = trimmed.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+                for (line in lines) {
+                    val bengaliCharCount = line.count { char -> char.code in 0x0980..0x09FF }
+                    val arabicCharCount = line.count { char ->
+                        char.code in 0x0600..0x06FF || char.code in 0x0750..0x077F ||
+                        char.code in 0x08A0..0x08FF || char.code in 0xFB50..0xFDFF ||
+                        char.code in 0xFE70..0xFEFF
                     }
-                } else {
-                    TextWithArabicFont(
-                        text = trimmed,
-                        fontSize = 14.sp,
-                        arabicFontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 25.sp,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+                    val isArabicBlock = bengaliCharCount < 3 && arabicCharCount > 15 && (arabicCharCount.toFloat() / line.length) > 0.5f
+
+                    if (isArabicBlock) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp)
+                        ) {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                Text(
+                                    text = line,
+                                    fontSize = 20.sp,
+                                    fontFamily = com.example.ui.theme.meQuranFont,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    lineHeight = 2.0.em,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                                )
+                            }
+                        }
+                    } else {
+                        TextWithArabicFont(
+                            text = line,
+                            fontSize = 16.sp,
+                            arabicFontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = 28.sp,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                    }
                 }
             }
         }
-        
+          
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
