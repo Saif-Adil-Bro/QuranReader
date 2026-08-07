@@ -63,7 +63,7 @@ object SubjectwiseQuranRepository {
             if (it.isNotEmpty()) return@withContext it
         }
 
-        val cacheFile = File(context.cacheDir, "subjectwise_categories_cache_v2.json")
+        val cacheFile = File(context.cacheDir, "subjectwise_categories_cache_v4.json")
         if (cacheFile.exists()) {
             try {
                 val jsonStr = cacheFile.readText()
@@ -194,6 +194,12 @@ object SubjectwiseQuranRepository {
 
     private fun cleanArabicText(rawText: String, surahNumber: Int, numberInSurah: Int): String {
         var text = rawText.removePrefix("\uFEFF").trim()
+        
+        // Remove unsupported Waqf signs and Tajweed characters
+        text = text.replace(Regex("[\uE000-\uF8FF]"), "")
+        val tajweedRegex = Regex("[\u06D6-\u06DC\u06E2\u06E5\u06E6]")
+        text = text.replace(tajweedRegex, "")
+        
         if (numberInSurah == 1 && surahNumber != 1 && surahNumber != 9) {
             val bismillahPrefixes = listOf(
                 "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",

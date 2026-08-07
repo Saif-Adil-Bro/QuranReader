@@ -995,6 +995,7 @@ fun MenuDetailDialog(
     }
     
     var subjectwiseBackAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var subjectwiseManzilInfoAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     val handleBack: () -> Unit = {
         if ((type == "dua" || type == "morning_evening_dua") && selectedDuaForDuaTab != null) {
@@ -1079,7 +1080,13 @@ fun MenuDetailDialog(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.size(48.dp)) // Symmetrical spacer
+                    if (type == "manzil" || type == "subjectwise") {
+                        IconButton(onClick = { subjectwiseManzilInfoAction?.invoke() }) {
+                            Icon(Icons.Default.Info, contentDescription = "মানযিল পরিচিতি", tint = PrimaryGreen)
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.size(48.dp)) // Symmetrical spacer
+                    }
                 }
                 
                 if (type != "qibla") {
@@ -1125,12 +1132,14 @@ fun MenuDetailDialog(
                         "planner" -> PlannerDialogContent(viewModel)
                         "subjectwise" -> SubjectwiseDialogContent(
                             onDismiss = onDismiss,
-                            onRegisterBackAction = { subjectwiseBackAction = it }
+                            onRegisterBackAction = { subjectwiseBackAction = it },
+                            onRegisterManzilInfoAction = { subjectwiseManzilInfoAction = it }
                         )
                         "manzil" -> SubjectwiseDialogContent(
                             initialCategoryName = "মানযিল",
                             onDismiss = onDismiss,
-                            onRegisterBackAction = { subjectwiseBackAction = it }
+                            onRegisterBackAction = { subjectwiseBackAction = it },
+                            onRegisterManzilInfoAction = { subjectwiseManzilInfoAction = it }
                         )
                         "dua" -> DuaDialogContent(
                             viewModel = viewModel,
@@ -1851,7 +1860,8 @@ fun PlannerDialogContent(viewModel: SettingsViewModel) {
 fun SubjectwiseDialogContent(
     initialCategoryName: String? = null,
     onDismiss: () -> Unit = {},
-    onRegisterBackAction: (((() -> Unit)?) -> Unit) = {}
+    onRegisterBackAction: (((() -> Unit)?) -> Unit) = {},
+    onRegisterManzilInfoAction: (((() -> Unit)?) -> Unit) = {}
 ) {
     val context = LocalContext.current
     val subjectCategoryListState = rememberLazyListState()
@@ -1879,8 +1889,10 @@ fun SubjectwiseDialogContent(
 
     DisposableEffect(selectedCategory, selectedTopic, initialCategoryName, showManzilInfo) {
         onRegisterBackAction(handleInternalBack)
+        onRegisterManzilInfoAction { showManzilInfo = true }
         onDispose {
             onRegisterBackAction(null)
+            onRegisterManzilInfoAction(null)
         }
     }
 
@@ -5390,7 +5402,7 @@ fun TextWithArabicFont(
     text: String,
     modifier: Modifier = Modifier,
     fontSize: androidx.compose.ui.unit.TextUnit = 15.sp,
-    arabicFontSize: androidx.compose.ui.unit.TextUnit = 22.sp,
+    arabicFontSize: androidx.compose.ui.unit.TextUnit = 18.sp,
     fontWeight: FontWeight? = null,
     color: Color = MaterialTheme.colorScheme.onSurface,
     lineHeight: androidx.compose.ui.unit.TextUnit = 24.sp
@@ -5559,27 +5571,62 @@ fun ManzilInfoContent() {
         val paragraphs = fullText.split("\n\n")
         
         for (paragraph in paragraphs) {
-            if (paragraph.trim().isEmpty()) continue
+            val trimmed = paragraph.trim()
+            if (trimmed.isEmpty()) continue
             
             // Check if it's a heading
-            val isHeading = paragraph.trim().length < 50 && !paragraph.trim().endsWith("।") && !paragraph.trim().endsWith("]") && !paragraph.trim().endsWith("}") && !paragraph.trim().endsWith(")") && !paragraph.trim().endsWith(":") && !paragraph.contains("\n") && !paragraph.trim().contains("এক.") && !paragraph.trim().contains("দুই.") && !paragraph.trim().contains("তিন.")
+            val isHeading = trimmed.length < 50 && !trimmed.endsWith("।") && !trimmed.endsWith("]") && !trimmed.endsWith("}") && !trimmed.endsWith(")") && !trimmed.endsWith(":") && !trimmed.contains("\n") && !trimmed.contains("এক.") && !trimmed.contains("দুই.") && !trimmed.contains("তিন.")
 
             if (isHeading) {
                 TextWithArabicFont(
-                    text = paragraph.trim(),
-                    fontSize = 18.sp,
+                    text = trimmed,
+                    fontSize = 17.sp,
+                    arabicFontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp, top = 12.dp)
                 )
             } else {
-                TextWithArabicFont(
-                    text = paragraph.trim(),
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 26.sp,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
+                val arabicCharCount = trimmed.count { char ->
+                    char.code in 0x0600..0x06FF || char.code in 0x0750..0x077F ||
+                    char.code in 0x08A0..0x08FF || char.code in 0xFB50..0xFDFF ||
+                    char.code in 0xFE70..0xFEFF
+                }
+                val isArabicBlock = arabicCharCount > 15 && (arabicCharCount.toFloat() / trimmed.length) > 0.35f
+
+                if (isArabicBlock) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                            Text(
+                                text = trimmed,
+                                fontSize = 18.sp,
+                                fontFamily = com.example.ui.theme.meQuranFont,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = 32.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 14.dp)
+                            )
+                        }
+                    }
+                } else {
+                    TextWithArabicFont(
+                        text = trimmed,
+                        fontSize = 14.sp,
+                        arabicFontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = 25.sp,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                }
             }
         }
         
