@@ -60,23 +60,14 @@ fun WordByWordText(
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (arabicFontName.contains("Saleem", ignoreCase = true)) {
-                                Text(
-                                    text = "﴿${ayahNumber.toArabicDigits()}﴾",
-                                    fontSize = (arabicFontSize * 1.1f).sp,
-                                    fontFamily = com.example.ui.theme.amiriFont,
-                                    color = PrimaryGreen,
-                                    textAlign = TextAlign.Center
-                                )
-                            } else {
-                                Text(
-                                    text = "﴿${ayahNumber.toArabicDigits()}﴾",
-                                    fontSize = (arabicFontSize * 1.1f).sp,
-                                    fontFamily = arabicFont,
-                                    color = PrimaryGreen,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                            AyahNumberCircle(
+                                number = ayahNumber,
+                                size = (arabicFontSize * 0.95f).coerceIn(28f, 36f).dp,
+                                backgroundColor = Color(0xFFE8F5E9),
+                                borderColor = PrimaryGreen,
+                                textColor = PrimaryGreen,
+                                fontSize = (arabicFontSize * 0.45f).coerceIn(11f, 16f).sp
+                            )
                         }
                     } else {
                         val rawAudioUrl = word.audioUrl
@@ -135,6 +126,7 @@ fun WordByWordText(
                                 Text(
                                     text = word.translation?.text ?: "",
                                     fontSize = 11.sp,
+                                    fontFamily = com.example.ui.theme.LocalBengaliFont.current,
                                     color = if (isHighlighted) PrimaryGreen.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                     textAlign = TextAlign.Center
                                 )

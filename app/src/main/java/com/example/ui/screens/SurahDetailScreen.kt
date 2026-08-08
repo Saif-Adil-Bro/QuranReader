@@ -68,6 +68,7 @@ import com.example.ui.screens.toBengaliNumerals
 import com.example.ui.viewmodels.SurahDetailViewModel
 import com.example.ui.viewmodels.PlaybackMode
 import com.example.ui.components.WordByWordText
+import com.example.ui.components.AyahNumberCircle
 import com.example.ui.components.parseHtmlToAnnotatedString
 
 enum class ViewMode { LIST, READING, MUSHAF, TAFSIR }
@@ -101,6 +102,7 @@ fun SurahDetailScreen(
     val arabicFontSize by viewModel.arabicFontSize.collectAsState()
     val bengaliFontSize by viewModel.bengaliFontSize.collectAsState()
     val arabicFontName by viewModel.arabicFontName.collectAsState()
+    val bengaliFontName by viewModel.bengaliFontName.collectAsState()
     val tanzilTextStyle by viewModel.tanzilTextStyle.collectAsState()
     val showWaqfSigns by viewModel.showWaqfSigns.collectAsState()
     val arabicLineSpacing by viewModel.arabicLineSpacing.collectAsState()
@@ -543,6 +545,7 @@ fun SurahDetailScreen(
                                     arabicFontSize = arabicFontSize,
                                     bengaliFontSize = bengaliFontSize,
                                     arabicFontName = arabicFontName,
+                                    bengaliFontName = bengaliFontName,
                                     currentPlayingWordUrl = currentPlayingWordUrl,
                                     isBookmarked = isBookmarked,
                                     onToggleBookmark = { viewModel.toggleBookmark(ayah, surahNumber) },
@@ -674,6 +677,8 @@ fun SurahDetailScreen(
                     onBengaliFontSizeChange = { viewModel.setBengaliFontSize(it) },
                     arabicFontName = arabicFontName,
                     onArabicFontNameChange = { viewModel.setArabicFontName(it) },
+                    bengaliFontName = bengaliFontName,
+                    onBengaliFontNameChange = { viewModel.setBengaliFontName(it) },
                     tanzilTextStyle = tanzilTextStyle,
                     onTanzilTextStyleChange = { viewModel.setTanzilTextStyle(it) },
                     isDownloadingOffline = isDownloadingOffline,
@@ -905,6 +910,7 @@ fun AyahCard(
     availableTranslations: List<com.example.data.model.TranslationResourceDto> = emptyList(),
     bengaliFontSize: Float,
     arabicFontName: String = "Me Quran",
+    bengaliFontName: String = "SolaimanLipi",
     currentPlayingWordUrl: String? = null,
     isBookmarked: Boolean = false,
     onToggleBookmark: () -> Unit = {},
@@ -918,6 +924,7 @@ fun AyahCard(
     }
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val bengaliFont = com.example.ui.theme.getBengaliFont(bengaliFontName)
     
     val shareText = buildString {
         append(ayah.arabicText)
@@ -988,12 +995,14 @@ fun AyahCard(
             if (viewMode == ViewMode.LIST) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier.size(36.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(ayah.numberInSurah.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                        }
+                        AyahNumberCircle(
+                            number = ayah.numberInSurah,
+                            size = 32.dp,
+                            backgroundColor = Color(0xFFE8F5E9),
+                            borderColor = PrimaryGreen,
+                            textColor = PrimaryGreen,
+                            fontSize = 13.sp
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("পারা ${ayah.juz} • পৃষ্ঠা ${ayah.page}", color = PrimaryGreen, fontSize = 10.sp)
                     }
@@ -1056,12 +1065,14 @@ fun AyahCard(
             if (viewMode == ViewMode.READING) {
                 Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier.size(36.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(ayah.numberInSurah.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                        }
+                        AyahNumberCircle(
+                            number = ayah.numberInSurah,
+                            size = 32.dp,
+                            backgroundColor = Color(0xFFE8F5E9),
+                            borderColor = PrimaryGreen,
+                            textColor = PrimaryGreen,
+                            fontSize = 13.sp
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("পারা ${ayah.juz} • পৃষ্ঠা ${ayah.page}", color = PrimaryGreen, fontSize = 10.sp)
                     }
@@ -1233,7 +1244,7 @@ fun AyahCard(
                     Text(
                         text = ayah.bengaliText,
                         fontSize = bengaliFontSize.sp,
-                        fontFamily = com.example.ui.theme.solaimanLipiFont,
+                        fontFamily = bengaliFont,
                         color = PrimaryGreen,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth()
@@ -1496,7 +1507,7 @@ fun PlayerBottomSheetContent(
             Text(
                 text = currentAyah.bengaliText,
                 fontSize = 14.sp,
-                fontFamily = com.example.ui.theme.solaimanLipiFont,
+                fontFamily = com.example.ui.theme.getBengaliFont(arabicFontName), // or LocalBengaliFont
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
@@ -1577,6 +1588,8 @@ fun ReaderSettingsBottomSheetContent(
     onBengaliFontSizeChange: (Float) -> Unit,
     arabicFontName: String = "Me Quran",
     onArabicFontNameChange: (String) -> Unit = {},
+    bengaliFontName: String = "SolaimanLipi",
+    onBengaliFontNameChange: (String) -> Unit = {},
     tanzilTextStyle: String = "quran-simple",
     onTanzilTextStyleChange: (String) -> Unit = {},
     isDownloadingOffline: Boolean,
@@ -1848,6 +1861,53 @@ fun ReaderSettingsBottomSheetContent(
                         color = if (isSelected) White else MaterialTheme.colorScheme.onSurface,
                         fontSize = 22.sp,
                         fontFamily = com.example.ui.theme.getArabicFont(font)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Bengali Font Style Selection
+        Text(
+            text = "বাংলা ফন্ট নির্বাচন করুন",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(com.example.ui.theme.bengaliFontsList) { font ->
+                val isSelected = font == bengaliFontName
+                val displayName = when(font) {
+                    "SolaimanLipi" -> "সলাইমান লিপি"
+                    "Hind Siliguri" -> "হিন্দ শিলিগুড়ি"
+                    "Shorif Shishir" -> "শরীফ শিশির"
+                    else -> font
+                }
+                Box(
+                    modifier = Modifier
+                        .height(56.dp)
+                        .background(
+                            if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .border(
+                            1.dp,
+                            if (isSelected) PrimaryGreen else Border,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { onBengaliFontNameChange(font) }
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = displayName,
+                        color = if (isSelected) White else MaterialTheme.colorScheme.onSurface,
+                        fontSize = 16.sp,
+                        fontFamily = com.example.ui.theme.getBengaliFont(font)
                     )
                 }
             }
@@ -2250,16 +2310,17 @@ fun Int.toArabicNumerals(): String {
 @Composable
 fun AyahCircle(
     number: Int,
-    fontSize: Float,
+    fontSize: Float = 28f,
     color: Color = PrimaryGreen,
     modifier: Modifier = Modifier
 ) {
-    Text(
-        text = "\u06DD${number.toArabicNumerals()}",
-        fontSize = (fontSize * 1.25f).sp,
-        fontFamily = amiriFont,
-        color = color,
-        textAlign = TextAlign.Center,
+    AyahNumberCircle(
+        number = number,
+        size = (fontSize * 0.95f).coerceIn(28f, 36f).dp,
+        backgroundColor = Color(0xFFE8F5E9),
+        borderColor = color,
+        textColor = color,
+        fontSize = (fontSize * 0.45f).coerceIn(11f, 16f).sp,
         modifier = modifier
     )
 }
@@ -2275,28 +2336,40 @@ fun AyahInlineText(
     lineSpacing: Float = 2.0f,
     arabicFontName: String = "Me Quran"
 ) {
-    // The standard Uthmani way to display ayah numbers: 
-    // Arabic text followed by U+FD3F (Ornate Left Parenthesis), ayah number in Arabic digits, U+FD3E (Ornate Right Parenthesis)
-    // Or just appending U+06DD (Arabic End of Ayah) followed by the digits. 
-    // In KFGQPC Uthman Taha, \u06DD wraps the trailing digits automatically!
-    val ayahNumberStr = ayahNumber.toArabicNumerals()
-    // KFGQPC Uthman Taha Naskh often uses U+06DD before the digits.
-    // Let's use \u06DD + digits.
-    
+    val inlineContentId = "ayah_circle_$ayahNumber"
     val annotatedText = androidx.compose.ui.text.buildAnnotatedString {
         appendStyledWaqfText(arabicText, fontSize, showWaqfSigns = true, arabicFontName = arabicFontName)
-        if (arabicFontName.contains("Saleem", ignoreCase = true)) {
-            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = amiriFont)) {
-                append(" ﴿$ayahNumberStr﴾")
-            }
-        } else {
-            append(" ﴿$ayahNumberStr﴾")
-        }
+        append(" ")
+        appendInlineContent(inlineContentId, "[$ayahNumber]")
     }
+
+    val circleSizeDp = (fontSize * 0.9f).coerceIn(24f, 36f)
+    val circleSize = circleSizeDp.dp
+    val circleFontSize = (fontSize * 0.42f).coerceIn(11f, 16f).sp
+
+    val inlineContent = mapOf(
+        inlineContentId to InlineTextContent(
+            placeholder = Placeholder(
+                width = (circleSizeDp + 6).sp,
+                height = circleSizeDp.sp,
+                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+            )
+        ) {
+            AyahNumberCircle(
+                number = ayahNumber,
+                size = circleSize,
+                backgroundColor = Color(0xFFE8F5E9),
+                borderColor = PrimaryGreen,
+                textColor = PrimaryGreen,
+                fontSize = circleFontSize
+            )
+        }
+    )
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Text(
             text = annotatedText,
+            inlineContent = inlineContent,
             fontSize = fontSize.sp,
             lineHeight = (fontSize * lineSpacing).sp,
             fontFamily = fontFamily,

@@ -37,6 +37,12 @@ import com.example.data.model.formatWaqfSigns
 import com.example.data.model.appendStyledWaqfText
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
+import com.example.ui.theme.PrimaryGreen
+import com.example.ui.components.AyahNumberCircle
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import com.example.ui.viewmodels.ReadingModeViewModel
 import androidx.activity.compose.BackHandler
 
@@ -216,8 +222,13 @@ fun ReadingModeScreen(
                                                     }
                                                 }
                                                 
-                                                val annotatedString = remember(surahAyahs, showWaqfSigns) {
-                                                    buildAnnotatedString {
+                                                val (annotatedString, inlineMap) = remember(surahAyahs, showWaqfSigns, arabicFontSize) {
+                                                    val map = mutableMapOf<String, InlineTextContent>()
+                                                    val circleSizeDp = (arabicFontSize * 0.9f).coerceIn(24f, 36f)
+                                                    val circleSize = circleSizeDp.dp
+                                                    val circleFontSize = (arabicFontSize * 0.42f).coerceIn(11f, 16f).sp
+
+                                                    val str = buildAnnotatedString {
                                                         surahAyahs.forEachIndexed { index, ayah ->
                                                             var textToDisplay = ayah.arabicText // Base text without processing
                                                             
@@ -244,13 +255,25 @@ fun ReadingModeScreen(
                                                             
                                                             appendStyledWaqfText(textToDisplay.trim(), arabicFontSize, showWaqfSigns, arabicFontName)
                                                             
-                                                            val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
-                                                            if (arabicFontName.contains("Saleem", ignoreCase = true)) {
-                                                                withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
-                                                                    append(" ﴿$numInSurahStr﴾")
-                                                                }
-                                                            } else {
-                                                                append(" ﴿$numInSurahStr﴾")
+                                                            val inlineId = "ayah_circle_${ayah.surahNumber}_${ayah.numberInSurah}"
+                                                            append(" ")
+                                                            appendInlineContent(inlineId, " [${ayah.numberInSurah}]")
+
+                                                            map[inlineId] = InlineTextContent(
+                                                                placeholder = Placeholder(
+                                                                    width = (circleSizeDp + 6).sp,
+                                                                    height = circleSizeDp.sp,
+                                                                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                                                                )
+                                                            ) {
+                                                                AyahNumberCircle(
+                                                                    number = ayah.numberInSurah,
+                                                                    size = circleSize,
+                                                                    backgroundColor = Color(0xFFE8F5E9),
+                                                                    borderColor = PrimaryGreen,
+                                                                    textColor = PrimaryGreen,
+                                                                    fontSize = circleFontSize
+                                                                )
                                                             }
                                                             
                                                             if (index < surahAyahs.lastIndex) {
@@ -258,10 +281,12 @@ fun ReadingModeScreen(
                                                             }
                                                         }
                                                     }
+                                                    Pair(str, map)
                                                 }
                                                 var textLayoutResult by remember { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
                                                 Text(
                                                     text = annotatedString,
+                                                    inlineContent = inlineMap,
                                                     fontSize = arabicFontSize.sp,
                                                     lineHeight = (arabicFontSize * arabicLineSpacing).sp,
                                                     fontFamily = arabicFont,

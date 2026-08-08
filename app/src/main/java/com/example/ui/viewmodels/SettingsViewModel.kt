@@ -76,6 +76,43 @@ class SettingsViewModel(
             initialValue = "Me Quran"
         )
 
+    val bengaliFontName: StateFlow<String> = repository.bengaliFontNameFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "SolaimanLipi"
+        )
+
+    val arabicFontSize: StateFlow<Float> = repository.arabicFontSizeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 20f
+        )
+
+    val bengaliFontSize: StateFlow<Float> = repository.bengaliFontSizeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 16f
+        )
+
+    fun setArabicFontName(fontName: String) {
+        viewModelScope.launch { repository.setArabicFontName(fontName) }
+    }
+
+    fun setBengaliFontName(fontName: String) {
+        viewModelScope.launch { repository.setBengaliFontName(fontName) }
+    }
+
+    fun setArabicFontSize(size: Float) {
+        viewModelScope.launch { repository.setArabicFontSize(size) }
+    }
+
+    fun setBengaliFontSize(size: Float) {
+        viewModelScope.launch { repository.setBengaliFontSize(size) }
+    }
+
 
     private val _downloadingTafsirIds = MutableStateFlow<Set<String>>(emptySet())
     val downloadingTafsirIds: StateFlow<Set<String>> = _downloadingTafsirIds.asStateFlow()

@@ -76,6 +76,8 @@ class MainActivity : ComponentActivity() {
       val appContainer = remember { (application as QuranApplication).container }
       val themeState by appContainer.settingsRepository.themeFlow.collectAsState(initial = "System")
       val keepScreenOn by appContainer.settingsRepository.keepScreenOnFlow.collectAsState(initial = false)
+      val arabicFontName by appContainer.settingsRepository.arabicFontNameFlow.collectAsState(initial = "Me Quran")
+      val bengaliFontName by appContainer.settingsRepository.bengaliFontNameFlow.collectAsState(initial = "SolaimanLipi")
       
       LaunchedEffect(keepScreenOn) {
           if (keepScreenOn) {
@@ -90,7 +92,11 @@ class MainActivity : ComponentActivity() {
           "Light" -> false
           else -> isSystemDark
       }
-      MyApplicationTheme(darkTheme = darkTheme) {
+      MyApplicationTheme(
+          darkTheme = darkTheme,
+          arabicFontName = arabicFontName,
+          bengaliFontName = bengaliFontName
+      ) {
         Surface(
           modifier = Modifier.fillMaxSize(),
           color = MaterialTheme.colorScheme.background

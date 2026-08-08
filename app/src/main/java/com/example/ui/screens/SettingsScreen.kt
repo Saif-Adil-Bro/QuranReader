@@ -151,6 +151,7 @@ fun SettingsScreen(
             title = "অ্যাপ সিস্টেম ও সেটিংস",
             icon = Icons.Default.Settings,
             items = listOf(
+                MenuItem("font_settings", "ফন্ট ও তাজভীদ", Icons.Default.FontDownload, Color(0xFF10B981)),
                 MenuItem("theme", "অ্যাপ থিম", Icons.Default.Palette, Color(0xFF9C27B0)),
                 MenuItem("notifications", "নোটিফিকেশন", Icons.Default.Notifications, Color(0xFFFBBF24)),
                 MenuItem("offline_sync", "অফলাইন ডাউনলোড", Icons.Default.Download, Color(0xFFF59E0B)),
@@ -1056,6 +1057,7 @@ fun MenuDetailDialog(
                     "learn" -> "কুরআন শিক্ষা"
                     "video" -> "ভিডিও ক্লাস"
                     "offline_sync" -> "কুরআন অফলাইন ডাউনলোড"
+                    "font_settings" -> "ফন্ট ও তাজভীদ"
                     "backup" -> "ব্যাকআপ"
                     "notifications" -> "নোটিফিকেশন সেটিংস"
                     "theme" -> "অ্যাপ থিম"
@@ -1161,6 +1163,7 @@ fun MenuDetailDialog(
                         "learn" -> LearnDialogContent()
                         "video" -> VideoDialogContent()
                         "offline_sync" -> OfflineSyncDialogContent(viewModel)
+                        "font_settings" -> FontSettingsContent(viewModel = viewModel, onDismiss = onDismiss)
                         "backup" -> BackupDialogContent()
                         "notifications" -> NotificationDialogContent(viewModel)
                         "theme" -> ThemeDialogContent(viewModel)
@@ -3863,13 +3866,13 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "শব্দার্থ ও তাজবীদ ডাটা",
+                            text = "শব্দে শব্দে অর্থ (WbW) ও তাজবীদ ডাটা",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "১১৪টি সুরার শব্দে শব্দে অর্থ ও তাজবীদ ক্যাশ",
+                            text = "১১৪টি সুরার শব্দে শব্দে বাংলা অর্থ, অনুবাদ ও তাজবীদ অফলাইন ডাটা",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -3891,7 +3894,7 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 val statusIcon: ImageVector
 
                 if (downloadedCount == 114) {
-                    statusText = "সম্পূর্ণ ডাউনলোড করা হয়েছে (১১৪টি সুরা)"
+                    statusText = "সম্পূর্ণ অফলাইন ডাউনলোড করা হয়েছে (১১৪টি সুরা WbW)"
                     statusColor = PrimaryGreen
                     statusIcon = Icons.Default.CheckCircle
                 } else if (downloadedCount > 0) {
@@ -5635,5 +5638,372 @@ fun ManzilInfoContent() {
         }
           
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+fun FontSettingsContent(
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
+    val arabicFontName by viewModel.arabicFontName.collectAsState()
+    val bengaliFontName by viewModel.bengaliFontName.collectAsState()
+    val arabicFontSize by viewModel.arabicFontSize.collectAsState()
+    val bengaliFontSize by viewModel.bengaliFontSize.collectAsState()
+
+    var selectedTab by remember { mutableStateOf(0) } // 0: Arabic, 1: Bengali
+
+    val arabicFontOptions = listOf(
+        "Scheherazade New" to "আল কালাম কুরআন মাজীদ",
+        "PDMS Saleem" to "মলভি এ-এম",
+        "Amiri" to "আমিরি",
+        "Me Quran" to "মি কুরআন",
+        "Noorehira" to "নুরে হুদা",
+        "Uthman Taha" to "উছমান তাহা নাসখ",
+        "Amiri Quran" to "আমিরি কুরআন",
+        "Lateef" to "লতীফ",
+        "Almarai" to "আল মারাই",
+        "Tajawal" to "তাজাওয়াল"
+    )
+
+    val bengaliFontOptions = listOf(
+        "SolaimanLipi" to "সলাইমান লিপি",
+        "Hind Siliguri" to "হিন্দ শিলিগুড়ি",
+        "Shorif Shishir" to "শরীফ শিশির"
+    )
+
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 8.dp)
+    ) {
+        // 1. Live Preview Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .border(1.dp, PrimaryGreen.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDark) Color(0xFF1E2923) else Color(0xFFF4FBF7)
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "কুরআন ও অনুবাদ প্রিভিউ",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PrimaryGreen,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                // Arabic Sample
+                Text(
+                    text = "﴿ رَبَّنَا تَقَبَّلْ مِنَّا إِنَّكَ أَنْتَ السَّمِيعُ الْعَلِيمُ ﴾",
+                    fontSize = arabicFontSize.sp,
+                    fontFamily = com.example.ui.theme.getArabicFont(arabicFontName),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    lineHeight = (arabicFontSize * 1.5f).sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp)
+                )
+
+                HorizontalDivider(
+                    color = Border.copy(alpha = 0.5f),
+                    thickness = 1.dp,
+                    modifier = Modifier.padding(vertical = 6.dp)
+                )
+
+                // Bengali Sample
+                Text(
+                    text = "পরওয়ারদেগার! আমাদের থেকে কবুল কর। নিশ্চয়ই তুমি শ্রবণকারী, সর্বজ্ঞ।",
+                    fontSize = bengaliFontSize.sp,
+                    fontFamily = com.example.ui.theme.getBengaliFont(bengaliFontName),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    lineHeight = (bengaliFontSize * 1.4f).sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp)
+                )
+
+                // Bengali Tafsir Sample
+                Text(
+                    text = "কাদের প্রতি আল্লাহর অনুগ্রহ হয়েছে, সে সম্পর্কে সূরা নিসায় এরশাদ হয়েছে, কেউ আল্লাহ ও রাসূলের আনুগত্য করলে সে নবীগণ, সিদ্দীকগণ...",
+                    fontSize = (bengaliFontSize * 0.85f).coerceAtLeast(11f).sp,
+                    fontFamily = com.example.ui.theme.getBengaliFont(bengaliFontName),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    lineHeight = (bengaliFontSize * 1.2f).sp,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        // 2. Font Size Adjusters
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Arabic Font Size
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "আরবি হরফের আকার",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                val newSize = (arabicFontSize - 1f).coerceIn(16f, 40f)
+                                viewModel.setArabicFontSize(newSize)
+                            },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                        ) {
+                            Text("-", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Text(
+                            text = "${arabicFontSize.toInt()}".toBengaliNumerals(),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            color = PrimaryGreen
+                        )
+                        IconButton(
+                            onClick = {
+                                val newSize = (arabicFontSize + 1f).coerceIn(16f, 40f)
+                                viewModel.setArabicFontSize(newSize)
+                            },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                        ) {
+                            Text("+", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Bengali Font Size
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "বাংলা হরফের আকার",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                val newSize = (bengaliFontSize - 1f).coerceIn(12f, 28f)
+                                viewModel.setBengaliFontSize(newSize)
+                            },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                        ) {
+                            Text("-", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Text(
+                            text = "${bengaliFontSize.toInt()}".toBengaliNumerals(),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            color = PrimaryGreen
+                        )
+                        IconButton(
+                            onClick = {
+                                val newSize = (bengaliFontSize + 1f).coerceIn(12f, 28f)
+                                viewModel.setBengaliFontSize(newSize)
+                            },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                        ) {
+                            Text("+", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Tab Switcher
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                .padding(4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .background(
+                        if (selectedTab == 0) PrimaryGreen else Color.Transparent,
+                        RoundedCornerShape(8.dp)
+                    )
+                    .clickable { selectedTab = 0 },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "আরবি ফন্ট",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selectedTab == 0) White else MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .background(
+                        if (selectedTab == 1) PrimaryGreen else Color.Transparent,
+                        RoundedCornerShape(8.dp)
+                    )
+                    .clickable { selectedTab = 1 },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "বাংলা ফন্ট",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selectedTab == 1) White else MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        // 4. Font Options List
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                if (selectedTab == 0) {
+                    arabicFontOptions.forEach { (fontKey, label) ->
+                        val isSelected = fontKey == arabicFontName
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setArabicFontName(fontKey) }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { viewModel.setArabicFontName(fontKey) },
+                                    colors = RadioButtonDefaults.colors(selectedColor = PrimaryGreen)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = label,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Text(
+                                text = "وَإِلَٰهُكُمْ إِلَٰهٌ وَٰحِدٌ",
+                                fontSize = 20.sp,
+                                fontFamily = com.example.ui.theme.getArabicFont(fontKey),
+                                color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.End
+                            )
+                        }
+                        HorizontalDivider(color = Border.copy(alpha = 0.3f))
+                    }
+                } else {
+                    bengaliFontOptions.forEach { (fontKey, label) ->
+                        val isSelected = fontKey == bengaliFontName
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setBengaliFontName(fontKey) }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { viewModel.setBengaliFontName(fontKey) },
+                                    colors = RadioButtonDefaults.colors(selectedColor = PrimaryGreen)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = label,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Text(
+                                text = "পরওয়ারদেগার!",
+                                fontSize = 15.sp,
+                                fontFamily = com.example.ui.theme.getBengaliFont(fontKey),
+                                color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.End
+                            )
+                        }
+                        HorizontalDivider(color = Border.copy(alpha = 0.3f))
+                    }
+                }
+            }
+        }
+
+        // 5. Action Button
+        Button(
+            onClick = onDismiss,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+        ) {
+            Text(
+                text = "সম্পন্ন",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = White
+            )
+        }
     }
 }

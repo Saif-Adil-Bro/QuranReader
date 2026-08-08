@@ -41,6 +41,7 @@ class SettingsRepository(val context: Context) {
     private val THEME_KEY = stringPreferencesKey("theme")
     private val AUTO_SCROLL_SPEED_KEY = floatPreferencesKey("auto_scroll_speed")
     private val ARABIC_FONT_NAME_KEY = stringPreferencesKey("arabic_font_name")
+    private val BENGALI_FONT_NAME_KEY = stringPreferencesKey("bengali_font_name")
     private val TANZIL_TEXT_STYLE_KEY = stringPreferencesKey("tanzil_text_style")
     private val ARABIC_LINE_SPACING_KEY = floatPreferencesKey("arabic_line_spacing")
     
@@ -94,6 +95,9 @@ class SettingsRepository(val context: Context) {
 
     val arabicFontNameFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[ARABIC_FONT_NAME_KEY] ?: "Me Quran" }
+
+    val bengaliFontNameFlow: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[BENGALI_FONT_NAME_KEY] ?: "SolaimanLipi" }
 
     val tanzilTextStyleFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] ?: "quran-simple" }
@@ -212,6 +216,10 @@ class SettingsRepository(val context: Context) {
 
     suspend fun setArabicFontName(fontName: String) {
         context.dataStore.edit { preferences -> preferences[ARABIC_FONT_NAME_KEY] = fontName }
+    }
+
+    suspend fun setBengaliFontName(fontName: String) {
+        context.dataStore.edit { preferences -> preferences[BENGALI_FONT_NAME_KEY] = fontName }
     }
 
     suspend fun setTanzilTextStyle(style: String) {

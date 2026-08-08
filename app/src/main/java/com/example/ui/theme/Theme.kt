@@ -9,6 +9,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -53,8 +55,9 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun MyApplicationTheme(
   darkTheme: Boolean = isSystemInDarkTheme(),
-  // Dynamic color is available on Android 12+
   dynamicColor: Boolean = false,
+  arabicFontName: String = "Me Quran",
+  bengaliFontName: String = "SolaimanLipi",
   content: @Composable () -> Unit,
 ) {
   val colorScheme =
@@ -80,5 +83,14 @@ fun MyApplicationTheme(
     }
   }
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  val bengaliFont = remember(bengaliFontName) { getBengaliFont(bengaliFontName) }
+  val arabicFont = remember(arabicFontName) { getArabicFont(arabicFontName) }
+  val customTypography = remember(bengaliFont) { getTypographyForBengaliFont(bengaliFont) }
+
+  CompositionLocalProvider(
+      LocalBengaliFont provides bengaliFont,
+      LocalArabicFont provides arabicFont
+  ) {
+      MaterialTheme(colorScheme = colorScheme, typography = customTypography, content = content)
+  }
 }

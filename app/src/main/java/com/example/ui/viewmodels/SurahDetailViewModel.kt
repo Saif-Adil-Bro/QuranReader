@@ -181,6 +181,13 @@ class SurahDetailViewModel(
             initialValue = "Me Quran"
         )
 
+    val bengaliFontName: StateFlow<String> = settingsRepository.bengaliFontNameFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = "SolaimanLipi"
+        )
+
     val tanzilTextStyle: StateFlow<String> = settingsRepository.tanzilTextStyleFlow
         .stateIn(
             scope = viewModelScope,
@@ -347,6 +354,12 @@ class SurahDetailViewModel(
     fun setArabicFontName(fontName: String) {
         viewModelScope.launch {
             settingsRepository.setArabicFontName(fontName)
+        }
+    }
+
+    fun setBengaliFontName(fontName: String) {
+        viewModelScope.launch {
+            settingsRepository.setBengaliFontName(fontName)
         }
     }
 
