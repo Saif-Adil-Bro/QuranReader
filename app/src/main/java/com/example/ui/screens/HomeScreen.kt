@@ -2322,7 +2322,7 @@ fun RecitationPlayerPanel(
                             Text(
                                 text = currentAyahObj.bengaliText,
                                 fontSize = 11.sp,
-                                fontFamily = com.example.ui.theme.solaimanLipiFont,
+                                fontFamily = com.example.ui.theme.LocalBengaliFont.current,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                                 textAlign = TextAlign.Left,
                                 modifier = Modifier.fillMaxWidth()

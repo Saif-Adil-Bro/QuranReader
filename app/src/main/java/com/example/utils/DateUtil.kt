@@ -19,6 +19,12 @@ object DateUtil {
         }.joinToString("")
     }
 
+    fun toArabicNumerals(number: Int): String {
+        return number.toString().map { 
+            if (it in '0'..'9') (it - '0' + '٠'.code).toChar() else it 
+        }.joinToString("")
+    }
+
     fun getTodayEnglishDateStr(): String {
         val calendar = java.util.Calendar.getInstance()
         val dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK) - 1
@@ -102,3 +108,5 @@ object DateUtil {
         return Pair("${toBengaliNumerals(bDay)} ${bengaliMonths[bMonth - 1]} ${toBengaliNumerals(bYear)}", "(ঋতু: $season)")
     }
 }
+
+fun Int.toArabicNumerals(): String = DateUtil.toArabicNumerals(this)

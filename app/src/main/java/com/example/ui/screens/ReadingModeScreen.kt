@@ -69,8 +69,10 @@ fun ReadingModeScreen(
 
     var showSettings by remember { mutableStateOf(false) }
 
-    LaunchedEffect(surahNumber, tanzilTextStyle) {
-        viewModel.loadSurah(surahNumber)
+    var activeSurahNumber by remember(surahNumber) { androidx.compose.runtime.mutableIntStateOf(surahNumber) }
+
+    LaunchedEffect(activeSurahNumber, tanzilTextStyle) {
+        viewModel.loadSurah(activeSurahNumber)
     }
 
     // Determine theme colors
@@ -320,6 +322,24 @@ fun ReadingModeScreen(
                                                                 }
                                                             }
                                                         }
+                                                )
+                                                Spacer(modifier = Modifier.height(16.dp))
+                                                com.example.ui.components.SurahNavigationButtons(
+                                                    currentSurahNumber = activeSurahNumber,
+                                                    onNavigateToSurah = { newSurah ->
+                                                        activeSurahNumber = newSurah
+                                                    },
+                                                    containerColor = containerColor,
+                                                    contentColor = when (theme) {
+                                                        "Dark" -> Color(0xFFE0E0E0)
+                                                        "Sepia" -> Color(0xFF4E342E)
+                                                        else -> Color(0xFF1A1A1A)
+                                                    },
+                                                    subtextColor = when (theme) {
+                                                        "Dark" -> Color.LightGray
+                                                        "Sepia" -> Color(0xFF795548)
+                                                        else -> Color.Gray
+                                                    }
                                                 )
                                             }
                                         }

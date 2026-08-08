@@ -449,7 +449,7 @@ fun RecitationPlayerScreen(
                                 Text(
                                     text = currentAyahObj.bengaliText,
                                     fontSize = 14.sp,
-                                    fontFamily = com.example.ui.theme.solaimanLipiFont,
+                                    fontFamily = com.example.ui.theme.LocalBengaliFont.current,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.fillMaxWidth(),

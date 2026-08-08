@@ -180,12 +180,14 @@ fun SurahDetailScreen(
     
     val currentPlayingAyah = (uiState as? UiState.Success)?.data?.find { it.numberInSurah == currentPlayingAyahNumber }
 
-    LaunchedEffect(surahNumber, isJuz, tanzilTextStyle, selectedTafsirIds) {
-        if (isJuz) {
-            viewModel.loadJuz(surahNumber)
-        } else {
-            viewModel.loadSurah(surahNumber)
-        }
+    var activeSurahNumber by remember(surahNumber, isJuz) {
+        androidx.compose.runtime.mutableIntStateOf(
+            if (isJuz) com.example.data.QuranData.getJuzStartSurah(surahNumber) else surahNumber
+        )
+    }
+
+    LaunchedEffect(activeSurahNumber, tanzilTextStyle, selectedTafsirIds) {
+        viewModel.loadSurah(activeSurahNumber)
     }
 
     Scaffold(
@@ -287,6 +289,7 @@ fun SurahDetailScreen(
                     val listStates = remember { List(4) { androidx.compose.foundation.lazy.LazyListState() } }
                     val coroutineScope = rememberCoroutineScope()
                     var searchQuery by remember { mutableStateOf("") }
+                    var highlightedAyahNumber by remember { mutableStateOf<Int?>(null) }
                     
                     val isStandaloneAyatAlKursi = surahNumber == 2 && initialAyah == 255
                     val isStandaloneLastTwoBaqarah = surahNumber == 2 && initialAyah == 285
@@ -398,21 +401,19 @@ fun SurahDetailScreen(
                         }
                     }
                     
-                    val surahData = com.example.data.QuranData.surahNames.find { it.first == surahNumber }
-                    val surahName = surahData?.second?.first ?: "সূরা $surahNumber"
-                    val title = if (isJuz) {
-                        "পারা $surahNumber"
-                    } else if (surahNumber == 2 && initialAyah == 255) {
+                    val surahData = com.example.data.QuranData.surahNames.find { it.first == activeSurahNumber }
+                    val surahName = surahData?.second?.first ?: "সূরা $activeSurahNumber"
+                    val title = if (surahNumber == 2 && initialAyah == 255) {
                         "আয়াতুল কুরসি"
                     } else if (surahNumber == 2 && initialAyah == 285) {
                         "বাকারার শেষ ২ আয়াত"
                     } else {
                         surahName
                     }
-                    val subtitle = if (isJuz) "" else if (surahNumber == 2 && initialAyah == 255) "সূরা আল-বাকারাহ, আয়াত ২৫৫" else if (surahNumber == 2 && initialAyah == 285) "সূরা আল-বাকারাহ, আয়াত ২৮৫-২৮৬" else (surahData?.second?.second ?: "")
-                    val info1 = if (isJuz) "পারা: $surahNumber" else "সূরা: $surahNumber"
-                    val info2 = if (isJuz) "" else com.example.data.QuranData.getSurahType(surahNumber)
-                    val info3 = if (surahNumber == 2 && initialAyah == 255) "১টি আয়াত" else if (surahNumber == 2 && initialAyah == 285) "২টি আয়াত" else "মোট আয়াত: ${displayedData.size}"
+                    val subtitle = if (surahNumber == 2 && initialAyah == 255) "সূরা আল-বাকারাহ, আয়াত ২৫৫" else if (surahNumber == 2 && initialAyah == 285) "সূরা আল-বাকারাহ, আয়াত ২৮৫-২৮৬" else (surahData?.second?.second ?: "")
+                    val info1 = "সূরা: ${com.example.utils.DateUtil.toBengaliNumerals(activeSurahNumber)}"
+                    val info2 = com.example.data.QuranData.getSurahType(activeSurahNumber)
+                    val info3 = if (surahNumber == 2 && initialAyah == 255) "১টি আয়াত" else if (surahNumber == 2 && initialAyah == 285) "২টি আয়াত" else "মোট আয়াত: ${com.example.utils.DateUtil.toBengaliNumerals(displayedData.size)}"
 
                     var headerHeightPx by remember { mutableFloatStateOf(0f) }
                     val headerHeightDp = with(androidx.compose.ui.platform.LocalDensity.current) { headerHeightPx.toDp() }
@@ -455,7 +456,7 @@ fun SurahDetailScreen(
                             item {
                                 Spacer(modifier = Modifier.height(headerHeightDp + 16.dp))
                             }
-                        if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) {
+                        if (activeSurahNumber != 1 && activeSurahNumber != 9 && !isStandalone) {
                             item {
                                 BismillahSection(arabicFontName = arabicFontName)
                             }
@@ -512,13 +513,14 @@ fun SurahDetailScreen(
                                     MushafPageView(
                                         page = page,
                                         ayahs = ayahs,
-                                        surahNumber = surahNumber,
+                                        surahNumber = activeSurahNumber,
                                         onPlayWord = { viewModel.playWord(it) },
-                                        onPlayAyah = { viewModel.togglePlayPause(it, surahNumber) },
+                                        onPlayAyah = { viewModel.togglePlayPause(it, activeSurahNumber) },
                                         arabicFontName = arabicFontName,
                                         arabicFontSize = arabicFontSize,
                                         currentPlayingWordUrl = currentPlayingWordUrl,
                                         currentPlayingAyahNumber = currentPlayingAyahNumber,
+                                        highlightedAyahNumber = highlightedAyahNumber,
                                         isPlaying = isPlaying,
                                         arabicLineSpacing = arabicLineSpacing,
                                         tanzilTextStyle = tanzilTextStyle
@@ -535,10 +537,11 @@ fun SurahDetailScreen(
                                 AyahCard(
                                     ayah = ayah,
                                     viewMode = pageViewMode,
-                                    surahNumber = surahNumber,
-                                    playAudio = { viewModel.togglePlayPause(ayah, surahNumber) },
+                                    surahNumber = activeSurahNumber,
+                                    playAudio = { viewModel.togglePlayPause(ayah, activeSurahNumber) },
                                     onPlayWord = { viewModel.playWord(it) },
                                     isPlaying = isAyahPlaying,
+                                    isHighlighted = (highlightedAyahNumber == ayah.numberInSurah),
                                     showTranslation = showTranslation,
                                     showTransliteration = showTransliteration,
                                     showTajweed = showTajweed,
@@ -548,9 +551,23 @@ fun SurahDetailScreen(
                                     bengaliFontName = bengaliFontName,
                                     currentPlayingWordUrl = currentPlayingWordUrl,
                                     isBookmarked = isBookmarked,
-                                    onToggleBookmark = { viewModel.toggleBookmark(ayah, surahNumber) },
+                                    onToggleBookmark = { viewModel.toggleBookmark(ayah, activeSurahNumber) },
                                     arabicLineSpacing = arabicLineSpacing,
                                     selectedTafsirNames = selectedTafsirNames
+                                )
+                            }
+                        }
+
+                        if (displayedData.isNotEmpty() && (!isTafsirSwitching || pageViewMode != ViewMode.TAFSIR)) {
+                            item(key = "surah_nav_$activeSurahNumber") {
+                                com.example.ui.components.SurahNavigationButtons(
+                                    currentSurahNumber = activeSurahNumber,
+                                    onNavigateToSurah = { newSurah ->
+                                        activeSurahNumber = newSurah
+                                        coroutineScope.launch {
+                                            pageListState.scrollToItem(0)
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -580,13 +597,40 @@ fun SurahDetailScreen(
                                 searchQuery = searchQuery,
                                 onSearchQueryChange = { searchQuery = it },
                                 onSearch = {
-                                    if (pageOrder[pagerState.currentPage] != ViewMode.MUSHAF) {
-                                        val ayahIndex = displayedData.indexOfFirst { it.numberInSurah.toString() == searchQuery }
-                                        if (ayahIndex != -1) {
-                                            val headerCount = 1
-                                            coroutineScope.launch {
-                                                currentListState.animateScrollToItem(ayahIndex + headerCount)
+                                    fun convertDigits(input: String): String {
+                                        val bDigits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
+                                        var res = input.trim()
+                                        bDigits.forEachIndexed { idx, ch ->
+                                            res = res.replace(ch, ('0' + idx))
+                                        }
+                                        return res
+                                    }
+                                    val targetNum = convertDigits(searchQuery).toIntOrNull()
+                                    if (targetNum != null && targetNum > 0) {
+                                        val targetAyah = displayedData.find { it.numberInSurah == targetNum }
+                                        if (targetAyah != null) {
+                                            highlightedAyahNumber = targetNum
+                                            val headerCount = if (activeSurahNumber != 1 && activeSurahNumber != 9 && !isStandalone) 2 else 1
+                                            val activeMode = pageOrder[pagerState.currentPage]
+                                            if (activeMode == ViewMode.MUSHAF) {
+                                                val ayahsByPage = displayedData.groupBy { it.page }
+                                                val pagesList = ayahsByPage.keys.toList()
+                                                val pageIndex = pagesList.indexOf(targetAyah.page)
+                                                if (pageIndex != -1) {
+                                                    coroutineScope.launch {
+                                                        currentListState.animateScrollToItem(pageIndex + headerCount)
+                                                    }
+                                                }
+                                            } else {
+                                                val ayahIndex = displayedData.indexOfFirst { it.numberInSurah == targetNum }
+                                                if (ayahIndex != -1) {
+                                                    coroutineScope.launch {
+                                                        currentListState.animateScrollToItem(ayahIndex + headerCount)
+                                                    }
+                                                }
                                             }
+                                        } else {
+                                            Toast.makeText(context, "আয়াত $targetNum এই সূরায় নেই", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 },
@@ -753,7 +797,19 @@ fun HeaderCard(
                             .padding(horizontal = 10.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(info2, fontSize = 11.sp, color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = if (info2.contains("মাক্কী")) Icons.Outlined.Mosque else Icons.Outlined.Place,
+                                contentDescription = null,
+                                tint = PrimaryGreen,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(info2, fontSize = 11.sp, color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
                 
@@ -782,35 +838,79 @@ fun HeaderCard(
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.text.BasicTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(100.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .width(160.dp)
+                        .height(38.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier
-                            .width(60.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface),
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { onSearch() }),
-                        singleLine = true,
-                        decorationBox = { innerTextField ->
+                            .fillMaxSize()
+                            .padding(start = 12.dp, end = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(modifier = Modifier.weight(1f)) {
                             if (searchQuery.isEmpty()) {
-                                Text("আয়াত", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "আয়াত নং",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
-                            innerTextField()
+                            androidx.compose.foundation.text.BasicTextField(
+                                value = searchQuery,
+                                onValueChange = onSearchQueryChange,
+                                textStyle = androidx.compose.ui.text.TextStyle(
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                                ),
+                                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                    onSearch = { onSearch() },
+                                    onDone = { onSearch() }
+                                ),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        Icons.Default.ArrowForward, 
-                        contentDescription = "Search Ayah", 
-                        tint = GrayText, 
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clickable { onSearch() }
-                    )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(PrimaryGreen)
+                                .clickable { onSearch() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "Search",
+                                tint = White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
                 }
             }
             
@@ -903,6 +1003,7 @@ fun AyahCard(
     playAudio: () -> Unit,
     onPlayWord: (String) -> Unit,
     isPlaying: Boolean,
+    isHighlighted: Boolean = false,
     showTranslation: Boolean,
     showTransliteration: Boolean = false,
     showTajweed: Boolean = false,
@@ -983,12 +1084,13 @@ fun AyahCard(
         )
     }
 
+    val isCardHighlighted = isPlaying || isHighlighted
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(20.dp))
-            .background(if (isPlaying) PrimaryGreen.copy(alpha = 0.05f) else MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp))
-            .border(if (isPlaying) 1.dp else 0.dp, if (isPlaying) PrimaryGreen else MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp))
+            .background(if (isCardHighlighted) PrimaryGreen.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp))
+            .border(if (isCardHighlighted) 1.5.dp else 0.dp, if (isCardHighlighted) PrimaryGreen else MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp))
             .padding(20.dp)
     ) {
         Column {
@@ -1178,7 +1280,7 @@ fun AyahCard(
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                        fontFamily = com.example.ui.theme.solaimanLipiFont
+                                        fontFamily = bengaliFont
                                     )
                                     if (translationInfo != null) {
                                         Spacer(modifier = Modifier.width(6.dp))
@@ -1192,7 +1294,7 @@ fun AyahCard(
                                                 fontSize = 9.sp,
                                                 color = PrimaryGreen,
                                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                                fontFamily = com.example.ui.theme.solaimanLipiFont
+                                                fontFamily = bengaliFont
                                             )
                                         }
                                     }
@@ -1201,7 +1303,7 @@ fun AyahCard(
                                 Text(
                                     text = android.text.Html.fromHtml(trans.text, android.text.Html.FROM_HTML_MODE_LEGACY).toString(),
                                     fontSize = bengaliFontSize.sp,
-                                    fontFamily = com.example.ui.theme.solaimanLipiFont,
+                                    fontFamily = bengaliFont,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -1211,7 +1313,7 @@ fun AyahCard(
                         Text(
                             text = android.text.Html.fromHtml(ayah.bengaliText, android.text.Html.FROM_HTML_MODE_LEGACY).toString(),
                             fontSize = bengaliFontSize.sp,
-                            fontFamily = com.example.ui.theme.solaimanLipiFont,
+                            fontFamily = bengaliFont,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -1304,7 +1406,7 @@ fun AyahCard(
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                        fontFamily = com.example.ui.theme.solaimanLipiFont
+                                        fontFamily = bengaliFont
                                     )
                                     if (translationInfo != null) {
                                         Spacer(modifier = Modifier.width(6.dp))
@@ -1318,7 +1420,7 @@ fun AyahCard(
                                                 fontSize = 9.sp,
                                                 color = PrimaryGreen,
                                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                                fontFamily = com.example.ui.theme.solaimanLipiFont
+                                                fontFamily = bengaliFont
                                             )
                                         }
                                     }
@@ -1327,7 +1429,7 @@ fun AyahCard(
                                 Text(
                                     text = android.text.Html.fromHtml(trans.text, android.text.Html.FROM_HTML_MODE_LEGACY).toString(),
                                     fontSize = bengaliFontSize.sp,
-                                    fontFamily = com.example.ui.theme.solaimanLipiFont,
+                                    fontFamily = bengaliFont,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -1337,7 +1439,7 @@ fun AyahCard(
                         Text(
                             text = android.text.Html.fromHtml(ayah.bengaliText, android.text.Html.FROM_HTML_MODE_LEGACY).toString(),
                             fontSize = bengaliFontSize.sp,
-                            fontFamily = com.example.ui.theme.solaimanLipiFont,
+                            fontFamily = bengaliFont,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -2089,6 +2191,7 @@ fun MushafPageView(
     arabicFontSize: Float = 28f,
     currentPlayingWordUrl: String? = null,
     currentPlayingAyahNumber: Int? = null,
+    highlightedAyahNumber: Int? = null,
     isPlaying: Boolean = false,
     arabicLineSpacing: Float = 2.0f,
     tanzilTextStyle: String = "quran-simple"
@@ -2097,12 +2200,12 @@ fun MushafPageView(
     
     var annotatedString by remember { mutableStateOf<androidx.compose.ui.text.AnnotatedString?>(null) }
     
-    LaunchedEffect(ayahs, surahNumber, currentPlayingWordUrl, currentPlayingAyahNumber, isPlaying, tanzilTextStyle) {
+    LaunchedEffect(ayahs, surahNumber, currentPlayingWordUrl, currentPlayingAyahNumber, isPlaying, tanzilTextStyle, highlightedAyahNumber) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             val result = buildAnnotatedString {
                 ayahs.forEachIndexed { index, ayah ->
                     val ayahStart = length
-                    val isAyahPlaying = isPlaying && currentPlayingAyahNumber == ayah.numberInSurah
+                    val isAyahPlaying = (isPlaying && currentPlayingAyahNumber == ayah.numberInSurah) || (highlightedAyahNumber == ayah.numberInSurah)
                     
                     if (ayah.words.isNotEmpty() && tanzilTextStyle != "quran-simple-clean" && tanzilTextStyle != "quran-simple-plain") {
                         val processedWords = mutableListOf<ProcessedWord>()
@@ -2183,10 +2286,9 @@ fun MushafPageView(
                         append(ayah.arabicText)
                     }
                     
-                    val ayahNumberStr = ayah.numberInSurah.toArabicNumerals()
-                    withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = amiriFont)) {
-                        append(" ﴿$ayahNumberStr﴾")
-                    }
+                    val inlineId = "mushaf_circle_${ayah.surahNumber}_${ayah.numberInSurah}"
+                    append(" ")
+                    appendInlineContent(inlineId, " [${ayah.numberInSurah}]")
                     
                     // Add a space between ayahs
                     if (index < ayahs.lastIndex) {
@@ -2230,12 +2332,41 @@ fun MushafPageView(
         return
     }
     
+    val circleSizeDp = (arabicFontSize * 0.9f).coerceIn(24f, 36f)
+    val circleSize = circleSizeDp.dp
+    val circleFontSize = (arabicFontSize * 0.42f).coerceIn(11f, 16f).sp
+
+    val inlineContentMap = remember(ayahs, arabicFontSize) {
+        val map = mutableMapOf<String, InlineTextContent>()
+        ayahs.forEach { ayah ->
+            val inlineId = "mushaf_circle_${ayah.surahNumber}_${ayah.numberInSurah}"
+            map[inlineId] = InlineTextContent(
+                placeholder = Placeholder(
+                    width = (circleSizeDp + 6).sp,
+                    height = circleSizeDp.sp,
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                )
+            ) {
+                com.example.ui.components.AyahNumberCircle(
+                    number = ayah.numberInSurah,
+                    size = circleSize,
+                    backgroundColor = Color(0xFFE8F5E9),
+                    borderColor = PrimaryGreen,
+                    textColor = PrimaryGreen,
+                    fontSize = circleFontSize
+                )
+            }
+        }
+        map
+    }
+
     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     
     Column(modifier = Modifier.fillMaxWidth()) {
         CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
             Text(
                 text = annotatedString!!,
+                inlineContent = inlineContentMap,
                 fontSize = arabicFontSize.sp,
                 lineHeight = (arabicFontSize * arabicLineSpacing).sp,
                 fontFamily = arabicFont,

@@ -1134,11 +1134,13 @@ fun MenuDetailDialog(
                         "note" -> NotepadDialogContent(viewModel)
                         "planner" -> PlannerDialogContent(viewModel)
                         "subjectwise" -> SubjectwiseDialogContent(
+                            viewModel = viewModel,
                             onDismiss = onDismiss,
                             onRegisterBackAction = { subjectwiseBackAction = it },
                             onRegisterManzilInfoAction = { subjectwiseManzilInfoAction = it }
                         )
                         "manzil" -> SubjectwiseDialogContent(
+                            viewModel = viewModel,
                             initialCategoryName = "মানযিল",
                             onDismiss = onDismiss,
                             onRegisterBackAction = { subjectwiseBackAction = it },
@@ -1862,12 +1864,15 @@ fun PlannerDialogContent(viewModel: SettingsViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubjectwiseDialogContent(
+    viewModel: SettingsViewModel? = null,
     initialCategoryName: String? = null,
     onDismiss: () -> Unit = {},
     onRegisterBackAction: (((() -> Unit)?) -> Unit) = {},
     onRegisterManzilInfoAction: (((() -> Unit)?) -> Unit) = {}
 ) {
     val context = LocalContext.current
+    val arabicFontName = viewModel?.arabicFontName?.collectAsState()?.value ?: "Me Quran"
+    val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     val subjectCategoryListState = rememberLazyListState()
     val subjectTopicListState = rememberLazyListState()
     val subjectVerseListState = rememberLazyListState()
@@ -2326,11 +2331,11 @@ fun SubjectwiseDialogContent(
                                         var lastIndex = 0
                                         regex.findAll(verse.arabicText).forEach { matchResult ->
                                             val textPart = verse.arabicText.substring(lastIndex, matchResult.range.first)
-                                            appendStyledWaqfText(textPart, 22f, true, "Me Quran")
+                                            appendStyledWaqfText(textPart, 22f, true, arabicFontName)
                                             
                                             withStyle(
                                                 androidx.compose.ui.text.SpanStyle(
-                                                    fontFamily = com.example.ui.theme.amiriFont,
+                                                    fontFamily = arabicFont,
                                                     fontSize = 22.sp
                                                 )
                                             ) {
@@ -2339,7 +2344,7 @@ fun SubjectwiseDialogContent(
                                             lastIndex = matchResult.range.last + 1
                                         }
                                         val remainingText = verse.arabicText.substring(lastIndex)
-                                        appendStyledWaqfText(remainingText, 22f, true, "Me Quran")
+                                        appendStyledWaqfText(remainingText, 22f, true, arabicFontName)
                                     }
                                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                         Text(
@@ -2349,7 +2354,7 @@ fun SubjectwiseDialogContent(
                                             color = MaterialTheme.colorScheme.onSurface,
                                             lineHeight = 38.sp,
                                             textAlign = TextAlign.Center,
-                                            fontFamily = com.example.ui.theme.meQuranFont,
+                                            fontFamily = arabicFont,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(horizontal = 16.dp, vertical = 16.dp)
@@ -3192,6 +3197,7 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
     val config by viewModel.gameConfig.collectAsState()
     val arabicFontName by viewModel.arabicFontName.collectAsState()
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
+    val bengaliFont = com.example.ui.theme.LocalBengaliFont.current
     val context = androidx.compose.ui.platform.LocalContext.current
     
     val isDark = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -3233,13 +3239,13 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("নিচের শব্দটির সঠিক অর্থ নির্বাচন করুন:", fontFamily = solaimanLipiFont, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("নিচের শব্দটির সঠিক অর্থ নির্বাচন করুন:", fontFamily = bengaliFont, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = question.question,
                     fontWeight = FontWeight.Bold,
                     fontSize = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) 32.sp else 24.sp,
-                    fontFamily = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) arabicFont else solaimanLipiFont,
+                    fontFamily = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) arabicFont else bengaliFont,
                     lineHeight = if (config.type == com.example.ui.viewmodels.GameType.ARABIC_TO_BENGALI) 48.sp else 32.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -3299,7 +3305,7 @@ fun GamePlayingScreen(viewModel: SettingsViewModel) {
                         text = opt,
                         fontWeight = FontWeight.Medium,
                         fontSize = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) 22.sp else 16.sp,
-                        fontFamily = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) arabicFont else solaimanLipiFont,
+                        fontFamily = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) arabicFont else bengaliFont,
                         lineHeight = if (config.type == com.example.ui.viewmodels.GameType.BENGALI_TO_ARABIC) 36.sp else 24.sp,
                         color = if (isAnswered && isThisSelectedOption && !isCorrectOpt) {
                             if (isDark) Color(0xFFF87171) else Color.Red

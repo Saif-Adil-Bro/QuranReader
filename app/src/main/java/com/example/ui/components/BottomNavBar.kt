@@ -75,55 +75,55 @@ fun BottomNavBar(
                 .shadow(elevation = 8.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .height(80.dp)
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
             ) {
-                items.forEachIndexed { index, item ->
-                    if (index == 2) {
-                        // Place a center play button placeholder or spacer if needed
-                        // Spacer(modifier = Modifier.weight(1f))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    items.forEachIndexed { index, item ->
+                        val isSelected = currentRoute != null && (
+                            currentRoute == item.route || 
+                            (item.route == "settings" && currentRoute.startsWith("settings"))
+                        )
+                        BottomNavIcon(
+                            item = item,
+                            isSelected = isSelected,
+                            onClick = {
+                                if (item.route == "home") {
+                                    navController.popBackStack("home", inclusive = false)
+                                } else if (item.route == "settings") {
+                                    if (currentRoute != "settings") {
+                                        navController.navigate("settings") {
+                                            popUpTo("home") {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = false
+                                        }
+                                    }
+                                } else {
+                                    if (currentRoute != item.route) {
+                                        navController.navigate(item.route) {
+                                            popUpTo("home") {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
-                    val isSelected = currentRoute != null && (
-                        currentRoute == item.route || 
-                        (item.route == "settings" && currentRoute.startsWith("settings"))
-                    )
-                    BottomNavIcon(
-                        item = item,
-                        isSelected = isSelected,
-                        onClick = {
-                            if (item.route == "home") {
-                                // Pop back to home to clear any pushed screens safely and return to Home
-                                navController.popBackStack("home", inclusive = false)
-                            } else if (item.route == "settings") {
-                                if (currentRoute != "settings") {
-                                    navController.navigate("settings") {
-                                        popUpTo("home") {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = false
-                                    }
-                                }
-                            } else {
-                                if (currentRoute != item.route) {
-                                    navController.navigate(item.route) {
-                                        popUpTo("home") {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
                 }
             }
         }

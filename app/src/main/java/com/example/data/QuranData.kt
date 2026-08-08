@@ -305,6 +305,42 @@ object QuranData {
         return if (madaniSurahs.contains(surahNumber)) "মাদানী" else "মাক্কী"
     }
 
+    fun getJuzStartSurah(juz: Int): Int {
+        return when (juz) {
+            1 -> 1
+            2 -> 2
+            3 -> 2
+            4 -> 3
+            5 -> 4
+            6 -> 4
+            7 -> 5
+            8 -> 6
+            9 -> 7
+            10 -> 8
+            11 -> 9
+            12 -> 11
+            13 -> 12
+            14 -> 15
+            15 -> 17
+            16 -> 18
+            17 -> 21
+            18 -> 23
+            19 -> 25
+            20 -> 27
+            21 -> 29
+            22 -> 33
+            23 -> 36
+            24 -> 39
+            25 -> 41
+            26 -> 46
+            27 -> 51
+            28 -> 58
+            29 -> 67
+            30 -> 78
+            else -> 1
+        }
+    }
+
     fun getSurahAndAyahFromGlobal(globalAyahId: Int): Pair<Int, Int> {
         val verseCounts = intArrayOf(
             7, 286, 200, 176, 120, 165, 206, 75, 129, 109,

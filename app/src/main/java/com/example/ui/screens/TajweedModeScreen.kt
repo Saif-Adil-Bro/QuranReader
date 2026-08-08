@@ -34,7 +34,14 @@ import com.example.data.model.removeWaqfSigns
 import androidx.compose.ui.draw.drawBehind
 import com.example.ui.state.UiState
 import com.example.ui.theme.getArabicFont
+import com.example.ui.theme.PrimaryGreen
 import com.example.ui.viewmodels.TajweedModeViewModel
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
@@ -1061,8 +1068,13 @@ fun TajweedPageContent(
                             }
                         }
 
-                        val annotatedString = remember(surahAyahs, playingAyahNumber, theme, showWaqfSigns, showTajweed) {
-                            buildAnnotatedString {
+                        val (annotatedString, inlineMap) = remember(surahAyahs, playingAyahNumber, theme, showWaqfSigns, showTajweed, arabicFontSize) {
+                            val map = mutableMapOf<String, InlineTextContent>()
+                            val circleSizeDp = (arabicFontSize * 0.9f).coerceIn(24f, 36f)
+                            val circleSize = circleSizeDp.dp
+                            val circleFontSize = (arabicFontSize * 0.42f).coerceIn(11f, 16f).sp
+
+                            val str = buildAnnotatedString {
                                 surahAyahs.forEachIndexed { index, ayah ->
                                     val start = length
                                     var textToDisplay = ayah.arabicText.trim()
@@ -1118,8 +1130,27 @@ fun TajweedPageContent(
                                             }
                                         }
                                         appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns, arabicFontName)
-                                        val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
-                                        append("﴿$numInSurahStr﴾")
+                                    }
+
+                                    val inlineId = "tajweed_circle_${ayah.surahNumber}_${ayah.numberInSurah}"
+                                    append(" ")
+                                    appendInlineContent(inlineId, " [${ayah.numberInSurah}]")
+
+                                    map[inlineId] = InlineTextContent(
+                                        placeholder = Placeholder(
+                                            width = (circleSizeDp + 6).sp,
+                                            height = circleSizeDp.sp,
+                                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                                        )
+                                    ) {
+                                        com.example.ui.components.AyahNumberCircle(
+                                            number = ayah.numberInSurah,
+                                            size = circleSize,
+                                            backgroundColor = if (theme == "Dark") Color(0xFF1E3524) else Color(0xFFE8F5E9),
+                                            borderColor = PrimaryGreen,
+                                            textColor = PrimaryGreen,
+                                            fontSize = circleFontSize
+                                        )
                                     }
                                     
                                     val end = length
@@ -1149,21 +1180,15 @@ fun TajweedPageContent(
                                     }
                                 }
                             }
+                            Pair(str, map)
                         }
 
                         var textLayoutResult by remember { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
 
-                        ClickableText(
+                        Text(
                             text = annotatedString,
+                            inlineContent = inlineMap,
                             onTextLayout = { textLayoutResult = it },
-                            onClick = { offset ->
-                                annotatedString.getStringAnnotations(tag = "AYAH_NUMBER", start = offset, end = offset)
-                                    .firstOrNull()?.let { annotation ->
-                                        annotation.item.toIntOrNull()?.let { ayahNumber ->
-                                            onAyahClick(ayahNumber)
-                                        }
-                                    }
-                            },
                             style = androidx.compose.ui.text.TextStyle(
                                 fontSize = arabicFontSize.sp,
                                 lineHeight = (arabicFontSize * arabicLineSpacing).sp,
@@ -1178,6 +1203,21 @@ fun TajweedPageContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 4.dp)
+                                .pointerInput(annotatedString) {
+                                    detectTapGestures(
+                                        onTap = { offset ->
+                                            textLayoutResult?.let { currentLayout ->
+                                                val charIndex = currentLayout.getOffsetForPosition(offset)
+                                                annotatedString.getStringAnnotations(tag = "AYAH_NUMBER", start = charIndex, end = charIndex)
+                                                    .firstOrNull()?.let { annotation ->
+                                                        annotation.item.toIntOrNull()?.let { ayahNumber ->
+                                                            onAyahClick(ayahNumber)
+                                                        }
+                                                    }
+                                            }
+                                        }
+                                    )
+                                }
                                 .drawBehind {
                                     textLayoutResult?.let { layoutResult ->
                                         val lineCount = layoutResult.lineCount
