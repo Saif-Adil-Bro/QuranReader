@@ -123,8 +123,8 @@ class IslamicEventReceiver : BroadcastReceiver() {
             )
 
             val sharedPrefs = context.getSharedPreferences("quran_menu_prefs", Context.MODE_PRIVATE)
-            val hour = sharedPrefs.getInt("islamic_events_hour", 20) // Default 8:00 PM (20:00)
-            val minute = sharedPrefs.getInt("islamic_events_minute", 0)
+            val hour = sharedPrefs.getInt("islamic_events_hour", 17) // Default 5:15 PM (17:15) - Afternoon after Asr
+            val minute = sharedPrefs.getInt("islamic_events_minute", 15)
 
             val calendar = Calendar.getInstance().apply {
                 timeInMillis = System.currentTimeMillis()

@@ -5279,6 +5279,14 @@ fun NotificationDialogContent(viewModel: SettingsViewModel) {
     val dailyMinute by viewModel.dailyMessageMinute.collectAsState()
 
     val context = LocalContext.current
+
+    var isIslamicEventsEnabled by remember {
+        mutableStateOf(
+            context.getSharedPreferences("quran_menu_prefs", android.content.Context.MODE_PRIVATE)
+                .getBoolean("islamic_events_reminder_enabled", true)
+        )
+    }
+
     val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -5394,6 +5402,67 @@ fun NotificationDialogContent(viewModel: SettingsViewModel) {
                             Text(timeStr, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
                         }
                     }
+                }
+            }
+        }
+
+        // রোজা ও দিবস নোটিফিকেশন
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFF10B981).copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = Color(0xFF10B981))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "সোম-বৃহস্পতি, আইয়ামে বীজ ও দিবস রিমাইন্ডার",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "রবি ও বুধবার বিকেলে (আসরের পর) সোম-বৃহস্পতিবারের রোজা, ১২ হিজরী বিকেলে আইয়ামে বীজ ও বিশেষ দিবসের নোটিফিকেশন আসবে।",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Switch(
+                        checked = isIslamicEventsEnabled,
+                        onCheckedChange = { checked ->
+                            if (checked && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                                androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                            isIslamicEventsEnabled = checked
+                            context.getSharedPreferences("quran_menu_prefs", android.content.Context.MODE_PRIVATE)
+                                .edit()
+                                .putBoolean("islamic_events_reminder_enabled", checked)
+                                .apply()
+
+                            if (checked) {
+                                com.example.receiver.IslamicEventReceiver.scheduleNextAlarm(context)
+                            } else {
+                                com.example.receiver.IslamicEventReceiver.cancelAlarm(context)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = PrimaryGreen, checkedTrackColor = PrimaryGreen.copy(alpha = 0.5f))
+                    )
                 }
             }
         }

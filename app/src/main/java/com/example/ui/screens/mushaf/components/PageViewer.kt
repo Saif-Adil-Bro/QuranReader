@@ -13,6 +13,8 @@ import kotlin.math.abs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +35,7 @@ import java.io.File
 fun PageViewer(
     pagePath: String?,
     isDark: Boolean = false,
+    pageHeightScale: Float = 1.0f,
     onZoomChanged: (Float) -> Unit = {},
     onTap: (() -> Unit)? = null
 ) {
@@ -87,9 +90,10 @@ fun PageViewer(
                 colorFilter = colorFilter,
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(bottom = 48.dp)
                     .graphicsLayer(
                         scaleX = scale,
-                        scaleY = scale,
+                        scaleY = scale * pageHeightScale,
                         translationX = offsetX,
                         translationY = offsetY
                     ),

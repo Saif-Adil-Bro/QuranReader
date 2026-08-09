@@ -58,6 +58,7 @@ class SettingsRepository(val context: Context) {
     // Qari Settings
     private val SELECTED_QARI_ID_KEY = stringPreferencesKey("selected_qari_id")
     private val MUSHAF_SCROLL_DIRECTION_KEY = stringPreferencesKey("mushaf_scroll_direction")
+    private val MUSHAF_PAGE_HEIGHT_SCALE_KEY = floatPreferencesKey("mushaf_page_height_scale")
     private val DEFAULT_MUSHAF_ID_KEY = stringPreferencesKey("default_mushaf_id")
     private val HIJRI_OFFSET_KEY = intPreferencesKey("hijri_offset")
 
@@ -131,6 +132,9 @@ class SettingsRepository(val context: Context) {
 
     val mushafScrollDirectionFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[MUSHAF_SCROLL_DIRECTION_KEY] ?: "Horizontal" }
+
+    val mushafPageHeightScaleFlow: Flow<Float> = context.dataStore.data
+        .map { preferences -> preferences[MUSHAF_PAGE_HEIGHT_SCALE_KEY] ?: 1.0f }
 
     val defaultMushafIdFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[DEFAULT_MUSHAF_ID_KEY] ?: "imdadia_hafezi" }
@@ -260,6 +264,10 @@ class SettingsRepository(val context: Context) {
 
     suspend fun setMushafScrollDirection(direction: String) {
         context.dataStore.edit { preferences -> preferences[MUSHAF_SCROLL_DIRECTION_KEY] = direction }
+    }
+
+    suspend fun setMushafPageHeightScale(scale: Float) {
+        context.dataStore.edit { preferences -> preferences[MUSHAF_PAGE_HEIGHT_SCALE_KEY] = scale }
     }
 
     suspend fun setDefaultMushafId(mushafId: String) {

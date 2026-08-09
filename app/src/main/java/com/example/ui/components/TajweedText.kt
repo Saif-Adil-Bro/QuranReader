@@ -73,7 +73,7 @@ fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
         // Preprocess <span class=end>...</span> or <span class="end">...</span>
         val regexEnd = "<span\\s+class=['\"]?end['\"]?>([^<]+)</span>".toRegex()
         val preprocessed = raw.replace(regexEnd) { matchResult ->
-            "<span class=\"end\">﴿${matchResult.groupValues[1].toArabicNumerals()}﴾</span>"
+            " <span class=\"end\">﴿${matchResult.groupValues[1].toArabicNumerals()}﴾</span> "
         }
 
         var currentIndex = 0
@@ -108,7 +108,8 @@ fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
                 if (tag.contains("class=")) {
                     val className = tag.substringAfter("class=").trim().substringBefore(" ").trim('\'', '"', '>')
                     val color = if (className == "end") defaultColor else (TajweedColors[className] ?: defaultColor)
-                    pushStyle(SpanStyle(color = color))
+                    val fontFamily = if (className == "end") com.example.ui.theme.amiriFont else null
+                    pushStyle(SpanStyle(color = color, fontFamily = fontFamily))
                 }
             }
             currentIndex = nextTagEnd + 1

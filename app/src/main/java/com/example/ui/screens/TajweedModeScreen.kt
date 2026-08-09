@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -1120,6 +1121,11 @@ fun TajweedPageContent(
                                             }
                                         }
                                         append(finalParsed)
+                                        if (!finalParsed.text.contains("﴿") && !finalParsed.text.contains("۝")) {
+                                            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
+                                                append(" ﴿${ayah.numberInSurah.toArabicNumerals()}﴾ ")
+                                            }
+                                        }
                                     } else {
                                         if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
                                             for (prefix in prefixes) {
@@ -1130,28 +1136,9 @@ fun TajweedPageContent(
                                             }
                                         }
                                         appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns, arabicFontName)
-                                    }
-
-                                    val inlineId = "tajweed_circle_${ayah.surahNumber}_${ayah.numberInSurah}"
-                                    append(" ")
-                                    appendInlineContent(inlineId, " [${ayah.numberInSurah}]")
-                                    append(" ")
-
-                                    map[inlineId] = InlineTextContent(
-                                        placeholder = Placeholder(
-                                            width = (circleSizeDp + 6).sp,
-                                            height = circleSizeDp.sp,
-                                            placeholderVerticalAlign = PlaceholderVerticalAlign.AboveBaseline
-                                        )
-                                    ) {
-                                        com.example.ui.components.AyahNumberCircle(
-                                            number = ayah.numberInSurah,
-                                            size = circleSize,
-                                            backgroundColor = if (theme == "Dark") Color(0xFF1E3524) else Color(0xFFE8F5E9),
-                                            borderColor = PrimaryGreen,
-                                            textColor = PrimaryGreen,
-                                            fontSize = circleFontSize
-                                        )
+                                        withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
+                                            append(" ﴿${ayah.numberInSurah.toArabicNumerals()}﴾ ")
+                                        }
                                     }
                                     
                                     val end = length

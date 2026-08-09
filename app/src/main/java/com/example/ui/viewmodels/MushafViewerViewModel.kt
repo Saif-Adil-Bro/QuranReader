@@ -57,6 +57,12 @@ class MushafViewerViewModel(
         initialValue = "Horizontal"
     )
 
+    val pageHeightScale: StateFlow<Float> = settingsRepository.mushafPageHeightScaleFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = 1.0f
+    )
+
     private val _currentPagePath = MutableStateFlow<String?>(null)
     val currentPagePath: StateFlow<String?> = _currentPagePath.asStateFlow()
 
@@ -223,6 +229,12 @@ class MushafViewerViewModel(
     fun setScrollDirection(direction: String) {
         viewModelScope.launch {
             settingsRepository.setMushafScrollDirection(direction)
+        }
+    }
+
+    fun setPageHeightScale(scale: Float) {
+        viewModelScope.launch {
+            settingsRepository.setMushafPageHeightScale(scale)
         }
     }
 

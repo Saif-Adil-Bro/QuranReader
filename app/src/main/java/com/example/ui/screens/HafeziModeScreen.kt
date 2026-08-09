@@ -38,8 +38,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -981,6 +981,11 @@ fun HafeziPageContent(
                                             }
                                         }
                                         append(finalParsed)
+                                        if (!finalParsed.text.contains("﴿") && !finalParsed.text.contains("۝")) {
+                                            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
+                                                append(" ﴿${ayah.numberInSurah.toArabicNumerals()}﴾ ")
+                                            }
+                                        }
                                     } else {
                                         if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
                                             for (prefix in prefixes) {
@@ -992,12 +997,8 @@ fun HafeziPageContent(
                                         }
                                         appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns, arabicFontName)
                                         val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
-                                        if (arabicFontName.contains("Saleem", ignoreCase = true)) {
-                                            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
-                                                append(" ﴿$numInSurahStr﴾")
-                                            }
-                                        } else {
-                                            append(" ﴿$numInSurahStr﴾")
+                                        withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
+                                            append(" ﴿$numInSurahStr﴾ ")
                                         }
                                     }
                                     

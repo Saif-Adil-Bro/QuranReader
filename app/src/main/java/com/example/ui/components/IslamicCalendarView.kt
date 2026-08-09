@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Remove
@@ -41,6 +43,7 @@ import com.example.utils.HijriDateInfo
 import java.time.LocalDate
 import java.time.YearMonth
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IslamicCalendarView(
     hijriOffset: Int = 0,
@@ -53,12 +56,6 @@ fun IslamicCalendarView(
     var showGuidanceDialogPair by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
-    var isNotifEnabled by remember {
-        mutableStateOf(
-            context.getSharedPreferences("quran_menu_prefs", android.content.Context.MODE_PRIVATE)
-                .getBoolean("islamic_events_reminder_enabled", true)
-        )
-    }
 
     val today = LocalDate.now()
 
@@ -536,190 +533,125 @@ fun IslamicCalendarView(
                     }
                 }
             }
-
-            // 6. SECTION HEADER 3: নোটিফিকেশন সেটিংস
-            item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = null,
-                        tint = Color(0xFF10B981),
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "রোজা ও দিবস নোটিফিকেশন",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-            }
-
-            item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "সোম-বৃহস্পতি, আইয়ামে বীজ ও দিবস রিমাইন্ডার",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "রবি ও বুধবার সন্ধ্যায় সোম-বৃহস্পতিবারের রোজা, ১২ হিজরী সন্ধ্যায় আইয়ামে বীজ ও বিশেষ দিবসের নোটিফিকেশন আসবে।",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Switch(
-                            checked = isNotifEnabled,
-                            onCheckedChange = { checked ->
-                                isNotifEnabled = checked
-                                context.getSharedPreferences("quran_menu_prefs", android.content.Context.MODE_PRIVATE)
-                                    .edit()
-                                    .putBoolean("islamic_events_reminder_enabled", checked)
-                                    .apply()
-
-                                if (checked) {
-                                    com.example.receiver.IslamicEventReceiver.scheduleNextAlarm(context)
-                                } else {
-                                    com.example.receiver.IslamicEventReceiver.cancelAlarm(context)
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF10B981)
-                            )
-                        )
-                    }
-                }
-            }
         }
     }
 
-    // SHARIA GUIDANCE DIALOG
+    // SHARIA GUIDANCE MODAL BOTTOM SHEET
     val currentGuidance = showGuidanceDialogPair
     if (currentGuidance != null) {
-        Dialog(onDismissRequest = { showGuidanceDialogPair = null }) {
-            Card(
+        var isFullScreenGuidance by remember { mutableStateOf(false) }
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showGuidanceDialogPair = null },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            modifier = if (isFullScreenGuidance) Modifier.fillMaxHeight() else Modifier,
+            shape = if (isFullScreenGuidance) RoundedCornerShape(0.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    .then(if (isFullScreenGuidance) Modifier.fillMaxHeight() else Modifier)
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp)
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = currentGuidance.first,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF10B981),
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { isFullScreenGuidance = !isFullScreenGuidance }) {
+                        Icon(
+                            imageVector = if (isFullScreenGuidance) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                            contentDescription = if (isFullScreenGuidance) "ছোট করুন" else "ফুল স্ক্রিন",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = { showGuidanceDialogPair = null }) {
+                        Icon(Icons.Default.Close, contentDescription = "বন্ধ করুন", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val scrollState = rememberScrollState()
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp)
+                        .then(
+                            if (isFullScreenGuidance) Modifier.weight(1f)
+                            else Modifier.heightIn(max = 460.dp)
+                        )
+                        .verticalScroll(scrollState)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    FormattedIslamicText(
+                        text = currentGuidance.second,
+                        baseFontSize = 14.sp,
+                        baseColor = MaterialTheme.colorScheme.onSurface,
+                        arabicColor = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val fullText = "${currentGuidance.first}\n\n${currentGuidance.second}"
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("Guidance", fullText)
+                            clipboard.setPrimaryClip(clip)
+                            android.widget.Toast.makeText(context, "অনুলিপি করা হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color(0xFF10B981))
                     ) {
-                        Text(
-                            text = currentGuidance.first,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF10B981),
-                            modifier = Modifier.weight(1f)
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "অনুলিপি করুন",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(18.dp)
                         )
-                        IconButton(onClick = { showGuidanceDialogPair = null }) {
-                            Icon(Icons.Default.Close, contentDescription = "বন্ধ করুন", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("কপি", color = Color(0xFF10B981), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val scrollState = rememberScrollState()
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 420.dp)
-                            .verticalScroll(scrollState)
+                    Button(
+                        onClick = {
+                            val fullText = "${currentGuidance.first}\n\n${currentGuidance.second}"
+                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, currentGuidance.first)
+                                putExtra(android.content.Intent.EXTRA_TEXT, fullText)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(shareIntent, "শেয়ার করুন"))
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        FormattedIslamicText(
-                            text = currentGuidance.second,
-                            baseFontSize = 14.sp,
-                            baseColor = MaterialTheme.colorScheme.onSurface,
-                            arabicColor = MaterialTheme.colorScheme.onSurface
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "শেয়ার করুন",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
                         )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                val fullText = "${currentGuidance.first}\n\n${currentGuidance.second}"
-                                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                val clip = android.content.ClipData.newPlainText("Guidance", fullText)
-                                clipboard.setPrimaryClip(clip)
-                                android.widget.Toast.makeText(context, "অনুলিপি করা হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Color(0xFF10B981))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "অনুলিপি করুন",
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("কপি", color = Color(0xFF10B981), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-
-                        Button(
-                            onClick = {
-                                val fullText = "${currentGuidance.first}\n\n${currentGuidance.second}"
-                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, currentGuidance.first)
-                                    putExtra(android.content.Intent.EXTRA_TEXT, fullText)
-                                }
-                                context.startActivity(android.content.Intent.createChooser(shareIntent, "শেয়ার করুন"))
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "শেয়ার করুন",
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("শেয়ার", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("শেয়ার", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             }
