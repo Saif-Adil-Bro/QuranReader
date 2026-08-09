@@ -47,6 +47,35 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.DialogProperties
+import android.widget.Toast
+import android.content.Intent
+import com.example.data.model.CombinedAyah
+import com.example.ui.components.parseHtmlToAnnotatedString
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.window.Dialog
 import com.example.utils.DateUtil
@@ -92,6 +121,23 @@ fun MushafViewerScreen(
     val isVertical = scrollDirection == "Vertical"
     
     val isBookmarked by viewModel.isBookmarked.collectAsState()
+    val pageAyahs by viewModel.pageAyahs.collectAsState()
+    val selectedAyah by viewModel.selectedAyah.collectAsState()
+    val isLoadingAyahs by viewModel.isLoadingAyahs.collectAsState()
+    val isAudioPlaying by viewModel.isAudioPlaying.collectAsState()
+    val currentPlayingAyahNum by viewModel.currentPlayingAyahNumber.collectAsState()
+
+    var showAyahSheet by remember { mutableStateOf(false) }
+    val infiniteTransition = rememberInfiniteTransition(label = "infoPulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
     var showSelectorSheet by remember { mutableStateOf(initialShowIndex) }
     var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0 for Surah, 1 for Para
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -144,6 +190,16 @@ fun MushafViewerScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { 
+                        viewModel.loadPageAyahs(currentPage)
+                        showAyahSheet = true 
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "অনুবাদ ও তাফসীর",
+                            tint = Color(0xFF10B981)
+                        )
+                    }
                     IconButton(onClick = { showSettingsSheet = true }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -221,6 +277,57 @@ fun MushafViewerScreen(
                     }
                 }
             }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        viewModel.loadPageAyahs(currentPage)
+                        showAyahSheet = true
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "অনুবাদ ও তাফসীর",
+                    tint = Color(0xFF10B981),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer(scaleX = pulseScale, scaleY = pulseScale)
+                )
+                Text(
+                    text = "অনুবাদ ও তাফসীর",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF10B981)
+                )
+            }
+        }
+    }
+
+    if (showAyahSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAyahSheet = false },
+            containerColor = if (isDark) Color(0xFF1E1E1E) else Color.White,
+            scrimColor = Color.Black.copy(alpha = 0.5f)
+        ) {
+            AyahSelectionSheetContent(
+                currentPage = currentPage,
+                pageAyahs = pageAyahs,
+                selectedAyah = selectedAyah,
+                isLoading = isLoadingAyahs,
+                isPlaying = isAudioPlaying,
+                currentPlayingAyahNum = currentPlayingAyahNum,
+                isDark = isDark,
+                onSelectAyah = { viewModel.selectAyah(it) },
+                onTogglePlayPause = { viewModel.togglePlayPauseAyah(it) },
+                onClose = { showAyahSheet = false }
+            )
         }
     }
 
@@ -1447,5 +1554,390 @@ fun OnDemandPageViewer(
         }
     } else if (pagePath != null) {
         PageViewer(pagePath = pagePath!!, isDark = isDark)
+    }
+}
+
+@Composable
+fun AyahSelectionSheetContent(
+    currentPage: Int,
+    pageAyahs: List<CombinedAyah>,
+    selectedAyah: CombinedAyah?,
+    isLoading: Boolean,
+    isPlaying: Boolean,
+    currentPlayingAyahNum: Int?,
+    isDark: Boolean,
+    onSelectAyah: (CombinedAyah) -> Unit,
+    onTogglePlayPause: (CombinedAyah) -> Unit,
+    onClose: () -> Unit
+) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    var showFullTafsirDialog by remember { mutableStateOf(false) }
+
+    val primaryGreen = Color(0xFF10B981)
+    val cardBg = if (isDark) Color(0xFF2A2A2A) else Color(0xFFF8FAF8)
+    val textColor = if (isDark) Color.White else Color(0xFF1F2937)
+    val subtitleColor = if (isDark) Color(0xFF9CA3AF) else Color(0xFF6B7280)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.85f)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        // 1. Header Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "পৃষ্ঠা ${DateUtil.toBengaliNumerals(currentPage)} - আয়াত নির্বাচন ও তাফসীর",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = primaryGreen
+                )
+                Text(
+                    text = if (pageAyahs.isNotEmpty()) "${DateUtil.toBengaliNumerals(pageAyahs.size)} টি আয়াত রয়েছে" else "আয়াত লোড হচ্ছে...",
+                    fontSize = 12.sp,
+                    color = subtitleColor
+                )
+            }
+            IconButton(onClick = onClose) {
+                Icon(Icons.Default.Close, contentDescription = "বন্ধ করুন", tint = subtitleColor)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = primaryGreen)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("আয়াত এবং তাফসীর তথ্য লোড হচ্ছে...", color = subtitleColor, fontSize = 13.sp)
+                }
+            }
+        } else if (pageAyahs.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("এই পৃষ্ঠার কোনো আয়াত তথ্য পাওয়া যায়নি", color = subtitleColor)
+            }
+        } else {
+            // 2. Ayah Selector Chips
+            Text(
+                text = "আয়াত নির্বাচন করুন:",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = textColor
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(pageAyahs) { ayah ->
+                    val isSelected = selectedAyah?.number == ayah.number
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onSelectAyah(ayah) },
+                        label = {
+                            Text(
+                                "আয়াত ${DateUtil.toBengaliNumerals(ayah.numberInSurah)}",
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = primaryGreen,
+                            selectedLabelColor = Color.White,
+                            containerColor = cardBg,
+                            labelColor = textColor
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 3. Selected Ayah Details Scrollable View
+            if (selectedAyah != null) {
+                val currentAyah = selectedAyah
+                val surahData = remember(currentAyah.surahNumber) {
+                    com.example.data.QuranData.surahNames.find { it.first == currentAyah.surahNumber }
+                }
+                val surahName = surahData?.second?.first ?: "সূরা ${currentAyah.surahNumber}"
+                val isCurrentPlaying = isPlaying && currentPlayingAyahNum == currentAyah.numberInSurah
+
+                val parsedTafsir = remember(currentAyah.tafsirText) {
+                    currentAyah.tafsirText?.parseHtmlToAnnotatedString(primaryGreen)
+                }
+
+                if (showFullTafsirDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showFullTafsirDialog = false },
+                        properties = DialogProperties(usePlatformDefaultWidth = false),
+                        modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f),
+                        title = {
+                            Column {
+                                Text("$surahName • আয়াত ${DateUtil.toBengaliNumerals(currentAyah.numberInSurah)}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = primaryGreen)
+                                Text("সম্পূর্ণ তাফসীর", fontSize = 13.sp, color = subtitleColor)
+                            }
+                        },
+                        text = {
+                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                if (parsedTafsir != null && parsedTafsir.isNotEmpty()) {
+                                    Text(
+                                        text = parsedTafsir,
+                                        fontSize = 16.sp,
+                                        lineHeight = 26.sp,
+                                        color = textColor,
+                                        textAlign = TextAlign.Justify
+                                    )
+                                } else {
+                                    Text("এই আয়াতের তাফসীর তথ্য পাওয়া যায়নি।", fontSize = 15.sp, color = subtitleColor)
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showFullTafsirDialog = false }) {
+                                Text("বন্ধ করুন", color = primaryGreen, fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        containerColor = if (isDark) Color(0xFF2A2A2A) else Color.White
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    // Ayah Header Info Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = cardBg),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "$surahName • আয়াত ${DateUtil.toBengaliNumerals(currentAyah.numberInSurah)}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = primaryGreen
+                                )
+                                Text(
+                                    text = "পারা ${DateUtil.toBengaliNumerals(currentAyah.juz)}",
+                                    fontSize = 12.sp,
+                                    color = subtitleColor
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Arabic Text
+                            Text(
+                                text = currentAyah.arabicText,
+                                fontSize = 24.sp,
+                                lineHeight = 42.sp,
+                                fontFamily = com.example.ui.theme.getArabicFont("Me Quran"),
+                                color = textColor,
+                                textAlign = TextAlign.Right,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Audio Playback Button & Navigation Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Previous Ayah Button
+                                val currentIndex = pageAyahs.indexOfFirst { it.number == currentAyah.number }
+                                IconButton(
+                                    onClick = {
+                                        if (currentIndex > 0) {
+                                            onSelectAyah(pageAyahs[currentIndex - 1])
+                                        }
+                                    },
+                                    enabled = currentIndex > 0
+                                ) {
+                                    Icon(
+                                        Icons.Default.SkipPrevious,
+                                        contentDescription = "পূর্ববর্তী আয়াত",
+                                        tint = if (currentIndex > 0) primaryGreen else subtitleColor.copy(alpha = 0.4f)
+                                    )
+                                }
+
+                                // Play Audio Button
+                                Button(
+                                    onClick = { onTogglePlayPause(currentAyah) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = primaryGreen),
+                                    shape = RoundedCornerShape(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isCurrentPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        tint = Color.White
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (isCurrentPlaying) "বিরতি দিন" else "তিলাওয়াত শুনুন",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                // Next Ayah Button
+                                IconButton(
+                                    onClick = {
+                                        if (currentIndex != -1 && currentIndex + 1 < pageAyahs.size) {
+                                            onSelectAyah(pageAyahs[currentIndex + 1])
+                                        }
+                                    },
+                                    enabled = currentIndex != -1 && currentIndex + 1 < pageAyahs.size
+                                ) {
+                                    Icon(
+                                        Icons.Default.SkipNext,
+                                        contentDescription = "পরবর্তী আয়াত",
+                                        tint = if (currentIndex != -1 && currentIndex + 1 < pageAyahs.size) primaryGreen else subtitleColor.copy(alpha = 0.4f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Bangla Translation Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = cardBg),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "বাংলা অনুবাদ:",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = primaryGreen
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = currentAyah.bengaliText.ifEmpty { "অনুবাদ উপলব্ধ নয়" },
+                                fontSize = 15.sp,
+                                lineHeight = 24.sp,
+                                color = textColor,
+                                fontFamily = com.example.ui.theme.getBengaliFont("SolaimanLipi")
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Tafsir Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = cardBg),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "তাফসীর:",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = primaryGreen
+                                )
+                                TextButton(onClick = { showFullTafsirDialog = true }) {
+                                    Text("সম্পূর্ণ দেখুন", color = primaryGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (parsedTafsir != null && parsedTafsir.isNotEmpty()) {
+                                Text(
+                                    text = parsedTafsir,
+                                    fontSize = 14.sp,
+                                    lineHeight = 22.sp,
+                                    color = textColor,
+                                    maxLines = 6,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else {
+                                Text(
+                                    text = "এই আয়াতের তাফসীর লোড করতে 'সম্পূর্ণ দেখুন' বাটনে ক্লিক করুন অথবা অনলাইন তাফসীর প্যাক ডাউনলোড করুন।",
+                                    fontSize = 13.sp,
+                                    color = subtitleColor
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Action buttons (Copy / Share)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                val textToCopy = "${currentAyah.arabicText}\n\n${currentAyah.bengaliText}\n\n($surahName: ${currentAyah.numberInSurah})"
+                                clipboardManager.setText(AnnotatedString(textToCopy))
+                                Toast.makeText(context, "আয়াত ও অনুবাদ কপি করা হয়েছে", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                            border = BorderStroke(1.dp, primaryGreen)
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null, tint = primaryGreen)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("কপি করুন", color = primaryGreen)
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                val textToShare = "${currentAyah.arabicText}\n\n${currentAyah.bengaliText}\n\n($surahName: ${currentAyah.numberInSurah})"
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, textToShare)
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "শেয়ার করুন"))
+                            },
+                            modifier = Modifier.weight(1f),
+                            border = BorderStroke(1.dp, primaryGreen)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, tint = primaryGreen)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("শেয়ার করুন", color = primaryGreen)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+        }
     }
 }

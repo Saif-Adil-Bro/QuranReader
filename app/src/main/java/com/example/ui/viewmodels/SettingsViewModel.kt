@@ -926,7 +926,7 @@ class SettingsViewModel(
     }
 
     fun addPlannerPages(pages: Int) {
-        val total = (_plannerPagesRead.value + pages).coerceAtMost(604).coerceAtLeast(0)
+        val total = (_plannerPagesRead.value + pages).coerceAtMost(610).coerceAtLeast(0)
         _plannerPagesRead.value = total
         
         // Simple streak logic for demo: increment streak if adding pages

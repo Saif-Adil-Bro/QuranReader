@@ -90,11 +90,11 @@ fun TajweedModeScreen(
     val coroutineScope = rememberCoroutineScope()
 
     val pagerState = rememberPagerState(
-        initialPage = (initialPage - 1).coerceIn(0, 603),
-        pageCount = { 604 }
+        initialPage = (initialPage - 1).coerceIn(0, 609),
+        pageCount = { 610 }
     )
     val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState(
-        initialFirstVisibleItemIndex = (initialPage - 1).coerceIn(0, 603)
+        initialFirstVisibleItemIndex = (initialPage - 1).coerceIn(0, 609)
     )
 
     if (scrollDirection == "Horizontal") {
@@ -279,7 +279,7 @@ fun TajweedModeScreen(
                 ) {
                     TextButton(
                         onClick = { viewModel.nextPage() }, 
-                        enabled = currentPage < 604,
+                        enabled = currentPage < 610,
                         colors = ButtonDefaults.textButtonColors(contentColor = topBarContentColor)
                     ) {
                         Text("পরবর্তী", fontWeight = FontWeight.Bold)
@@ -328,7 +328,7 @@ fun TajweedModeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                items(604) { pageIndex ->
+                items(610) { pageIndex ->
                     TajweedPageLoader(
                         pageNumber = pageIndex + 1,
                         viewModel = viewModel,
@@ -385,7 +385,7 @@ fun TajweedModeScreen(
                 title = { Text("পৃষ্ঠায় যান", color = topBarContentColor, fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
-                        Text("১ থেকে ৬০৪ এর মধ্যে একটি পৃষ্ঠা নম্বর লিখুন:", modifier = Modifier.padding(bottom = 8.dp))
+                        Text("১ থেকে ৬১০ এর মধ্যে একটি পৃষ্ঠা নম্বর লিখুন:", modifier = Modifier.padding(bottom = 8.dp))
                         OutlinedTextField(
                             value = jumpPageInput,
                             onValueChange = { input ->
@@ -404,7 +404,7 @@ fun TajweedModeScreen(
                     Button(
                         onClick = {
                             val targetPage = jumpPageInput.toIntOrNull()
-                            if (targetPage != null && targetPage in 1..604) {
+                            if (targetPage != null && targetPage in 1..610) {
                                 viewModel.stopAudio()
                                 viewModel.loadPage(targetPage)
                                 showJumpToPageDialog = false
@@ -1135,12 +1135,13 @@ fun TajweedPageContent(
                                     val inlineId = "tajweed_circle_${ayah.surahNumber}_${ayah.numberInSurah}"
                                     append(" ")
                                     appendInlineContent(inlineId, " [${ayah.numberInSurah}]")
+                                    append(" ")
 
                                     map[inlineId] = InlineTextContent(
                                         placeholder = Placeholder(
                                             width = (circleSizeDp + 6).sp,
                                             height = circleSizeDp.sp,
-                                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                                            placeholderVerticalAlign = PlaceholderVerticalAlign.AboveBaseline
                                         )
                                     ) {
                                         com.example.ui.components.AyahNumberCircle(

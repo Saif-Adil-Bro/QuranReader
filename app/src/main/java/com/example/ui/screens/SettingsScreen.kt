@@ -1533,12 +1533,12 @@ fun PlannerDialogContent(viewModel: SettingsViewModel) {
     val totalDays = selectedPlan.second
     val passedDays = maxOf(0, ((System.currentTimeMillis() - startDate) / (1000 * 60 * 60 * 24)).toInt())
     val remainingDays = maxOf(1, totalDays - passedDays)
-    val remainingPages = maxOf(0, 604 - pagesRead)
+    val remainingPages = maxOf(0, 610 - pagesRead)
     
     // Dynamic daily target adjustment
     val dailyTargetPages = maxOf(1, kotlin.math.ceil(remainingPages.toDouble() / remainingDays).toInt())
     
-    val progressPercentage = pagesRead.toFloat() / 604f
+    val progressPercentage = pagesRead.toFloat() / 610f
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         

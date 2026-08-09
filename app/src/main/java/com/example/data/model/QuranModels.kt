@@ -222,13 +222,22 @@ fun AnnotatedString.Builder.appendStyledWaqfText(
             if (i > lastIndex) {
                 append(text.substring(lastIndex, i))
             }
-            // Style the waqf sign: Use Amiri waqf shape system for Saleem font, use default font shape for Me Quran
+            
+            // If preceding text does not end with space, add hair space to prevent glyph collision
+            if (length > 0) {
+                val currentText = this.toAnnotatedString().text
+                if (currentText.isNotEmpty() && currentText.last() != ' ' && currentText.last() != '\u200A') {
+                    append("\u200A")
+                }
+            }
+
+            // Style the waqf sign without negative baselineShift so it doesn't overlap the letters below
             if (arabicFontName.contains("Saleem", ignoreCase = true)) {
                 withStyle(
                     style = SpanStyle(
                         fontFamily = com.example.ui.theme.amiriFont,
-                        fontSize = (fontSize * 0.55f).sp, // Significantly smaller
-                        baselineShift = BaselineShift(-0.4f) // Shift downwards
+                        fontSize = (fontSize * 0.70f).sp,
+                        baselineShift = BaselineShift(0.0f)
                     )
                 ) {
                     append(char.toString())
@@ -236,13 +245,19 @@ fun AnnotatedString.Builder.appendStyledWaqfText(
             } else {
                 withStyle(
                     style = SpanStyle(
-                        fontSize = (fontSize * 0.65f).sp,
-                        baselineShift = BaselineShift(-0.2f)
+                        fontSize = (fontSize * 0.70f).sp,
+                        baselineShift = BaselineShift(0.0f)
                     )
                 ) {
                     append(char.toString())
                 }
             }
+
+            // Add hair space after waqf sign if not followed by space
+            if (i + 1 < text.length && text[i + 1] != ' ' && text[i + 1] != '\u200A') {
+                append("\u200A")
+            }
+
             lastIndex = i + 1
         }
     }

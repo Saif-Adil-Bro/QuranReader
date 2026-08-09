@@ -17,14 +17,33 @@ import kotlinx.coroutines.withContext
 import com.example.data.local.dao.BookmarkDao
 import com.example.data.local.entity.BookmarkEntity
 
+import com.example.data.repository.QuranRepository
+import com.example.data.repository.AudioRepository
+import com.example.data.model.CombinedAyah
+import com.example.util.AudioUtils
+
 class MushafViewerViewModel(
     private val repository: MushafRepository,
     private val settingsRepository: SettingsRepository,
-    private val bookmarkDao: BookmarkDao
+    private val bookmarkDao: BookmarkDao,
+    private val quranRepository: QuranRepository? = null,
+    val audioRepository: AudioRepository? = null
 ) : ViewModel() {
 
     private val _isBookmarked = MutableStateFlow(false)
     val isBookmarked: StateFlow<Boolean> = _isBookmarked.asStateFlow()
+
+    private val _pageAyahs = MutableStateFlow<List<CombinedAyah>>(emptyList())
+    val pageAyahs: StateFlow<List<CombinedAyah>> = _pageAyahs.asStateFlow()
+
+    private val _selectedAyah = MutableStateFlow<CombinedAyah?>(null)
+    val selectedAyah: StateFlow<CombinedAyah?> = _selectedAyah.asStateFlow()
+
+    private val _isLoadingAyahs = MutableStateFlow(false)
+    val isLoadingAyahs: StateFlow<Boolean> = _isLoadingAyahs.asStateFlow()
+
+    val isAudioPlaying: StateFlow<Boolean> = audioRepository?.isPlaying ?: MutableStateFlow(false)
+    val currentPlayingAyahNumber: StateFlow<Int?> = audioRepository?.currentPlayingAyahNumber ?: MutableStateFlow(null)
 
     val theme: StateFlow<String> = settingsRepository.themeFlow.stateIn(
         scope = viewModelScope,
@@ -95,6 +114,49 @@ class MushafViewerViewModel(
             val bookmarkEntity = bookmarkDao.getBookmark("MUSHAF_PAGE", pageNumber)
                 ?: bookmarkDao.getBookmark("PAGE", pageNumber)
             _isBookmarked.value = bookmarkEntity != null
+        }
+        loadPageAyahs(pageNumber)
+    }
+
+    fun loadPageAyahs(pageNumber: Int) {
+        if (quranRepository == null) return
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingAyahs.value = true
+            try {
+                val ayahs = quranRepository.getPageCombined(pageNumber)
+                _pageAyahs.value = ayahs
+                if (ayahs.isNotEmpty()) {
+                    val currentSel = _selectedAyah.value
+                    if (currentSel == null || currentSel.page != pageNumber) {
+                        _selectedAyah.value = ayahs.first()
+                    }
+                } else {
+                    _selectedAyah.value = null
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isLoadingAyahs.value = false
+            }
+        }
+    }
+
+    fun selectAyah(ayah: CombinedAyah) {
+        _selectedAyah.value = ayah
+    }
+
+    fun togglePlayPauseAyah(ayah: CombinedAyah) {
+        if (audioRepository == null) return
+        val currentlyPlayingNum = currentPlayingAyahNumber.value
+        val isCurrentlyPlaying = isAudioPlaying.value
+
+        if (currentlyPlayingNum == ayah.numberInSurah && isCurrentlyPlaying) {
+            audioRepository.pauseAudio()
+        } else if (currentlyPlayingNum == ayah.numberInSurah && !isCurrentlyPlaying) {
+            audioRepository.resumeAudio()
+        } else {
+            val audioUrl = AudioUtils.getAudioUrl("ar.alafasy", ayah.number)
+            audioRepository.playAudio(audioUrl, ayah.numberInSurah)
         }
     }
 

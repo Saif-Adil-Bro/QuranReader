@@ -296,7 +296,7 @@ fun AppNavGraph(
                     navController.navigate("tajweed/$startPage")
                 },
                 onJuzClick = { juzId ->
-                    val startPage = if (juzId == 1) 1 else (juzId - 1) * 20 + 2
+                    val startPage = com.example.data.HafeziQuranData.getParaStartPage(juzId, 1)
                     navController.navigate("tajweed/$startPage")
                 },
                 onSettingsClick = { navController.navigate("settings") }
@@ -308,7 +308,7 @@ fun AppNavGraph(
             arguments = listOf(navArgument("page") { type = NavType.IntType })
         ) { backStackEntry ->
             val pageArg = backStackEntry.arguments?.getInt("page") ?: 1
-            val page = if (pageArg in 1..604) pageArg else 1
+            val page = if (pageArg in 1..610) pageArg else 1
             val viewModel: TajweedModeViewModel = viewModel(factory = viewModelFactory)
             TajweedModeScreen(
                 viewModel = viewModel,
@@ -440,7 +440,7 @@ fun AppNavGraph(
             arguments = listOf(navArgument("page") { type = NavType.IntType })
         ) { backStackEntry ->
             val pageArg = backStackEntry.arguments?.getInt("page") ?: 1
-            val page = if (pageArg in 1..604) pageArg else 1
+            val page = if (pageArg in 1..610) pageArg else 1
             val viewModel: HafeziModeViewModel = viewModel(factory = viewModelFactory)
             HafeziModeScreen(
                 viewModel = viewModel,

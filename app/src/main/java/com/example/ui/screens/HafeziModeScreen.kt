@@ -97,11 +97,11 @@ fun HafeziModeScreen(
     val coroutineScope = rememberCoroutineScope()
 
     val pagerState = rememberPagerState(
-        initialPage = (initialPage - 1).coerceIn(0, 603),
-        pageCount = { 604 }
+        initialPage = (initialPage - 1).coerceIn(0, 609),
+        pageCount = { 610 }
     )
     val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState(
-        initialFirstVisibleItemIndex = (initialPage - 1).coerceIn(0, 603)
+        initialFirstVisibleItemIndex = (initialPage - 1).coerceIn(0, 609)
     )
 
     if (scrollDirection == "Horizontal") {
@@ -256,7 +256,7 @@ fun HafeziModeScreen(
                 ) {
                     TextButton(
                         onClick = { viewModel.nextPage() }, 
-                        enabled = currentPage < 604,
+                        enabled = currentPage < 610,
                         colors = ButtonDefaults.textButtonColors(contentColor = topBarContentColor)
                     ) {
                         Text("পরবর্তী", fontWeight = FontWeight.Bold)
@@ -305,7 +305,7 @@ fun HafeziModeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                items(604) { pageIndex ->
+                items(610) { pageIndex ->
                     HafeziPageLoader(
                         pageNumber = pageIndex + 1,
                         viewModel = viewModel,
@@ -748,7 +748,7 @@ fun HafeziModeScreen(
                                 pageInput = filtered
                                 if (filtered.isNotEmpty()) {
                                     val num = filtered.toIntOrNull()
-                                    isError = num == null || num !in 1..604
+                                    isError = num == null || num !in 1..610
                                 } else {
                                     isError = false
                                 }
@@ -758,7 +758,7 @@ fun HafeziModeScreen(
                             isError = isError,
                             supportingText = {
                                 if (isError) {
-                                    Text("অনুগ্রহ করে ১ থেকে ৬০৪ এর মধ্যে একটি সঠিক নম্বর লিখুন", color = MaterialTheme.colorScheme.error)
+                                    Text("অনুগ্রহ করে ১ থেকে ৬১০ এর মধ্যে একটি সঠিক নম্বর লিখুন", color = MaterialTheme.colorScheme.error)
                                 }
                             },
                             singleLine = true,
@@ -779,7 +779,7 @@ fun HafeziModeScreen(
                         onClick = {
                             val englishInput = pageInput.toEnglishNumerals()
                             val num = englishInput.toIntOrNull()
-                            if (num != null && num in 1..604) {
+                            if (num != null && num in 1..610) {
                                 viewModel.loadPage(num)
                                 showJumpToPageDialog = false
                             } else {

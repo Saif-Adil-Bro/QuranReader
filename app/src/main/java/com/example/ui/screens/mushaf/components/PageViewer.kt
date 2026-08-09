@@ -33,7 +33,8 @@ import java.io.File
 fun PageViewer(
     pagePath: String?,
     isDark: Boolean = false,
-    onZoomChanged: (Float) -> Unit = {}
+    onZoomChanged: (Float) -> Unit = {},
+    onTap: (() -> Unit)? = null
 ) {
     var scale by remember { mutableStateOf(1f) }
     var offsetX by remember { mutableStateOf(0f) }

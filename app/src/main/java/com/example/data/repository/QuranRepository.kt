@@ -632,6 +632,14 @@ class QuranRepository(
      * Fetches a specific page of the Quran
      */
     suspend fun getPageCombined(pageNumber: Int, audioEditionOverride: String? = null): List<CombinedAyah> {
+        val pageRange = com.example.data.HafeziQuranData.getPageRange(pageNumber)
+        if (pageRange != null) {
+            val rangeAyahs = getAyahsByHafeziRange(pageRange, audioEditionOverride)
+            if (rangeAyahs.isNotEmpty()) {
+                return rangeAyahs.map { it.copy(page = pageNumber) }
+            }
+        }
+
         val tafsirIdsSet = settingsRepository.selectedTafsirIdsFlow.first()
         val tafsirIdsStr = tafsirIdsSet.joinToString(",")
         val translationIdsSet = settingsRepository.selectedTranslationIdsFlow.first()
@@ -723,6 +731,61 @@ class QuranRepository(
                 throw Exception(e.message ?: e.toString())
             }
         }
+    }
+
+    private suspend fun getAyahsByHafeziRange(
+        range: com.example.data.HafeziPageRange,
+        audioEditionOverride: String?
+    ): List<CombinedAyah> {
+        val result = mutableListOf<CombinedAyah>()
+        for (surahNum in range.fromSurah..range.toSurah) {
+            val surahAyahs = try {
+                getSurahDetailsCombined(surahNum, audioEditionOverride = audioEditionOverride)
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            val filtered = surahAyahs.filter { ayah ->
+                if (range.fromSurah == range.toSurah) {
+                    ayah.numberInSurah >= range.fromAyah && ayah.numberInSurah <= range.toAyah
+                } else if (surahNum == range.fromSurah) {
+                    ayah.numberInSurah >= range.fromAyah
+                } else if (surahNum == range.toSurah) {
+                    ayah.numberInSurah <= range.toAyah
+                } else {
+                    true
+                }
+            }
+            result.addAll(filtered)
+        }
+
+        if (result.isEmpty()) {
+            for (surahNum in range.fromSurah..range.toSurah) {
+                val startV = if (surahNum == range.fromSurah) range.fromAyah else 1
+                val endV = if (surahNum == range.toSurah) range.toAyah else 999
+                try {
+                    val dbAyahs = offlineDao.getAyahsBySurahRange(surahNum, startV, endV)
+                    result.addAll(dbAyahs.map {
+                        CombinedAyah(
+                            number = it.globalNumber,
+                            numberInSurah = it.numberInSurah,
+                            page = it.page,
+                            juz = it.juz,
+                            surahNumber = it.surahNumber,
+                            arabicText = it.arabicText,
+                            bengaliText = it.bengaliText,
+                            tafsirText = null,
+                            audioUrl = null,
+                            words = emptyList(),
+                            textUthmaniTajweed = null
+                        )
+                    })
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        return result
     }
 
     /**

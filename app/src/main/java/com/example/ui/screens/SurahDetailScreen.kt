@@ -2344,7 +2344,7 @@ fun MushafPageView(
                 placeholder = Placeholder(
                     width = (circleSizeDp + 6).sp,
                     height = circleSizeDp.sp,
-                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.AboveBaseline
                 )
             ) {
                 com.example.ui.components.AyahNumberCircle(
@@ -2483,7 +2483,7 @@ fun AyahInlineText(
             placeholder = Placeholder(
                 width = (circleSizeDp + 6).sp,
                 height = circleSizeDp.sp,
-                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                placeholderVerticalAlign = PlaceholderVerticalAlign.AboveBaseline
             )
         ) {
             AyahNumberCircle(

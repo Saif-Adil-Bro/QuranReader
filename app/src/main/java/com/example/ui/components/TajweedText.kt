@@ -16,6 +16,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.em
+import com.example.data.model.WAQF_CHARS
 import com.example.ui.theme.TajweedColors
 
 private fun String.toArabicNumerals(): String {
@@ -24,6 +26,46 @@ private fun String.toArabicNumerals(): String {
         '5' to '٥', '6' to '٦', '7' to '٧', '8' to '٨', '9' to '٩'
     )
     return this.map { englishToArabic[it] ?: it }.joinToString("")
+}
+
+private fun AnnotatedString.Builder.appendTajweedWithWaqf(text: String, defaultColor: Color) {
+    if (text.isEmpty()) return
+    var lastIndex = 0
+    for (i in text.indices) {
+        val char = text[i]
+        if (WAQF_CHARS.contains(char)) {
+            if (i > lastIndex) {
+                append(text.substring(lastIndex, i))
+            }
+            
+            // Add hair space before waqf sign if not preceded by space
+            if (length > 0) {
+                val currentText = this.toAnnotatedString().text
+                if (currentText.isNotEmpty() && currentText.last() != ' ' && currentText.last() != '\u200A') {
+                    append("\u200A")
+                }
+            }
+            
+            withStyle(
+                style = SpanStyle(
+                    fontSize = 0.75.em,
+                    baselineShift = androidx.compose.ui.text.style.BaselineShift(0.0f)
+                )
+            ) {
+                append(char.toString())
+            }
+
+            // Add hair space after waqf sign if not followed by space
+            if (i + 1 < text.length && text[i + 1] != ' ' && text[i + 1] != '\u200A') {
+                append("\u200A")
+            }
+
+            lastIndex = i + 1
+        }
+    }
+    if (lastIndex < text.length) {
+        append(text.substring(lastIndex))
+    }
 }
 
 fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
@@ -38,17 +80,17 @@ fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
         while (currentIndex < preprocessed.length) {
             val nextTagStart = preprocessed.indexOf("<", currentIndex)
             if (nextTagStart == -1) {
-                append(preprocessed.substring(currentIndex))
+                appendTajweedWithWaqf(preprocessed.substring(currentIndex), defaultColor)
                 break
             }
             
             if (nextTagStart > currentIndex) {
-                append(preprocessed.substring(currentIndex, nextTagStart))
+                appendTajweedWithWaqf(preprocessed.substring(currentIndex, nextTagStart), defaultColor)
             }
             
             val nextTagEnd = preprocessed.indexOf(">", nextTagStart)
             if (nextTagEnd == -1) {
-                append(preprocessed.substring(nextTagStart))
+                appendTajweedWithWaqf(preprocessed.substring(nextTagStart), defaultColor)
                 break
             }
             

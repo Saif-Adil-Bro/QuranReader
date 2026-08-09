@@ -76,7 +76,7 @@ class HafeziModeViewModel(
     private var playbackJob: Job? = null
 
     fun loadPage(pageNumber: Int) {
-        if (pageNumber !in 1..604) return
+        if (pageNumber !in 1..610) return
         _currentPage.value = pageNumber
         viewModelScope.launch {
             _uiState.value = UiState.Loading
@@ -244,7 +244,7 @@ class HafeziModeViewModel(
     }
 
     fun nextPage() {
-        if (_currentPage.value < 604) {
+        if (_currentPage.value < 610) {
             stopAudio()
             loadPage(_currentPage.value + 1)
         }
@@ -272,7 +272,7 @@ class HafeziModeViewModel(
     }
 
     fun updateActivePage(pageNumber: Int) {
-        if (pageNumber !in 1..604) return
+        if (pageNumber !in 1..610) return
         _currentPage.value = pageNumber
         viewModelScope.launch {
             try {

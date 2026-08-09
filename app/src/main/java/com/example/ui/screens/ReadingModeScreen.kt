@@ -265,7 +265,7 @@ fun ReadingModeScreen(
                                                                 placeholder = Placeholder(
                                                                     width = (circleSizeDp + 6).sp,
                                                                     height = circleSizeDp.sp,
-                                                                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                                                                    placeholderVerticalAlign = PlaceholderVerticalAlign.AboveBaseline
                                                                 )
                                                             ) {
                                                                 AyahNumberCircle(
