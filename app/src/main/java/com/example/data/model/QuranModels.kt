@@ -188,8 +188,7 @@ val WAQF_CHARS = charArrayOf(
     '\u06D9', // ۙ (لا)
     '\u06DA', // ۚ (ج)
     '\u06DB', // ۛ (three dots)
-    '\u06DC', // ۜ (seen)
-    '\u06E2'  // ۢ (high meem isolated)
+    '\u06DC'  // ۜ (seen)
 )
 
 fun String.removeWaqfSigns(): String {

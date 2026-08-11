@@ -952,7 +952,7 @@ fun TajweedPageContent(
     isVerticalScrollEnabled: Boolean = true,
     onAyahClick: (Int) -> Unit
 ) {
-    val arabicFont = getArabicFont(arabicFontName)
+    val arabicFont = if (showTajweed) com.example.ui.theme.getArabicFontForTajweed(arabicFontName) else getArabicFont(arabicFontName)
     val firstAyah = ayahs.firstOrNull()
     
     // Resolve Page Headers
@@ -1250,8 +1250,7 @@ private val paraNamesBangla = listOf(
 )
 
 private fun getJuzStartPage(juz: Int): Int {
-    if (juz == 1) return 1
-    return (juz - 1) * 20 + 2
+    return com.example.data.HafeziQuranData.getParaStartPage(juz, 1)
 }
 
 @Composable

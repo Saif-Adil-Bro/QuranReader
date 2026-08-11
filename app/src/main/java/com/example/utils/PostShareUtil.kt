@@ -120,6 +120,7 @@ object PostShareUtil {
         textAlignName: String = "CENTER", // "LEFT", "CENTER", "RIGHT"
         fontName: String = "SolaimanLipi", // "SolaimanLipi", "Hind Siliguri", "Shorif Shishir Unicode", "Default"
         fontSizeSp: Float = 44f,
+        lineSpacingMult: Float = 1.15f,
         customCategory: String? = null,
         customText: String? = null,
         customRef: String? = null,
@@ -133,6 +134,17 @@ object PostShareUtil {
         val displayCategory: String = customCategory?.takeIf { it.isNotBlank() } ?: post.category
         val displayText: String = customText?.takeIf { it.isNotBlank() } ?: post.text
         val displayRef: String = customRef?.takeIf { it.isNotBlank() } ?: post.reference
+
+        if (bgImageUrl.isNullOrBlank() && theme == CardTheme.EMERALD) {
+            val shareData = IslamicCardTemplate.ShareData(
+                badgeTitle = displayCategory.ifBlank { "আজকের পোস্ট" },
+                arabicText = null,
+                transliterationText = null,
+                translationText = displayText,
+                referenceText = displayRef.ifBlank { null }
+            )
+            return@withContext IslamicCardTemplate.generateCardBitmap(context, shareData)
+        }
 
         // Load Shahrazad font for Arabic script
         val shahrazadFont = getCachedFont(context, R.font.scheherazade_new) ?: Typeface.DEFAULT
@@ -216,7 +228,7 @@ object PostShareUtil {
         // Measure text layout
         val textLayout = StaticLayout.Builder.obtain(
             formattedDisplayText, 0, formattedDisplayText.length, textPaint, contentWidth
-        ).setAlignment(staticLayoutAlign).setLineSpacing(12f, 1.15f).build()
+        ).setAlignment(staticLayoutAlign).setLineSpacing(12f, lineSpacingMult).build()
 
         val categoryText = if (displayCategory.isNotBlank()) "— $displayCategory —" else ""
         val refText = if (displayRef.isNotEmpty()) "— $displayRef —" else ""
@@ -282,7 +294,7 @@ object PostShareUtil {
         val bgPaint = Paint().apply {
             this.shader = shader
             if (bgBitmapDrawn) {
-                alpha = (overlayAlpha * 255).toInt().coerceIn(20, 255)
+                alpha = (overlayAlpha * 255).toInt().coerceIn(0, 255)
             }
         }
         canvas.drawRect(0f, 0f, width.toFloat(), finalHeight.toFloat(), bgPaint)
@@ -369,6 +381,7 @@ object PostShareUtil {
         textAlignName: String = "CENTER",
         fontName: String = "SolaimanLipi",
         fontSizeSp: Float = 44f,
+        lineSpacingMult: Float = 1.15f,
         customCategory: String? = null,
         customText: String? = null,
         customRef: String? = null,
@@ -385,6 +398,7 @@ object PostShareUtil {
                 textAlignName = textAlignName,
                 fontName = fontName,
                 fontSizeSp = fontSizeSp,
+                lineSpacingMult = lineSpacingMult,
                 customCategory = customCategory,
                 customText = customText,
                 customRef = customRef,

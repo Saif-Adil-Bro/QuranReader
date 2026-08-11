@@ -257,30 +257,15 @@ object SubjectwiseShareUtil {
 
     fun shareAsImage(context: Context, verse: SubjectwiseVerse, categoryName: String) {
         try {
-            val height = measureAndDrawVerse(null, verse, categoryName, context)
-            val bitmap = Bitmap.createBitmap(1080, height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-
-            val shader = LinearGradient(
-                0f, 0f, 0f, height.toFloat(),
-                Color.parseColor("#07301B"),
-                Color.parseColor("#145233"),
-                Shader.TileMode.CLAMP
+            val shareData = IslamicCardTemplate.ShareData(
+                badgeTitle = categoryName.ifBlank { "বিষয়ভিত্তিক ক্বুরআন" },
+                arabicText = verse.arabicText.takeIf { it.isNotBlank() },
+                transliterationText = null,
+                translationText = verse.banglaTranslation,
+                referenceText = "${verse.surahName} : ${verse.verseNo}"
             )
-            val bgPaint = Paint().apply {
-                this.shader = shader
-            }
-            canvas.drawRect(0f, 0f, 1080f, height.toFloat(), bgPaint)
 
-            val borderPaint = Paint().apply {
-                color = Color.parseColor("#25FFFFFF")
-                style = Paint.Style.STROKE
-                strokeWidth = 4f
-                isAntiAlias = true
-            }
-            canvas.drawRoundRect(RectF(30f, 30f, 1050f, (height - 30).toFloat()), 24f, 24f, borderPaint)
-
-            measureAndDrawVerse(canvas, verse, categoryName, context)
+            val bitmap = IslamicCardTemplate.generateCardBitmap(context, shareData)
 
             val cacheDir = File(context.cacheDir, "shared_images")
             if (!cacheDir.exists()) {

@@ -37,14 +37,9 @@ object DateUtil {
 
     fun getTodayHijriDateStr(hijriOffset: Int = 0): String {
         return try {
-            val islamicCalendar = IslamicCalendar()
-            if (hijriOffset != 0) {
-                islamicCalendar.add(IslamicCalendar.DAY_OF_MONTH, hijriOffset)
-            }
-            val day = islamicCalendar.get(IslamicCalendar.DAY_OF_MONTH)
-            val month = islamicCalendar.get(IslamicCalendar.MONTH)
-            val year = islamicCalendar.get(IslamicCalendar.YEAR)
-            "${toBengaliNumerals(day)} ${hijriMonths[month]} ${toBengaliNumerals(year)}"
+            val today = java.time.LocalDate.now()
+            val info = HijriCalendarUtil.getHijriDate(today, hijriOffset)
+            "${toBengaliNumerals(info.hijriDay)} ${info.hijriMonthNameBn} ${toBengaliNumerals(info.hijriYear)}"
         } catch (e: Exception) {
             "..."
         }
@@ -52,12 +47,10 @@ object DateUtil {
 
     fun getHijriNoteStr(hijriOffset: Int = 0): String {
         return try {
-            val islamicCalendar = IslamicCalendar()
-            if (hijriOffset != 0) {
-                islamicCalendar.add(IslamicCalendar.DAY_OF_MONTH, hijriOffset)
-            }
-            val day = islamicCalendar.get(IslamicCalendar.DAY_OF_MONTH)
-            val month = islamicCalendar.get(IslamicCalendar.MONTH)
+            val today = java.time.LocalDate.now()
+            val info = HijriCalendarUtil.getHijriDate(today, hijriOffset)
+            val month = info.hijriMonth - 1
+            val day = info.hijriDay
             if (month == 0 && day == 1) "(নতুন বছর শুরু)"
             else if (month == 8) "(রহমতের মাস)"
             else "(পবিত্র আরবি মাস)"

@@ -395,38 +395,28 @@ object DuaShareUtil {
 
     fun shareAsImage(context: Context, dua: DuaItem) {
         try {
-            // 1. Measure dynamic height
-            val height = measureAndDrawDua(null, dua, context)
-            
-            // 2. Create bitmap & canvas
-            val bitmap = Bitmap.createBitmap(1080, height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            
-            // 3. Draw premium background gradient
-            val shader = LinearGradient(
-                0f, 0f, 0f, height.toFloat(),
-                Color.parseColor("#07301B"), // Deep Rich Forest Green
-                Color.parseColor("#145233"), // Emerald Green
-                Shader.TileMode.CLAMP
+            val banglaDigits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
+            val banglaNumber = dua.id.toString().map { char ->
+                if (char.isDigit()) banglaDigits[char - '0'] else char
+            }.joinToString("")
+
+            val arabicText = dua.segments.mapNotNull { it.arabic.takeIf { a -> a.isNotBlank() && a != "null" } }.joinToString("\n\n")
+            val transliterationText = dua.segments.mapNotNull { it.transliteration.takeIf { t -> t.isNotBlank() && t != "null" } }.joinToString("\n")
+            val translationText = dua.segments.mapNotNull { it.translation.takeIf { tr -> tr.isNotBlank() && tr != "null" } }.joinToString("\n")
+                .ifEmpty { dua.title }
+            val referenceText = dua.segments.mapNotNull { it.reference.takeIf { r -> r.isNotBlank() && r != "null" } }.firstOrNull()
+                ?: "দোয়া নং $banglaNumber"
+
+            val shareData = IslamicCardTemplate.ShareData(
+                badgeTitle = "আজকের দোয়া",
+                arabicText = arabicText.ifBlank { null },
+                transliterationText = transliterationText.ifBlank { null },
+                translationText = translationText,
+                referenceText = referenceText
             )
-            val bgPaint = Paint().apply {
-                this.shader = shader
-            }
-            canvas.drawRect(0f, 0f, 1080f, height.toFloat(), bgPaint)
+
+            val bitmap = IslamicCardTemplate.generateCardBitmap(context, shareData)
             
-            // 4. Draw decorative inner border
-            val borderPaint = Paint().apply {
-                color = Color.parseColor("#25FFFFFF")
-                style = Paint.Style.STROKE
-                strokeWidth = 4f
-                isAntiAlias = true
-            }
-            canvas.drawRoundRect(RectF(30f, 30f, 1050f, (height - 30).toFloat()), 24f, 24f, borderPaint)
-            
-            // 5. Render Dua Content onto Canvas
-            measureAndDrawDua(canvas, dua, context)
-            
-            // 6. Save image to cache
             val cacheDir = File(context.cacheDir, "shared_images")
             if (!cacheDir.exists()) {
                 cacheDir.mkdirs()
@@ -437,7 +427,6 @@ object DuaShareUtil {
             out.flush()
             out.close()
             
-            // 7. Share via FileProvider
             val uri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",

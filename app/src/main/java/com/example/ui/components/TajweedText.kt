@@ -28,6 +28,18 @@ private fun String.toArabicNumerals(): String {
     return this.map { englishToArabic[it] ?: it }.joinToString("")
 }
 
+private val COMBINING_DIACRITICS_REGEX = Regex("(</(?:tajweed|span)>)([\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06DC\\u06DF-\\u06E8\\u06EA-\\u06ED]+)")
+
+fun sanitizeTajweedHtml(raw: String): String {
+    var result = raw
+    while (true) {
+        val next = result.replace(COMBINING_DIACRITICS_REGEX, "$2$1")
+        if (next == result) break
+        result = next
+    }
+    return result
+}
+
 private fun AnnotatedString.Builder.appendTajweedWithWaqf(text: String, defaultColor: Color) {
     if (text.isEmpty()) return
     var lastIndex = 0
@@ -38,26 +50,13 @@ private fun AnnotatedString.Builder.appendTajweedWithWaqf(text: String, defaultC
                 append(text.substring(lastIndex, i))
             }
             
-            // Add hair space before waqf sign if not preceded by space
-            if (length > 0) {
-                val currentText = this.toAnnotatedString().text
-                if (currentText.isNotEmpty() && currentText.last() != ' ' && currentText.last() != '\u200A') {
-                    append("\u200A")
-                }
-            }
-            
             withStyle(
                 style = SpanStyle(
-                    fontSize = 0.75.em,
+                    fontSize = 0.85.em,
                     baselineShift = androidx.compose.ui.text.style.BaselineShift(0.0f)
                 )
             ) {
                 append(char.toString())
-            }
-
-            // Add hair space after waqf sign if not followed by space
-            if (i + 1 < text.length && text[i + 1] != ' ' && text[i + 1] != '\u200A') {
-                append("\u200A")
             }
 
             lastIndex = i + 1
@@ -69,10 +68,11 @@ private fun AnnotatedString.Builder.appendTajweedWithWaqf(text: String, defaultC
 }
 
 fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
+    val sanitizedRaw = sanitizeTajweedHtml(raw)
     return buildAnnotatedString {
         // Preprocess <span class=end>...</span> or <span class="end">...</span>
         val regexEnd = "<span\\s+class=['\"]?end['\"]?>([^<]+)</span>".toRegex()
-        val preprocessed = raw.replace(regexEnd) { matchResult ->
+        val preprocessed = sanitizedRaw.replace(regexEnd) { matchResult ->
             " <span class=\"end\">﴿${matchResult.groupValues[1].toArabicNumerals()}﴾</span> "
         }
 
@@ -106,7 +106,7 @@ fun parseTajweedText(raw: String, defaultColor: Color): AnnotatedString {
                 }
             } else {
                 if (tag.contains("class=")) {
-                    val className = tag.substringAfter("class=").trim().substringBefore(" ").trim('\'', '"', '>')
+                    val className = tag.substringAfter("class=").trim().substringBefore(" ").substringBefore(">").trim('\'', '"')
                     val color = if (className == "end") defaultColor else (TajweedColors[className] ?: defaultColor)
                     val fontFamily = if (className == "end") com.example.ui.theme.amiriFont else null
                     pushStyle(SpanStyle(color = color, fontFamily = fontFamily))

@@ -40,8 +40,7 @@ private val paraNamesBangla = listOf(
 )
 
 private fun getJuzStartPage(juz: Int): Int {
-    if (juz == 1) return 1
-    return (juz - 1) * 20 + 2
+    return com.example.data.HafeziQuranData.getParaStartPage(juz, 1)
 }
 
 private fun Int.toBengaliNumerals(): String {

@@ -1000,6 +1000,7 @@ fun PhotoCardCustomizerDialog(
     var textAlignName by remember { mutableStateOf("CENTER") } // "LEFT", "CENTER", "RIGHT"
     var fontName by remember { mutableStateOf("SolaimanLipi") } // "SolaimanLipi", "Hind Siliguri", "Shorif Shishir Unicode", "Default"
     var fontSizeSp by remember { mutableFloatStateOf(44f) }
+    var lineSpacingMult by remember { mutableFloatStateOf(1.15f) }
     var customCategory by remember { mutableStateOf(post.category) }
     var customText by remember { mutableStateOf(post.text) }
     var customRef by remember { mutableStateOf(post.reference) }
@@ -1040,7 +1041,7 @@ fun PhotoCardCustomizerDialog(
     }
 
     LaunchedEffect(
-        selectedTheme, bgImageUrl, overlayAlpha, textAlignName, fontName, fontSizeSp, customCategory, customText, customRef, showLogo, showWatermark, post
+        selectedTheme, bgImageUrl, overlayAlpha, textAlignName, fontName, fontSizeSp, lineSpacingMult, customCategory, customText, customRef, showLogo, showWatermark, post
     ) {
         isGeneratingPreview = true
         cardBitmap = PostShareUtil.generateCardBitmap(
@@ -1052,6 +1053,7 @@ fun PhotoCardCustomizerDialog(
             textAlignName = textAlignName,
             fontName = fontName,
             fontSizeSp = fontSizeSp,
+            lineSpacingMult = lineSpacingMult,
             customCategory = customCategory,
             customText = customText,
             customRef = customRef,
@@ -1095,6 +1097,7 @@ fun PhotoCardCustomizerDialog(
                                             textAlignName = textAlignName,
                                             fontName = fontName,
                                             fontSizeSp = fontSizeSp,
+                                            lineSpacingMult = lineSpacingMult,
                                             customCategory = customCategory,
                                             customText = customText,
                                             customRef = customRef,
@@ -1311,7 +1314,7 @@ fun PhotoCardCustomizerDialog(
                                     Slider(
                                         value = overlayAlpha,
                                         onValueChange = { overlayAlpha = it },
-                                        valueRange = 0.15f..0.95f,
+                                        valueRange = 0.0f..1.0f,
                                         modifier = Modifier.weight(1f),
                                         colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
                                     )
@@ -1510,33 +1513,65 @@ fun PhotoCardCustomizerDialog(
 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 
-                        // 6. Font Size Adjustment
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "🔠 ফন্ট সাইজ",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "${fontSizeSp.toInt()} sp",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = PrimaryGreen
+                        // 6. Font Size & Line Spacing Adjustment
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // Font Size
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "🔠 ফন্ট সাইজ",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${fontSizeSp.toInt()} sp",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryGreen
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Slider(
+                                    value = fontSizeSp,
+                                    onValueChange = { fontSizeSp = it },
+                                    valueRange = 32f..58f,
+                                    colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Slider(
-                                value = fontSizeSp,
-                                onValueChange = { fontSizeSp = it },
-                                valueRange = 32f..58f,
-                                colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
-                            )
+
+                            // Line Spacing
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "↕️ লাইন স্পেসিং (Line Spacing)",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = String.format(java.util.Locale.US, "%.2fx", lineSpacingMult),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryGreen
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Slider(
+                                    value = lineSpacingMult,
+                                    onValueChange = { lineSpacingMult = it },
+                                    valueRange = 0.8f..2.2f,
+                                    colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
+                                )
+                            }
                         }
 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))

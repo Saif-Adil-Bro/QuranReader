@@ -605,7 +605,7 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "অ্যাপ-এ হিজরি তারিখ গণনার ভিত্তিতে প্রদর্শিত হয়; চাঁদ দেখার পার্থক্যের কারণে কখনও ১ বা একাধিক দিনের অমিল দেখা দিতে পারে। প্রয়োজনে তারিখ সমন্বয় (-/+) ব্যবহার করুন।",
+                        text = "ইসলামী হিজরি তারিখ সূর্যাস্তের (~সন্ধ্যা ৬টা) পরেই পরবর্তী দিনের জন্য গণনা শুরু হয়। চাঁদ দেখার পার্থক্যের কারণে স্থানীয় তারিখের অমিল দেখা দিলে প্রয়োজনে তারিখ সমন্বয় (-/+) ব্যবহার করতে পারেন।",
                         fontSize = 13.sp,
                         color = Color(0xFF424242),
                         lineHeight = 18.sp
@@ -4029,6 +4029,8 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 }
             }
         }
+    }
+}
 
         // 2. Audio Cache Card
         Card(
@@ -4229,6 +4231,8 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 )
             }
         }
+    }
+}
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -4394,6 +4398,8 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 }
             }
         }
+    }
+}
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -4551,6 +4557,8 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 }
             }
         }
+    }
+}
 
         // 5. Offline Features Info Card
         Card(
@@ -4656,6 +4664,8 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 }
             }
         }
+    }
+}
 
         // 5. Online Features Info Card
         val onlineAccentColor = Color(0xFF0EA5E9)
@@ -4760,20 +4770,10 @@ fun OfflineSyncDialogContent(viewModel: SettingsViewModel) {
                 }
             }
         }
+    }
+}
 
         Spacer(modifier = Modifier.height(32.dp))
-                    }
-                }
-                    }
-                }
-                    }
-                }
-                    }
-                }
-                    }
-                }
-                    }
-                }
     }
 
     // Searchable Surah Selector Dialog

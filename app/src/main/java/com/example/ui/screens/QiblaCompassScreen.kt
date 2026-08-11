@@ -173,23 +173,36 @@ fun QiblaDialogContent() {
             try {
                 val lastKnown = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) 
                     ?: locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
                 if (lastKnown != null) {
                     latitude = lastKnown.latitude
                     longitude = lastKnown.longitude
                 }
                 
-                locationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER,
-                    60000L,
-                    10f,
-                    locationListener
-                )
+                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    locationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER,
+                        10000L,
+                        5f,
+                        locationListener
+                    )
+                }
+                if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    locationManager.requestLocationUpdates(
+                        LocationManager.NETWORK_PROVIDER,
+                        10000L,
+                        5f,
+                        locationListener
+                    )
+                }
             } catch (e: SecurityException) {}
         }
 
         onDispose {
             if (hasLocationPermission) {
-                locationManager.removeUpdates(locationListener)
+                try {
+                    locationManager.removeUpdates(locationListener)
+                } catch (e: SecurityException) {}
             }
         }
     }
@@ -197,6 +210,33 @@ fun QiblaDialogContent() {
     val distanceToMecca = calculateDistanceToMecca(latitude, longitude).roundToInt()
     var turnAngle = (qiblaBearing - currentAzimuth + 360) % 360
     if (turnAngle > 180) turnAngle -= 360
+    
+    val isAligned = abs(turnAngle) <= 3f
+    var hasVibratedForCurrentAlignment by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isAligned) {
+        if (isAligned && !hasVibratedForCurrentAlignment) {
+            val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vibratorManager?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            }
+            
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(150L, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(150L)
+                }
+            }
+            hasVibratedForCurrentAlignment = true
+        } else if (!isAligned) {
+            hasVibratedForCurrentAlignment = false
+        }
+    }
     
     val turnDirectionText = when {
         abs(turnAngle) <= 2 -> "আপনি সঠিক দিকে আছেন"

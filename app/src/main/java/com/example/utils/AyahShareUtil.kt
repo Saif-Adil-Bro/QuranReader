@@ -227,30 +227,15 @@ object AyahShareUtil {
 
     fun shareAsImage(context: Context, ayah: CombinedAyah, surahName: String) {
         try {
-            val height = measureAndDrawAyah(null, ayah, surahName, context)
-            val bitmap = Bitmap.createBitmap(1080, height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            
-            val shader = LinearGradient(
-                0f, 0f, 0f, height.toFloat(),
-                Color.parseColor("#07301B"), // Deep Rich Forest Green
-                Color.parseColor("#145233"), // Emerald Green
-                Shader.TileMode.CLAMP
+            val shareData = IslamicCardTemplate.ShareData(
+                badgeTitle = "আজকের আয়াত",
+                arabicText = ayah.arabicText,
+                transliterationText = null,
+                translationText = ayah.bengaliText,
+                referenceText = "$surahName : ${com.example.utils.DateUtil.toBengaliNumerals(ayah.numberInSurah)}"
             )
-            val bgPaint = Paint().apply {
-                this.shader = shader
-            }
-            canvas.drawRect(0f, 0f, 1080f, height.toFloat(), bgPaint)
-            
-            val borderPaint = Paint().apply {
-                color = Color.parseColor("#25FFFFFF")
-                style = Paint.Style.STROKE
-                strokeWidth = 4f
-                isAntiAlias = true
-            }
-            canvas.drawRoundRect(RectF(30f, 30f, 1050f, (height - 30).toFloat()), 24f, 24f, borderPaint)
-            
-            measureAndDrawAyah(canvas, ayah, surahName, context)
+
+            val bitmap = IslamicCardTemplate.generateCardBitmap(context, shareData)
             
             val cacheDir = File(context.cacheDir, "shared_images")
             if (!cacheDir.exists()) {

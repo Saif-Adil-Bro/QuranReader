@@ -34,7 +34,17 @@ object HijriCalendarUtil {
         val (hDay, hMonth, hYear) = try {
             val islamicCalendar = android.icu.util.IslamicCalendar()
             val calendar = java.util.Calendar.getInstance()
-            calendar.set(date.year, date.monthValue - 1, date.dayOfMonth)
+            if (date == java.time.LocalDate.now()) {
+                if (date.year != calendar.get(java.util.Calendar.YEAR) ||
+                    date.monthValue - 1 != calendar.get(java.util.Calendar.MONTH) ||
+                    date.dayOfMonth != calendar.get(java.util.Calendar.DAY_OF_MONTH)) {
+                    calendar.set(date.year, date.monthValue - 1, date.dayOfMonth, 12, 0, 0)
+                    calendar.set(java.util.Calendar.MILLISECOND, 0)
+                }
+            } else {
+                calendar.set(date.year, date.monthValue - 1, date.dayOfMonth, 12, 0, 0)
+                calendar.set(java.util.Calendar.MILLISECOND, 0)
+            }
             islamicCalendar.time = calendar.time
             if (offsetDays != 0) {
                 islamicCalendar.add(android.icu.util.IslamicCalendar.DAY_OF_MONTH, offsetDays)

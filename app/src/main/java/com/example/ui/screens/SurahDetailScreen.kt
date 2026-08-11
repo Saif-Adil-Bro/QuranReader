@@ -328,24 +328,30 @@ fun SurahDetailScreen(
                         }
                     }
                     
-                    LaunchedEffect(displayedData) {
-                        if (initialAyah > 0) {
-                            val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) 2 else 1
-                            val currentListState = listStates[pageOrder.indexOf(viewMode).takeIf { it >= 0 } ?: 0]
-                            if (viewMode == ViewMode.MUSHAF) {
-                                val targetAyah = displayedData.find { it.numberInSurah == initialAyah }
-                                if (targetAyah != null) {
-                                    val ayahsByPage = displayedData.groupBy { it.page }
-                                    val pagesList = ayahsByPage.keys.toList()
-                                    val pageIndex = pagesList.indexOf(targetAyah.page)
-                                    if (pageIndex != -1) {
-                                        currentListState.scrollToItem(pageIndex + headerCount)
-                                    }
+                    LaunchedEffect(displayedData, initialAyah) {
+                        if (initialAyah > 0 && displayedData.isNotEmpty()) {
+                            highlightedAyahNumber = initialAyah
+                            
+                            val headerCount = if (!isJuz && activeSurahNumber != 1 && activeSurahNumber != 9 && !isStandalone) 2 else 1
+                            
+                            // Allow LazyColumn to finish its initial layout before scrolling
+                            kotlinx.coroutines.delay(150)
+                            
+                            val ayahIndex = displayedData.indexOfFirst { it.numberInSurah == initialAyah }
+                            if (ayahIndex != -1) {
+                                val targetIndex = ayahIndex + headerCount
+                                listStates.forEach { listState ->
+                                    listState.scrollToItem(targetIndex)
                                 }
-                            } else {
-                                val ayahIndex = displayedData.indexOfFirst { it.numberInSurah == initialAyah }
-                                if (ayahIndex != -1) {
-                                    currentListState.scrollToItem(ayahIndex + headerCount)
+                            }
+                            
+                            val targetAyah = displayedData.find { it.numberInSurah == initialAyah }
+                            if (targetAyah != null) {
+                                val ayahsByPage = displayedData.groupBy { it.page }
+                                val pagesList = ayahsByPage.keys.toList()
+                                val pageIndex = pagesList.indexOf(targetAyah.page)
+                                if (pageIndex != -1 && listStates.size > 3) {
+                                    listStates[3].scrollToItem(pageIndex + headerCount)
                                 }
                             }
                         }
@@ -1251,7 +1257,7 @@ fun AyahCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = arabicFontSize.sp,
                         lineHeight = (arabicFontSize * arabicLineSpacing).sp,
-                        fontFamily = arabicFont,
+                        fontFamily = com.example.ui.theme.getArabicFontForTajweed(arabicFontName),
                         textAlign = TextAlign.Right
                     )
                 } else {
@@ -1327,7 +1333,7 @@ fun AyahCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = arabicFontSize.sp,
                         lineHeight = (arabicFontSize * arabicLineSpacing).sp,
-                        fontFamily = arabicFont,
+                        fontFamily = com.example.ui.theme.getArabicFontForTajweed(arabicFontName),
                         textAlign = TextAlign.Right
                     )
                 } else {
