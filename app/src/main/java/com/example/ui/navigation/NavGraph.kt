@@ -267,7 +267,33 @@ fun AppNavGraph(
                     navController.navigate("settings?subScreen=calendar") {
                         launchSingleTop = true
                     }
+                },
+                onNavigateToDhikrReminder = { type ->
+                    if (type == com.example.utils.DhikrType.DUROOD) {
+                        navController.navigate("reminder/durood")
+                    } else {
+                        navController.navigate("reminder/istighfar")
+                    }
+                },
+                onNavigateToHijriAdjustment = {
+                    navController.navigate("settings?highlightHijri=true") {
+                        launchSingleTop = true
+                    }
                 }
+            )
+        }
+
+        composable("reminder/durood") {
+            com.example.ui.screens.DhikrReminderScreen(
+                type = com.example.utils.DhikrType.DUROOD,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable("reminder/istighfar") {
+            com.example.ui.screens.DhikrReminderScreen(
+                type = com.example.utils.DhikrType.ISTIGHFAR,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -450,7 +476,7 @@ fun AppNavGraph(
         }
 
         composable(
-            route = "settings?subScreen={subScreen}&duaId={duaId}",
+            route = "settings?subScreen={subScreen}&duaId={duaId}&highlightHijri={highlightHijri}",
             arguments = listOf(
                 navArgument("subScreen") {
                     type = NavType.StringType
@@ -460,11 +486,16 @@ fun AppNavGraph(
                 navArgument("duaId") {
                     type = NavType.IntType
                     defaultValue = -1
+                },
+                navArgument("highlightHijri") {
+                    type = NavType.BoolType
+                    defaultValue = false
                 }
             )
         ) { backStackEntry ->
             val subScreen = backStackEntry.arguments?.getString("subScreen")
             val duaIdVal = backStackEntry.arguments?.getInt("duaId") ?: -1
+            val highlightHijriVal = backStackEntry.arguments?.getBoolean("highlightHijri") ?: false
             val viewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
             SettingsScreen(
                 viewModel = viewModel,
@@ -495,7 +526,8 @@ fun AppNavGraph(
                     navController.navigate("mushaf/viewer/$mushafId?page=$page")
                 },
                 initialSubScreen = subScreen,
-                initialDuaId = if (duaIdVal != -1) duaIdVal else null
+                initialDuaId = if (duaIdVal != -1) duaIdVal else null,
+                highlightHijriAdjustment = highlightHijriVal
             )
         }
 

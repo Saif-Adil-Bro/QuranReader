@@ -31,6 +31,11 @@ class QuranApplication : Application(), ImageLoaderFactory {
 
         try {
             com.example.receiver.IslamicEventReceiver.scheduleNextAlarm(this)
+            val sharedPrefs = getSharedPreferences("quran_menu_prefs", android.content.Context.MODE_PRIVATE)
+            val hijriOffset = sharedPrefs.getInt("hijri_offset", 0)
+            com.example.utils.HijriNewMonthNotificationHelper.checkAndNotifyNewMonth(this, hijriOffset)
+            com.example.utils.MoonSightingNotificationHelper.checkAndNotify29th(this, hijriOffset)
+            com.example.utils.JumuahReminderHelper.checkAndNotifyFriday(this)
         } catch (e: Exception) {
             e.printStackTrace()
         }

@@ -46,6 +46,22 @@ class DailyMessageReceiver : BroadcastReceiver() {
             e.printStackTrace()
         }
 
+        // Check and notify for 29th Hijri day Moon Sighting notice at morning
+        try {
+            val sharedPrefs = context.getSharedPreferences("quran_menu_prefs", Context.MODE_PRIVATE)
+            val hijriOffset = sharedPrefs.getInt("hijri_offset", 0)
+            com.example.utils.MoonSightingNotificationHelper.checkAndNotify29th(context, hijriOffset)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Check and notify for Friday Jumu'ah reminder
+        try {
+            com.example.utils.JumuahReminderHelper.checkAndNotifyFriday(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val richDuas = com.example.data.DuaData.richDuas
         val selectedDua = if (richDuas.isNotEmpty()) {
             val calendar = java.util.Calendar.getInstance()

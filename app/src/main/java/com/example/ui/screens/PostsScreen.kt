@@ -800,6 +800,16 @@ fun BlogPostDetailScreen(
 ) {
     val context = LocalContext.current
     var textSizeSp by remember { mutableFloatStateOf(16f) }
+    val sharedPrefs = remember(context) { context.getSharedPreferences("quran_menu_prefs", android.content.Context.MODE_PRIVATE) }
+    val hijriOffset = sharedPrefs.getInt("hijri_offset", 0)
+
+    val displayContent = remember(post.content, post.id, hijriOffset) {
+        if (post.id == com.example.utils.MoonSightingNotificationHelper.TARGET_POST_ID || post.content.contains("চাঁদ অনুসন্ধানের জন্য")) {
+            com.example.utils.MoonSightingNotificationHelper.formatDynamicMoonSightingContent(post.content, hijriOffset)
+        } else {
+            post.content
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -830,7 +840,7 @@ fun BlogPostDetailScreen(
                     }
                     IconButton(
                         onClick = {
-                            val shareText = "✨ ${post.title} ✨\n\n${post.content}\n\n— ${post.author}\n\n📱 ❝কুরআন রিডার❞ অ্যাপ থেকে"
+                            val shareText = "✨ ${post.title} ✨\n\n$displayContent\n\n— ${post.author}\n\n📱 ❝কুরআন রিডার❞ অ্যাপ থেকে"
                             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(android.content.Intent.EXTRA_TEXT, shareText)
@@ -937,32 +947,76 @@ fun BlogPostDetailScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Post Title
-            Text(
-                text = post.title,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                lineHeight = 30.sp
-            )
+            var showFullScreenImage by remember { mutableStateOf(false) }
+
+            // Post Title with Selection
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Text(
+                    text = post.title,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 30.sp
+                )
+            }
 
             if (post.imageUrl.trim().isNotBlank()) {
                 Spacer(modifier = Modifier.height(14.dp))
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { showFullScreenImage = true },
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    AsyncImage(
-                        model = post.imageUrl.trim(),
-                        contentDescription = post.title,
-                        contentScale = ContentScale.Crop,
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        AsyncImage(
+                            model = post.imageUrl.trim(),
+                            contentDescription = post.title,
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                        )
+                    }
+                }
+            }
+
+            if (showFullScreenImage && post.imageUrl.trim().isNotBlank()) {
+                Dialog(
+                    onDismissRequest = { showFullScreenImage = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = false)
+                ) {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 180.dp, max = 380.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.95f))
+                            .clickable { showFullScreenImage = false }
+                    ) {
+                        AsyncImage(
+                            model = post.imageUrl.trim(),
+                            contentDescription = post.title,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp)
+                        )
+                        IconButton(
+                            onClick = { showFullScreenImage = false },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(16.dp)
+                                .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "বন্ধ করুন",
+                                tint = Color.White
+                            )
+                        }
+                    }
                 }
             }
 
@@ -972,13 +1026,15 @@ fun BlogPostDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Body Content
-            com.example.ui.components.FormattedIslamicText(
-                text = post.content,
-                baseFontSize = textSizeSp.sp,
-                baseColor = MaterialTheme.colorScheme.onSurface,
-                arabicColor = MaterialTheme.colorScheme.onSurface
-            )
+            // Body Content with Text Selection and Clickable Links
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                com.example.ui.components.FormattedIslamicText(
+                    text = displayContent,
+                    baseFontSize = textSizeSp.sp,
+                    baseColor = MaterialTheme.colorScheme.onSurface,
+                    arabicColor = MaterialTheme.colorScheme.onSurface
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
         }

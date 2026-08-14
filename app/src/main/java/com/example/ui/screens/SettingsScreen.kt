@@ -95,11 +95,28 @@ fun SettingsScreen(
     onNavigateToPosts: () -> Unit = {},
     onNavigateToMushafPage: (String, Int) -> Unit = { _, _ -> },
     initialSubScreen: String? = null,
-    initialDuaId: Int? = null
+    initialDuaId: Int? = null,
+    highlightHijriAdjustment: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val isDark = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val scrollState = rememberScrollState()
+    var shouldHighlightHijri by remember { mutableStateOf(highlightHijriAdjustment) }
+
+    LaunchedEffect(highlightHijriAdjustment) {
+        if (highlightHijriAdjustment) {
+            // Scroll down to the general settings area
+            try {
+                scrollState.animateScrollTo(1400)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            // Keep the pulsing highlight effect for 5 seconds
+            kotlinx.coroutines.delay(5000)
+            shouldHighlightHijri = false
+        }
+    }
     
     val showTranslation by viewModel.showTranslation.collectAsState()
     val showTransliteration by viewModel.showTransliteration.collectAsState()
@@ -203,7 +220,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
             // 1. Profile Card
@@ -513,11 +530,15 @@ fun SettingsScreen(
             )
             
             // Hijri Date Adjustment
+            val hijriBorderColor = if (shouldHighlightHijri) PrimaryGreen else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+            val hijriBorderWidth = if (shouldHighlightHijri) 2.dp else 1.dp
+            val hijriBgColor = if (shouldHighlightHijri) PrimaryGreen.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors = CardDefaults.cardColors(containerColor = hijriBgColor),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                border = BorderStroke(hijriBorderWidth, hijriBorderColor)
             ) {
                 Row(
                     modifier = Modifier
@@ -5274,6 +5295,16 @@ fun ThemeOption(title: String, isSelected: Boolean, onClick: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationDialogContent(viewModel: SettingsViewModel) {
+    var activeDhikrType by remember { mutableStateOf<com.example.utils.DhikrType?>(null) }
+
+    if (activeDhikrType != null) {
+        DhikrReminderScreen(
+            type = activeDhikrType!!,
+            onBackClick = { activeDhikrType = null }
+        )
+        return
+    }
+
     val dailyEnabled by viewModel.dailyMessageEnabled.collectAsState()
     val dailyHour by viewModel.dailyMessageHour.collectAsState()
     val dailyMinute by viewModel.dailyMessageMinute.collectAsState()
@@ -5462,6 +5493,104 @@ fun NotificationDialogContent(viewModel: SettingsViewModel) {
                             }
                         },
                         colors = SwitchDefaults.colors(checkedThumbColor = PrimaryGreen, checkedTrackColor = PrimaryGreen.copy(alpha = 0.5f))
+                    )
+                }
+            }
+        }
+
+        // দরূদ রিমাইন্ডার কার্ড
+        val duroodConfig = remember(activeDhikrType) { com.example.utils.DhikrReminderManager.getConfig(context, com.example.utils.DhikrType.DUROOD) }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .clickable { activeDhikrType = com.example.utils.DhikrType.DUROOD },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, if (duroodConfig.isEnabled) PrimaryGreen.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFF00A86B).copy(alpha = 0.12f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "📿", fontSize = 18.sp)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "দরূদ রিমাইন্ডার",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (duroodConfig.isEnabled) "চালু (${duroodConfig.intervalMinutes} মিনিট পরপর)" else "বন্ধ • সেটিংস পরিবর্তন করতে ট্যাপ করুন",
+                            fontSize = 12.sp,
+                            color = if (duroodConfig.isEnabled) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = "বিস্তারিত",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        // ইস্তেগফার রিমাইন্ডার কার্ড
+        val istighfarConfig = remember(activeDhikrType) { com.example.utils.DhikrReminderManager.getConfig(context, com.example.utils.DhikrType.ISTIGHFAR) }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .clickable { activeDhikrType = com.example.utils.DhikrType.ISTIGHFAR },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, if (istighfarConfig.isEnabled) PrimaryGreen.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFF3B82F6).copy(alpha = 0.12f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "🤲", fontSize = 18.sp)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "ইস্তেগফার রিমাইন্ডার",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (istighfarConfig.isEnabled) "চালু (${istighfarConfig.intervalMinutes} মিনিট পরপর)" else "বন্ধ • সেটিংস পরিবর্তন করতে ট্যাপ করুন",
+                            fontSize = 12.sp,
+                            color = if (istighfarConfig.isEnabled) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = "বিস্তারিত",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }

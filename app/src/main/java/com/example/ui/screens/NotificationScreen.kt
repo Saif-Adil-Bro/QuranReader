@@ -34,7 +34,9 @@ fun NotificationScreen(
     onNavigateToPlanner: (() -> Unit)? = null,
     onNavigateToManzil: (() -> Unit)? = null,
     onNavigateToSubjectwise: (() -> Unit)? = null,
-    onNavigateToCalendar: (() -> Unit)? = null
+    onNavigateToCalendar: (() -> Unit)? = null,
+    onNavigateToDhikrReminder: ((com.example.utils.DhikrType) -> Unit)? = null,
+    onNavigateToHijriAdjustment: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val blogPosts by viewModel.rawBlogPosts.collectAsState(initial = emptyList())
@@ -78,11 +80,12 @@ fun NotificationScreen(
     }
 
     // Handle incoming pending notification post
-    LaunchedEffect(pendingPost) {
+    LaunchedEffect(pendingPost, blogPosts) {
         val currentPending = pendingPost
         if (currentPending != null && (currentPending.category == "নোটিফিকেশন" || currentPending.category == "নোটিশ")) {
-            selectedPostForReader = currentPending
-            NotificationStateHelper.markAsRead(context, currentPending.id.ifBlank { (currentPending.title + currentPending.content).hashCode().toString() })
+            val matchedPost = blogPosts.find { it.id == currentPending.id } ?: currentPending
+            selectedPostForReader = matchedPost
+            NotificationStateHelper.markAsRead(context, matchedPost.id.ifBlank { (matchedPost.title + matchedPost.content).hashCode().toString() })
             forceUpdate++
             viewModel.setPendingBlogPost(null)
         }
@@ -237,7 +240,7 @@ fun NotificationScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
@@ -348,8 +351,13 @@ fun NotificationScreen(
                                                 val isManzilTarget = post.author == "মানযিল" || post.title.contains("মানযিল")
                                                 val isSubjectwiseTarget = post.author == "বিষয়ভিত্তিক কুরআন" || post.title.contains("বিষয়ভিত্তিক")
                                                 val isCalendarTarget = post.author == "ক্যালেন্ডার" || post.title.contains("ক্যালেন্ডার")
+                                                val isDuroodTarget = post.author == "দরূদ রিমাইন্ডার" || post.title.contains("দরূদ")
+                                                val isIstighfarTarget = post.author == "ইস্তেগফার রিমাইন্ডার" || post.title.contains("ইস্তেগফার")
+                                                val isHijriAdjustmentTarget = post.author == "হিজরি তারিখ সমন্বয়" || post.title.contains("হিজরি") || post.content.contains("হিজরি তারিখ সমন্বয়")
                                                 
-                                                if (isDuaTarget && onNavigateToDua != null) {
+                                                if (isHijriAdjustmentTarget && onNavigateToHijriAdjustment != null) {
+                                                    onNavigateToHijriAdjustment()
+                                                } else if (isDuaTarget && onNavigateToDua != null) {
                                                     var duaId: Int? = null
                                                     try {
                                                         if (com.example.data.DuaData.richDuas.isEmpty()) {
@@ -374,6 +382,10 @@ fun NotificationScreen(
                                                     onNavigateToSubjectwise()
                                                 } else if (isCalendarTarget && onNavigateToCalendar != null) {
                                                     onNavigateToCalendar()
+                                                } else if (isDuroodTarget && onNavigateToDhikrReminder != null) {
+                                                    onNavigateToDhikrReminder(com.example.utils.DhikrType.DUROOD)
+                                                } else if (isIstighfarTarget && onNavigateToDhikrReminder != null) {
+                                                    onNavigateToDhikrReminder(com.example.utils.DhikrType.ISTIGHFAR)
                                                 } else {
                                                     selectedPostForReader = post 
                                                 }

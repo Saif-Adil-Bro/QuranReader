@@ -36,6 +36,28 @@ class IslamicEventReceiver : BroadcastReceiver() {
         }
 
         val hijriOffset = sharedPrefs.getInt("hijri_offset", 0)
+
+        // Check and notify for New Hijri Month transition
+        try {
+            com.example.utils.HijriNewMonthNotificationHelper.checkAndNotifyNewMonth(context, hijriOffset)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Check and notify for 29th Hijri day Moon Sighting notice
+        try {
+            com.example.utils.MoonSightingNotificationHelper.checkAndNotify29th(context, hijriOffset)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Check and notify for Friday Jumu'ah reminder
+        try {
+            com.example.utils.JumuahReminderHelper.checkAndNotifyFriday(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val today = LocalDate.now()
         val eventInfo = IslamicEventGuidanceHelper.checkNotificationForDate(today, hijriOffset)
 

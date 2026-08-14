@@ -213,6 +213,17 @@ class MainActivity : ComponentActivity() {
                       targetIntent.removeExtra("target_screen")
                       targetIntent.removeExtra("navigate_to")
                       currentIntentState.value = null
+                  } else if (navigateTo == "hijri_adjustment" || targetIntent.getBooleanExtra("highlight_hijri_adjustment", false)) {
+                      if (currentRoute != "notifications") {
+                          navController.navigate("notifications") { launchSingleTop = true }
+                      }
+                      navController.navigate("settings?highlightHijri=true") {
+                          launchSingleTop = true
+                      }
+                      targetIntent.removeExtra("target_screen")
+                      targetIntent.removeExtra("navigate_to")
+                      targetIntent.removeExtra("highlight_hijri_adjustment")
+                      currentIntentState.value = null
                   }
               }
           }
