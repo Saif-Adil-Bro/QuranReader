@@ -203,11 +203,12 @@ class MainActivity : ComponentActivity() {
                       targetIntent.removeExtra("navigate_to")
                       targetIntent.removeExtra("dua_id")
                       currentIntentState.value = null
-                  } else if (navigateTo == "planner" || navigateTo == "manzil" || navigateTo == "subjectwise" || navigateTo == "calendar") {
+                  } else if (navigateTo == "prayer_times" || navigateTo == "planner" || navigateTo == "manzil" || navigateTo == "subjectwise" || navigateTo == "calendar") {
+                      val sub = if (navigateTo == "prayer_times") "calendar" else navigateTo
                       if (currentRoute != "notifications") {
                           navController.navigate("notifications") { launchSingleTop = true }
                       }
-                      navController.navigate("settings?subScreen=$navigateTo") {
+                      navController.navigate("settings?subScreen=$sub") {
                           launchSingleTop = true
                       }
                       targetIntent.removeExtra("target_screen")

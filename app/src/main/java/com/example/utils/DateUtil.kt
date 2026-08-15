@@ -26,13 +26,23 @@ object DateUtil {
     }
 
     fun getTodayEnglishDateStr(): String {
-        val calendar = java.util.Calendar.getInstance()
-        val dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK) - 1
-        val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
-        val month = calendar.get(java.util.Calendar.MONTH)
-        val year = calendar.get(java.util.Calendar.YEAR)
-        
-        return "${daysOfWeekBengali[dayOfWeek]}, ${toBengaliNumerals(day)} ${englishMonthsBengali[month]} ${toBengaliNumerals(year)}"
+        return formatDateStr(java.time.LocalDate.now())
+    }
+
+    fun formatDateStr(date: java.time.LocalDate): String {
+        val dayOfWeekIndex = when (date.dayOfWeek) {
+            java.time.DayOfWeek.SUNDAY -> 0
+            java.time.DayOfWeek.MONDAY -> 1
+            java.time.DayOfWeek.TUESDAY -> 2
+            java.time.DayOfWeek.WEDNESDAY -> 3
+            java.time.DayOfWeek.THURSDAY -> 4
+            java.time.DayOfWeek.FRIDAY -> 5
+            java.time.DayOfWeek.SATURDAY -> 6
+        }
+        val day = date.dayOfMonth
+        val month = date.monthValue - 1
+        val year = date.year
+        return "${daysOfWeekBengali[dayOfWeekIndex]}, ${toBengaliNumerals(day)} ${englishMonthsBengali[month]} ${toBengaliNumerals(year)}"
     }
 
     fun getTodayHijriDateStr(hijriOffset: Int = 0): String {
@@ -59,25 +69,16 @@ object DateUtil {
         }
     }
 
-    fun getTodayBengaliDateStr(): Pair<String, String> {
-        val calendar = java.util.Calendar.getInstance()
-        val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
-        val month = calendar.get(java.util.Calendar.MONTH) + 1
-        val year = calendar.get(java.util.Calendar.YEAR)
+    fun getBengaliDateStr(date: java.time.LocalDate = java.time.LocalDate.now()): Pair<String, String> {
+        val day = date.dayOfMonth
+        val month = date.monthValue
+        val year = date.year
 
         var bDay = 0
         var bMonth = 0
         var bYear = year - 593
 
-        fun isLeapYear(y: Int): Boolean {
-            return (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)
-        }
-
         // Days in Gregorian months before mid-month where Bengali month changes
-        val midMonthDates = intArrayOf(0, 14, 13, 15, 14, 15, 15, 16, 16, 16, 16, 15, 15) // Approx for Jan to Dec
-
-        // Very simplified Bangla Academy rules mapping
-        // April 14 is Boishakh 1.
         val dateValue = month * 100 + day
         
         if (dateValue >= 414 && dateValue <= 514) { bMonth = 1; bDay = if (dateValue <= 430) day - 13 else day + 17; if(bDay > 31) bDay -= 31 }
@@ -98,7 +99,31 @@ object DateUtil {
         val seasonIndex = (bMonth - 1) / 2
         val season = if (seasonIndex in seasons.indices) seasons[seasonIndex] else seasons[0]
 
-        return Pair("${toBengaliNumerals(bDay)} ${bengaliMonths[bMonth - 1]} ${toBengaliNumerals(bYear)}", "(ঋতু: $season)")
+        return Pair("${toBengaliNumerals(bDay)} ${bengaliMonths[bMonth - 1]}, ${toBengaliNumerals(bYear)}", "(ঋতু: $season)")
+    }
+
+    fun getTodayBengaliDateStr(): Pair<String, String> {
+        return getBengaliDateStr(java.time.LocalDate.now())
+    }
+
+    fun getShortDayNameBn(date: java.time.LocalDate): String {
+        return when (date.dayOfWeek) {
+            java.time.DayOfWeek.SATURDAY -> "শনি"
+            java.time.DayOfWeek.SUNDAY -> "রবি"
+            java.time.DayOfWeek.MONDAY -> "সোম"
+            java.time.DayOfWeek.TUESDAY -> "মঙ্গল"
+            java.time.DayOfWeek.WEDNESDAY -> "বুধ"
+            java.time.DayOfWeek.THURSDAY -> "বৃহঃ"
+            java.time.DayOfWeek.FRIDAY -> "শুক্র"
+        }
+    }
+
+    fun getFullHeaderDateStr(date: java.time.LocalDate): String {
+        val engMonth = englishMonthsBengali[date.monthValue - 1]
+        val engDay = toBengaliNumerals(date.dayOfMonth)
+        val engYear = toBengaliNumerals(date.year)
+        val banglaDate = getBengaliDateStr(date).first
+        return "$engDay $engMonth, $engYear • $banglaDate"
     }
 }
 

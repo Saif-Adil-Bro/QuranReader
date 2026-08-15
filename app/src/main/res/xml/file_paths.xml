@@ -2,5 +2,6 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="shared_images" path="shared_images/" />
     <cache-path name="shared_posts" path="shared_posts/" />
+    <cache-path name="shared_prayer_cards" path="shared_prayer_cards/" />
     <external-cache-path name="external_shared_posts" path="shared_posts/" />
 </paths>

@@ -77,6 +77,17 @@
         </receiver>
 
         <receiver
+            android:name=".receiver.PrayerNotificationReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="com.example.ACTION_PRAYER_NOTIFICATION" />
+                <action android:name="com.example.ACTION_REFRESH_PRAYER_ALARMS" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name=".receiver.PostNotificationShareReceiver"
             android:enabled="true"
             android:exported="false">

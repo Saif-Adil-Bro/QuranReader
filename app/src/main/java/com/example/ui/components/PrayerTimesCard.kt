@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.DailyPrayerSchedule
@@ -107,11 +108,18 @@ fun PrayerTimesBannerSlide(
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
+                        val locationName = if (schedule.district.countryBn == "বাংলাদেশ") {
+                            schedule.district.nameBn
+                        } else {
+                            "${schedule.district.nameBn}, ${schedule.district.countryBn}"
+                        }
                         Text(
-                            text = schedule.district.nameBn,
+                            text = locationName,
                             color = TextPrimary,
                             fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

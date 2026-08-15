@@ -31,32 +31,22 @@ object HijriCalendarUtil {
     )
 
     fun getHijriDate(date: LocalDate, offsetDays: Int = 0): HijriDateInfo {
-        return calculateHijriDate(date, offsetDays, useCurrentTimeForToday = true)
+        return calculateHijriDate(date, offsetDays)
     }
 
     /**
-     * Used for full-month Calendar Grid display to ensure sequential, consistent day-by-day dates
-     * without same-day duplication caused by evening real-time transitions.
+     * Used for full-month Calendar Grid display to ensure sequential, consistent day-by-day dates.
      */
     fun getHijriDateForGrid(date: LocalDate, offsetDays: Int = 0): HijriDateInfo {
-        return calculateHijriDate(date, offsetDays, useCurrentTimeForToday = false)
+        return calculateHijriDate(date, offsetDays)
     }
 
-    private fun calculateHijriDate(date: LocalDate, offsetDays: Int, useCurrentTimeForToday: Boolean): HijriDateInfo {
+    private fun calculateHijriDate(date: LocalDate, offsetDays: Int): HijriDateInfo {
         val (hDay, hMonth, hYear) = try {
             val islamicCalendar = android.icu.util.IslamicCalendar()
             val calendar = java.util.Calendar.getInstance()
-            if (useCurrentTimeForToday && date == java.time.LocalDate.now()) {
-                if (date.year != calendar.get(java.util.Calendar.YEAR) ||
-                    date.monthValue - 1 != calendar.get(java.util.Calendar.MONTH) ||
-                    date.dayOfMonth != calendar.get(java.util.Calendar.DAY_OF_MONTH)) {
-                    calendar.set(date.year, date.monthValue - 1, date.dayOfMonth, 12, 0, 0)
-                    calendar.set(java.util.Calendar.MILLISECOND, 0)
-                }
-            } else {
-                calendar.set(date.year, date.monthValue - 1, date.dayOfMonth, 12, 0, 0)
-                calendar.set(java.util.Calendar.MILLISECOND, 0)
-            }
+            calendar.set(date.year, date.monthValue - 1, date.dayOfMonth, 12, 0, 0)
+            calendar.set(java.util.Calendar.MILLISECOND, 0)
             islamicCalendar.time = calendar.time
             if (offsetDays != 0) {
                 islamicCalendar.add(android.icu.util.IslamicCalendar.DAY_OF_MONTH, offsetDays)

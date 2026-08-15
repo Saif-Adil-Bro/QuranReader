@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.time.LocalDate
 
-class PrayerTimesRepository(context: Context) {
+class PrayerTimesRepository(val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("prayer_times_prefs", Context.MODE_PRIVATE)
 
     private val _selectedDistrict = MutableStateFlow(loadSelectedDistrict())
@@ -31,12 +31,22 @@ class PrayerTimesRepository(context: Context) {
         prefs.edit().putString("selected_district_id", district.id).apply()
         _selectedDistrict.value = district
         refreshSchedule()
+        try {
+            com.example.utils.PrayerNotificationHelper.scheduleNextPrayerAlarms(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun setHanafi(hanafi: Boolean) {
         prefs.edit().putBoolean("is_hanafi", hanafi).apply()
         _isHanafi.value = hanafi
         refreshSchedule()
+        try {
+            com.example.utils.PrayerNotificationHelper.scheduleNextPrayerAlarms(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun refreshSchedule(date: LocalDate = LocalDate.now()) {
