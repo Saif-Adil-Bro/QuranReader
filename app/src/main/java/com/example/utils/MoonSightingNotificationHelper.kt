@@ -129,18 +129,11 @@ object MoonSightingNotificationHelper {
         val timestamp = System.currentTimeMillis()
         val notificationId = ("moon_sighting_29_${hijriInfo.hijriYear}_${hijriInfo.hijriMonth}").hashCode()
 
-        // 1. Save to local Notification Database so it is also listed in the notification center
+        // 1. Clean up any previous dummy local entries
         try {
             val db = com.example.data.local.NotificationDatabase.getDatabase(context)
-            val entity = com.example.data.local.entity.LocalNotificationEntity(
-                title = title,
-                content = message,
-                category = "নোটিফিকেশন",
-                author = "চাঁদ দেখা বিজ্ঞপ্তি",
-                timestamp = timestamp
-            )
             GlobalScope.launch(Dispatchers.IO) {
-                db.localNotificationDao().insertNotification(entity)
+                db.localNotificationDao().cleanupDummyNotifications()
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -153,7 +146,7 @@ object MoonSightingNotificationHelper {
             putExtra("open_blog_post_detail", true)
             putExtra("blog_post_id", TARGET_POST_ID)
             putExtra("blog_post_title", title)
-            putExtra("blog_post_content", message)
+            putExtra("blog_post_content", "")
             putExtra("blog_post_category", "নোটিফিকেশন")
             putExtra("blog_post_author", "চাঁদ দেখা বিজ্ঞপ্তি")
             putExtra("blog_post_timestamp", timestamp)

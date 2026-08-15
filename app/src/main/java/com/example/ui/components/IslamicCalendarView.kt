@@ -91,8 +91,8 @@ fun IslamicCalendarView(
 
     // Determine primary Hijri Month & Year span for header (e.g. "সফর-রবিউল আউয়াল ১৪৪৮")
     val currentMonthHijriHeaderStr = remember(currentYearMonth, hijriOffset) {
-        val startHijri = HijriCalendarUtil.getHijriDate(currentYearMonth.atDay(1), hijriOffset)
-        val endHijri = HijriCalendarUtil.getHijriDate(currentYearMonth.atDay(daysInMonth), hijriOffset)
+        val startHijri = HijriCalendarUtil.getHijriDateForGrid(currentYearMonth.atDay(1), hijriOffset)
+        val endHijri = HijriCalendarUtil.getHijriDateForGrid(currentYearMonth.atDay(daysInMonth), hijriOffset)
 
         if (startHijri.hijriMonthNameBn == endHijri.hijriMonthNameBn) {
             "${startHijri.hijriMonthNameBn} ${HijriCalendarUtil.toBengaliNumerals(startHijri.hijriYear)}"
@@ -335,7 +335,7 @@ fun IslamicCalendarView(
 
                                     if (dayNum in 1..daysInMonth) {
                                         val date = currentYearMonth.atDay(dayNum)
-                                        val hijriInfo = HijriCalendarUtil.getHijriDate(date, hijriOffset)
+                                        val hijriInfo = HijriCalendarUtil.getHijriDateForGrid(date, hijriOffset)
 
                                         val isSelected = date == selectedDate
                                         val isToday = date == today

@@ -341,6 +341,42 @@ object QuranData {
         }
     }
 
+    fun getJuzStartAyah(juz: Int): Int {
+        return when (juz) {
+            1 -> 1
+            2 -> 142
+            3 -> 253
+            4 -> 92
+            5 -> 24
+            6 -> 148
+            7 -> 82
+            8 -> 111
+            9 -> 88
+            10 -> 41
+            11 -> 94
+            12 -> 6
+            13 -> 53
+            14 -> 1
+            15 -> 1
+            16 -> 75
+            17 -> 1
+            18 -> 1
+            19 -> 21
+            20 -> 60
+            21 -> 45
+            22 -> 31
+            23 -> 22
+            24 -> 32
+            25 -> 47
+            26 -> 1
+            27 -> 31
+            28 -> 1
+            29 -> 1
+            30 -> 1
+            else -> 1
+        }
+    }
+
     fun getSurahAndAyahFromGlobal(globalAyahId: Int): Pair<Int, Int> {
         val verseCounts = intArrayOf(
             7, 286, 200, 176, 120, 165, 206, 75, 129, 109,

@@ -65,18 +65,11 @@ object JumuahReminderHelper {
         val timestamp = System.currentTimeMillis()
         val notificationId = ("jumuah_reminder_$todayStr").hashCode()
 
-        // 1. Save to local Notification Database so it is also listed in the notification center
+        // 1. Clean up any previous dummy local entries
         try {
             val db = com.example.data.local.NotificationDatabase.getDatabase(context)
-            val entity = com.example.data.local.entity.LocalNotificationEntity(
-                title = title,
-                content = message,
-                category = "নোটিফিকেশন",
-                author = "জুমুআ মোবারক",
-                timestamp = timestamp
-            )
             GlobalScope.launch(Dispatchers.IO) {
-                db.localNotificationDao().insertNotification(entity)
+                db.localNotificationDao().cleanupDummyNotifications()
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -89,7 +82,7 @@ object JumuahReminderHelper {
             putExtra("open_blog_post_detail", true)
             putExtra("blog_post_id", TARGET_POST_ID)
             putExtra("blog_post_title", title)
-            putExtra("blog_post_content", message)
+            putExtra("blog_post_content", "")
             putExtra("blog_post_category", "নোটিফিকেশন")
             putExtra("blog_post_author", "জুমুআ মোবারক")
             putExtra("blog_post_timestamp", timestamp)

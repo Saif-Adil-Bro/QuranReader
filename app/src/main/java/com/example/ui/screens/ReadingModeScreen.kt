@@ -224,11 +224,16 @@ fun ReadingModeScreen(
                                                     }
                                                 }
                                                 
-                                                val (annotatedString, inlineMap) = remember(surahAyahs, showWaqfSigns, arabicFontSize) {
+                                                val (annotatedString, inlineMap) = remember(surahAyahs, showWaqfSigns, arabicFontSize, theme) {
                                                     val map = mutableMapOf<String, InlineTextContent>()
                                                     val circleSizeDp = (arabicFontSize * 0.9f).coerceIn(24f, 36f)
                                                     val circleSize = circleSizeDp.dp
                                                     val circleFontSize = (arabicFontSize * 0.42f).coerceIn(11f, 16f).sp
+                                                    val textColor = when (theme) {
+                                                        "Dark" -> Color(0xFFE0E0E0)
+                                                        "Sepia" -> Color(0xFF4E342E)
+                                                        else -> Color(0xFF1A1A1A)
+                                                    }
 
                                                     val str = buildAnnotatedString {
                                                         surahAyahs.forEachIndexed { index, ayah ->
@@ -271,9 +276,9 @@ fun ReadingModeScreen(
                                                                 AyahNumberCircle(
                                                                     number = ayah.numberInSurah,
                                                                     size = circleSize,
-                                                                    backgroundColor = Color(0xFFE8F5E9),
-                                                                    borderColor = PrimaryGreen,
-                                                                    textColor = PrimaryGreen,
+                                                                    backgroundColor = Color.Transparent,
+                                                                    borderColor = textColor,
+                                                                    textColor = textColor,
                                                                     fontSize = circleFontSize
                                                                 )
                                                             }

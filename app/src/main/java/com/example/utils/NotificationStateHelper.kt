@@ -52,4 +52,15 @@ object NotificationStateHelper {
         hiddenIds.add(id)
         prefs.edit().putStringSet(KEY_HIDDEN_NOTIFICATIONS, hiddenIds).apply()
     }
+
+    fun getAppFirstInstallTime(context: Context): Long {
+        val syncPrefs = context.getSharedPreferences("posts_sync_prefs", Context.MODE_PRIVATE)
+        var t = syncPrefs.getLong("app_first_install_time", 0L)
+        if (t == 0L) {
+            t = System.currentTimeMillis()
+            syncPrefs.edit().putLong("app_first_install_time", t).putLong("last_sync_timestamp", t).apply()
+        }
+        return t
+    }
 }
+

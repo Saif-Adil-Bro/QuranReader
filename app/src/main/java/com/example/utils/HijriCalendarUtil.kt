@@ -31,10 +31,22 @@ object HijriCalendarUtil {
     )
 
     fun getHijriDate(date: LocalDate, offsetDays: Int = 0): HijriDateInfo {
+        return calculateHijriDate(date, offsetDays, useCurrentTimeForToday = true)
+    }
+
+    /**
+     * Used for full-month Calendar Grid display to ensure sequential, consistent day-by-day dates
+     * without same-day duplication caused by evening real-time transitions.
+     */
+    fun getHijriDateForGrid(date: LocalDate, offsetDays: Int = 0): HijriDateInfo {
+        return calculateHijriDate(date, offsetDays, useCurrentTimeForToday = false)
+    }
+
+    private fun calculateHijriDate(date: LocalDate, offsetDays: Int, useCurrentTimeForToday: Boolean): HijriDateInfo {
         val (hDay, hMonth, hYear) = try {
             val islamicCalendar = android.icu.util.IslamicCalendar()
             val calendar = java.util.Calendar.getInstance()
-            if (date == java.time.LocalDate.now()) {
+            if (useCurrentTimeForToday && date == java.time.LocalDate.now()) {
                 if (date.year != calendar.get(java.util.Calendar.YEAR) ||
                     date.monthValue - 1 != calendar.get(java.util.Calendar.MONTH) ||
                     date.dayOfMonth != calendar.get(java.util.Calendar.DAY_OF_MONTH)) {

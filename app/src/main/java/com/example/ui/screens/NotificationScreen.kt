@@ -59,6 +59,11 @@ fun NotificationScreen(
 
     LaunchedEffect(Unit) {
         val db = com.example.data.local.NotificationDatabase.getDatabase(context)
+        try {
+            db.localNotificationDao().cleanupDummyNotifications()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         db.localNotificationDao().getAllNotifications().collect { entities ->
             localNotifications = entities.map { entity ->
                 BlogPost(
@@ -73,6 +78,10 @@ fun NotificationScreen(
         }
     }
 
+    val appFirstInstallTime = remember(context) {
+        NotificationStateHelper.getAppFirstInstallTime(context)
+    }
+
     LaunchedEffect(forceUpdate) {
         val prefs = context.getSharedPreferences("notification_states", android.content.Context.MODE_PRIVATE)
         readIds = prefs.getStringSet("read_notifications", emptySet())?.toSet() ?: emptySet()
@@ -83,17 +92,28 @@ fun NotificationScreen(
     LaunchedEffect(pendingPost, blogPosts) {
         val currentPending = pendingPost
         if (currentPending != null && (currentPending.category == "নোটিফিকেশন" || currentPending.category == "নোটিশ")) {
-            val matchedPost = blogPosts.find { it.id == currentPending.id } ?: currentPending
-            selectedPostForReader = matchedPost
-            NotificationStateHelper.markAsRead(context, matchedPost.id.ifBlank { (matchedPost.title + matchedPost.content).hashCode().toString() })
+            val matchedPost = blogPosts.find { it.id == currentPending.id }
+            if (matchedPost != null && matchedPost.content.isNotBlank()) {
+                selectedPostForReader = matchedPost
+            } else {
+                selectedPostForReader = currentPending
+            }
+            NotificationStateHelper.markAsRead(context, currentPending.id.ifBlank { (currentPending.title + currentPending.content).hashCode().toString() })
             forceUpdate++
             viewModel.setPendingBlogPost(null)
         }
     }
 
-    val notificationPosts = remember(blogPosts, hiddenIds, localNotifications) {
-        val firestoreNotifs = blogPosts.filter { (it.category == "নোটিফিকেশন" || it.category == "নোটিশ") && !hiddenIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) }
-        val localNotifs = localNotifications.filter { !hiddenIds.contains(it.id) }
+    val notificationPosts = remember(blogPosts, hiddenIds, localNotifications, appFirstInstallTime) {
+        val firestoreNotifs = blogPosts.filter {
+            (it.category == "নোটিফিকেশন" || it.category == "নোটিশ") &&
+            !hiddenIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) &&
+            (it.timestamp >= appFirstInstallTime)
+        }
+        val localNotifs = localNotifications.filter {
+            !hiddenIds.contains(it.id) &&
+            (it.timestamp >= appFirstInstallTime)
+        }
         (firestoreNotifs + localNotifs).sortedByDescending { it.timestamp }
     }
 
@@ -144,6 +164,9 @@ fun NotificationScreen(
 
 
     if (selectedPostForReader != null) {
+        androidx.activity.compose.BackHandler {
+            selectedPostForReader = null
+        }
         BlogPostDetailScreen(
             post = selectedPostForReader!!,
             onBackClick = { selectedPostForReader = null }

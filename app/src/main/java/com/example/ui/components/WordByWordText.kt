@@ -63,9 +63,9 @@ fun WordByWordText(
                             AyahNumberCircle(
                                 number = ayahNumber,
                                 size = (arabicFontSize * 0.95f).coerceIn(28f, 36f).dp,
-                                backgroundColor = Color(0xFFE8F5E9),
-                                borderColor = PrimaryGreen,
-                                textColor = PrimaryGreen,
+                                backgroundColor = Color.Transparent,
+                                borderColor = MaterialTheme.colorScheme.onSurface,
+                                textColor = MaterialTheme.colorScheme.onSurface,
                                 fontSize = (arabicFontSize * 0.45f).coerceIn(11f, 16f).sp
                             )
                         }

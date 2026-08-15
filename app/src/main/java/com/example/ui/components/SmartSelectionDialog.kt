@@ -238,7 +238,7 @@ fun SmartSelectionDialog(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = item.icon ?: (if (isSelected) Icons.Default.Check else Icons.Default.Mic),
+                                            imageVector = item.icon ?: (if (isSelected) Icons.Default.Check else headerIcon),
                                             contentDescription = null,
                                             tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(20.dp)

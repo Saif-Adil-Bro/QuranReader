@@ -219,12 +219,18 @@ fun PostsScreen(
         }
     }
 
-    val unreadNotificationCount = remember(rawBlogPosts, localNotifsList, notifReadIds, notifHiddenIds) {
+    val appFirstInstallTime = remember(context) { com.example.utils.NotificationStateHelper.getAppFirstInstallTime(context) }
+
+    val unreadNotificationCount = remember(rawBlogPosts, localNotifsList, notifReadIds, notifHiddenIds, appFirstInstallTime) {
         val firestoreNotifs = rawBlogPosts.filter { 
             (it.category == "নোটিফিকেশন" || it.category == "নোটিশ") && 
-            !notifHiddenIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) 
+            !notifHiddenIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) &&
+            (it.timestamp >= appFirstInstallTime)
         }
-        val localNotifs = localNotifsList.filter { !notifHiddenIds.contains(it.id) }
+        val localNotifs = localNotifsList.filter { 
+            !notifHiddenIds.contains(it.id) &&
+            (it.timestamp >= appFirstInstallTime)
+        }
         val allNotifs = firestoreNotifs + localNotifs
         allNotifs.count { post ->
             val nId = post.id.ifBlank { (post.title + post.content).hashCode().toString() }
@@ -798,16 +804,55 @@ fun BlogPostDetailScreen(
     post: BlogPost,
     onBackClick: () -> Unit
 ) {
+    androidx.activity.compose.BackHandler(onBack = onBackClick)
+
     val context = LocalContext.current
     var textSizeSp by remember { mutableFloatStateOf(16f) }
     val sharedPrefs = remember(context) { context.getSharedPreferences("quran_menu_prefs", android.content.Context.MODE_PRIVATE) }
     val hijriOffset = sharedPrefs.getInt("hijri_offset", 0)
 
-    val displayContent = remember(post.content, post.id, hijriOffset) {
-        if (post.id == com.example.utils.MoonSightingNotificationHelper.TARGET_POST_ID || post.content.contains("চাঁদ অনুসন্ধানের জন্য")) {
-            com.example.utils.MoonSightingNotificationHelper.formatDynamicMoonSightingContent(post.content, hijriOffset)
+    var fullPostContent by remember(post.id, post.content) { mutableStateOf(post.content) }
+    var fullPostTitle by remember(post.id, post.title) { mutableStateOf(post.title) }
+    var fullPostAuthor by remember(post.id, post.author) { mutableStateOf(post.author) }
+
+    LaunchedEffect(post.id) {
+        if (post.id.isNotBlank() && !post.id.startsWith("local_")) {
+            try {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                db.collection("notifications").document(post.id).get()
+                    .addOnSuccessListener { doc ->
+                        if (doc != null && doc.exists()) {
+                            val c = doc.getString("content") ?: doc.getString("text") ?: doc.getString("body") ?: ""
+                            val t = doc.getString("title") ?: doc.getString("name") ?: ""
+                            val a = doc.getString("author") ?: doc.getString("writer") ?: ""
+                            if (c.isNotBlank()) fullPostContent = c
+                            if (t.isNotBlank()) fullPostTitle = t
+                            if (a.isNotBlank()) fullPostAuthor = a
+                        } else {
+                            db.collection("blog_posts").document(post.id).get()
+                                .addOnSuccessListener { doc2 ->
+                                    if (doc2 != null && doc2.exists()) {
+                                        val c = doc2.getString("content") ?: doc2.getString("text") ?: doc2.getString("body") ?: ""
+                                        val t = doc2.getString("title") ?: doc2.getString("name") ?: ""
+                                        val a = doc2.getString("author") ?: doc2.getString("writer") ?: ""
+                                        if (c.isNotBlank()) fullPostContent = c
+                                        if (t.isNotBlank()) fullPostTitle = t
+                                        if (a.isNotBlank()) fullPostAuthor = a
+                                    }
+                                }
+                        }
+                    }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    val displayContent = remember(fullPostContent, post.id, hijriOffset) {
+        if (post.id == com.example.utils.MoonSightingNotificationHelper.TARGET_POST_ID || fullPostContent.contains("চাঁদ অনুসন্ধানের জন্য")) {
+            com.example.utils.MoonSightingNotificationHelper.formatDynamicMoonSightingContent(fullPostContent, hijriOffset)
         } else {
-            post.content
+            fullPostContent
         }
     }
 
@@ -840,7 +885,7 @@ fun BlogPostDetailScreen(
                     }
                     IconButton(
                         onClick = {
-                            val shareText = "✨ ${post.title} ✨\n\n$displayContent\n\n— ${post.author}\n\n📱 ❝কুরআন রিডার❞ অ্যাপ থেকে"
+                            val shareText = "✨ $fullPostTitle ✨\n\n$displayContent\n\n— $fullPostAuthor\n\n📱 ❝কুরআন রিডার❞ অ্যাপ থেকে"
                             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(android.content.Intent.EXTRA_TEXT, shareText)
@@ -932,7 +977,7 @@ fun BlogPostDetailScreen(
 
                 Column {
                     Text(
-                        text = post.author,
+                        text = fullPostAuthor,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -952,7 +997,7 @@ fun BlogPostDetailScreen(
             // Post Title with Selection
             androidx.compose.foundation.text.selection.SelectionContainer {
                 Text(
-                    text = post.title,
+                    text = fullPostTitle,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,

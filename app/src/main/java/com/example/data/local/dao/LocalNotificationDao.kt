@@ -17,4 +17,7 @@ interface LocalNotificationDao {
 
     @Query("DELETE FROM local_notifications WHERE id = :id")
     suspend fun deleteNotification(id: Int)
+
+    @Query("DELETE FROM local_notifications WHERE author IN ('চাঁদ দেখা বিজ্ঞপ্তি', 'জুমুআ মোবারক')")
+    suspend fun cleanupDummyNotifications()
 }

@@ -23,7 +23,7 @@ fun AyahNumberCircle(
     number: Int,
     modifier: Modifier = Modifier,
     size: Dp = 28.dp,
-    backgroundColor: Color = Color(0xFFE8F5E9), // Light green background
+    backgroundColor: Color = Color.Transparent,
     borderColor: Color = PrimaryGreen,
     textColor: Color = PrimaryGreen,
     fontSize: TextUnit = 12.sp,

@@ -55,6 +55,7 @@ import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.geometry.Offset
 
 fun String.toArabicNumerals(): String {
     val englishNumerals = "0123456789"
@@ -204,12 +205,18 @@ fun HomeScreen(
         }
     }
 
-    val unreadNotificationCount = remember(rawBlogPosts, localNotifsList, notifReadIds, notifHiddenIds) {
+    val appFirstInstallTime = remember(context) { com.example.utils.NotificationStateHelper.getAppFirstInstallTime(context) }
+
+    val unreadNotificationCount = remember(rawBlogPosts, localNotifsList, notifReadIds, notifHiddenIds, appFirstInstallTime) {
         val firestoreNotifs = rawBlogPosts.filter { 
             (it.category == "নোটিফিকেশন" || it.category == "নোটিশ") && 
-            !notifHiddenIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) 
+            !notifHiddenIds.contains(it.id.ifBlank { (it.title + it.content).hashCode().toString() }) &&
+            (it.timestamp >= appFirstInstallTime)
         }
-        val localNotifs = localNotifsList.filter { !notifHiddenIds.contains(it.id) }
+        val localNotifs = localNotifsList.filter { 
+            !notifHiddenIds.contains(it.id) &&
+            (it.timestamp >= appFirstInstallTime)
+        }
         val allNotifs = firestoreNotifs + localNotifs
         allNotifs.count { post ->
             val nId = post.id.ifBlank { (post.title + post.content).hashCode().toString() }
@@ -249,6 +256,30 @@ fun HomeScreen(
     var selectedDuaForDetail by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.example.data.DuaItem?>(null) }
 
     val arabicFontName by viewModel.arabicFontName.collectAsState()
+
+    // Dynamic Prayer Times Setup
+    val prayerRepo = remember(context) { com.example.data.repository.PrayerTimesRepository.getInstance(context) }
+    val prayerSchedule by prayerRepo.todaySchedule.collectAsState()
+    val isHanafiAsr by prayerRepo.isHanafi.collectAsState()
+    var showPrayerTimesDetailSheet by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    // Auto-refresh prayer timer every 30 seconds
+    LaunchedEffect(Unit) {
+        while (true) {
+            prayerRepo.refreshSchedule()
+            delay(30000)
+        }
+    }
+
+    if (showPrayerTimesDetailSheet) {
+        com.example.ui.components.PrayerTimesDetailSheet(
+            schedule = prayerSchedule,
+            isHanafi = isHanafiAsr,
+            onDistrictSelected = { prayerRepo.setDistrict(it) },
+            onHanafiChanged = { prayerRepo.setHanafi(it) },
+            onDismiss = { showPrayerTimesDetailSheet = false }
+        )
+    }
 
     if (selectedDuaForDetail != null) {
         DuaDetailDialog(
@@ -545,6 +576,7 @@ fun HomeScreen(
                             lastReadTitle = actionTextForHero,
                             lastReadSubtitle = subTextForHero,
                             hijriOffset = combinedHijriOffset,
+                            prayerSchedule = prayerSchedule,
                             onResumeClick = {
                                 when (lastReadMode) {
                                     "HAFEZI" -> onNavigateToHafeziMode(lastReadPage)
@@ -556,7 +588,8 @@ fun HomeScreen(
                                 }
                             },
                             onHijriDateClick = { onNavigateToCalendar() },
-                            onDuaClick = { selectedDuaForDetail = it }
+                            onDuaClick = { selectedDuaForDetail = it },
+                            onPrayerTimesClick = { showPrayerTimesDetailSheet = true }
                         )
                         Box(
                             modifier = Modifier
@@ -749,16 +782,19 @@ fun HeroSection(
     lastReadTitle: String,
     lastReadSubtitle: String,
     hijriOffset: Int,
+    prayerSchedule: com.example.data.model.DailyPrayerSchedule,
     onResumeClick: () -> Unit,
     onHijriDateClick: () -> Unit = {},
-    onDuaClick: (com.example.data.DuaItem) -> Unit = {}
+    onDuaClick: (com.example.data.DuaItem) -> Unit = {},
+    onPrayerTimesClick: () -> Unit = {}
 ) {
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val totalSlides = 5
+    val pagerState = rememberPagerState(pageCount = { totalSlides })
     LaunchedEffect(pagerState) {
         while (true) {
             delay(9000)
             try {
-                val nextPage = (pagerState.currentPage + 1) % 4
+                val nextPage = (pagerState.currentPage + 1) % totalSlides
                 if (!pagerState.isScrollInProgress) {
                     pagerState.animateScrollToPage(nextPage)
                 }
@@ -771,7 +807,15 @@ fun HeroSection(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-            .background(Brush.verticalGradient(listOf(PrimaryGreen, DarkGreen)))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF0E382A), // Deep Islamic Pine/Forest Green
+                        Color(0xFF1B5B45), // Rich Emerald Green
+                        Color(0xFF124333)  // Deep Emerald Base
+                    )
+                )
+            )
             .padding(top = 32.dp, bottom = 48.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -779,20 +823,52 @@ fun HeroSection(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 24.dp)
+                contentPadding = PaddingValues(horizontal = 20.dp)
             ) { page ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                        .height(130.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                        .padding(horizontal = 4.dp)
+                        .height(140.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    when (page) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        Color(0xFF185340), // Perfectly aligned Dark Emerald
+                                        Color(0xFF247358)  // Vibrant Islamic Emerald
+                                    ),
+                                    start = Offset(0f, 0f),
+                                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.linearGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.28f),
+                                        Color.White.copy(alpha = 0.08f)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                    ) {
+                        when (page) {
                         0 -> {
-                            // Slide 1: Resume
+                            // Slide 1: Prayer Times Dynamic Card
+                            com.example.ui.components.PrayerTimesBannerSlide(
+                                schedule = prayerSchedule,
+                                onClick = onPrayerTimesClick,
+                                onLocationClick = onPrayerTimesClick
+                            )
+                        }
+                        1 -> {
+                            // Slide 2: Resume
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -837,8 +913,8 @@ fun HeroSection(
                                 }
                             }
                         }
-                        1 -> {
-                            // Slide 2: Dua of the day
+                        2 -> {
+                            // Slide 3: Dua of the day
                             val duaItem = com.example.data.DuaData.getDuaItemOfTheDay()
                             val banglaDigits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
                             val banglaNumber = duaItem.id.toString().map { char ->
@@ -901,8 +977,8 @@ fun HeroSection(
                                 }
                             }
                         }
-                        2 -> {
-                            // Slide 3: Ayah of the day
+                        3 -> {
+                            // Slide 4: Ayah of the day
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -933,8 +1009,8 @@ fun HeroSection(
                                 )
                             }
                         }
-                        3 -> {
-                            // Slide 3: Quick Info (Date)
+                        4 -> {
+                            // Slide 5: Quick Info (Date)
                             val bengaliDate = com.example.utils.DateUtil.getTodayBengaliDateStr()
                             Column(
                                 modifier = Modifier
@@ -984,26 +1060,28 @@ fun HeroSection(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                repeat(4) { iteration ->
-                    val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.4f)
-                    val width = if (pagerState.currentPage == iteration) 16.dp else 6.dp
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(color)
-                            .size(width = width, height = 4.dp)
-                    )
-                }
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(totalSlides) { iteration ->
+                val isCurrent = pagerState.currentPage == iteration
+                val color = if (isCurrent) Color.White else Color.White.copy(alpha = 0.38f)
+                val width = if (isCurrent) 16.dp else 5.dp
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 2.5.dp)
+                        .clip(if (isCurrent) RoundedCornerShape(100.dp) else CircleShape)
+                        .background(color)
+                        .size(width = width, height = 5.dp)
+                )
             }
         }
     }
+}
 }
 
 @Composable

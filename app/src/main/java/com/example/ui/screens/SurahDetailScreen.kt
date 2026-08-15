@@ -291,12 +291,22 @@ fun SurahDetailScreen(
                     var searchQuery by remember { mutableStateOf("") }
                     var highlightedAyahNumber by remember { mutableStateOf<Int?>(null) }
                     
-                    val isStandaloneAyatAlKursi = surahNumber == 2 && initialAyah == 255
-                    val isStandaloneLastTwoBaqarah = surahNumber == 2 && initialAyah == 285
+                    val effectiveInitialAyah = remember(surahNumber, isJuz, initialAyah) {
+                        if (initialAyah > 0) {
+                            initialAyah
+                        } else if (isJuz) {
+                            com.example.data.QuranData.getJuzStartAyah(surahNumber)
+                        } else {
+                            -1
+                        }
+                    }
+
+                    val isStandaloneAyatAlKursi = surahNumber == 2 && effectiveInitialAyah == 255 && !isJuz
+                    val isStandaloneLastTwoBaqarah = surahNumber == 2 && effectiveInitialAyah == 285 && !isJuz
                     val isStandalone = isStandaloneAyatAlKursi || isStandaloneLastTwoBaqarah
                     
                     val rawDisplayedData = if (isStandaloneAyatAlKursi) {
-                        state.data.filter { it.numberInSurah == initialAyah }
+                        state.data.filter { it.numberInSurah == effectiveInitialAyah }
                     } else if (isStandaloneLastTwoBaqarah) {
                         state.data.filter { it.numberInSurah == 285 || it.numberInSurah == 286 }
                     } else {
@@ -328,16 +338,16 @@ fun SurahDetailScreen(
                         }
                     }
                     
-                    LaunchedEffect(displayedData, initialAyah) {
-                        if (initialAyah > 0 && displayedData.isNotEmpty()) {
-                            highlightedAyahNumber = initialAyah
+                    LaunchedEffect(displayedData, effectiveInitialAyah) {
+                        if (effectiveInitialAyah > 0 && displayedData.isNotEmpty()) {
+                            highlightedAyahNumber = effectiveInitialAyah
                             
-                            val headerCount = if (!isJuz && activeSurahNumber != 1 && activeSurahNumber != 9 && !isStandalone) 2 else 1
+                            val headerCount = if (activeSurahNumber != 1 && activeSurahNumber != 9 && !isStandalone) 2 else 1
                             
                             // Allow LazyColumn to finish its initial layout before scrolling
                             kotlinx.coroutines.delay(150)
                             
-                            val ayahIndex = displayedData.indexOfFirst { it.numberInSurah == initialAyah }
+                            val ayahIndex = displayedData.indexOfFirst { it.numberInSurah == effectiveInitialAyah }
                             if (ayahIndex != -1) {
                                 val targetIndex = ayahIndex + headerCount
                                 listStates.forEach { listState ->
@@ -345,7 +355,7 @@ fun SurahDetailScreen(
                                 }
                             }
                             
-                            val targetAyah = displayedData.find { it.numberInSurah == initialAyah }
+                            val targetAyah = displayedData.find { it.numberInSurah == effectiveInitialAyah }
                             if (targetAyah != null) {
                                 val ayahsByPage = displayedData.groupBy { it.page }
                                 val pagesList = ayahsByPage.keys.toList()
@@ -357,13 +367,21 @@ fun SurahDetailScreen(
                         }
                     }
 
+                    // Auto-remove highlight after a few seconds
+                    LaunchedEffect(highlightedAyahNumber) {
+                        if (highlightedAyahNumber != null) {
+                            kotlinx.coroutines.delay(2500)
+                            highlightedAyahNumber = null
+                        }
+                    }
+
                     // Auto-scroll to currently playing ayah during audio play
                     LaunchedEffect(currentPlayingAyahNumber) {
                         val playingAyahNum = currentPlayingAyahNumber
                         if (playingAyahNum != null && playingAyahNum > 0) {
                             val targetAyah = displayedData.find { it.numberInSurah == playingAyahNum }
                             if (targetAyah != null) {
-                                val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) 2 else 1
+                                val headerCount = if (activeSurahNumber != 1 && activeSurahNumber != 9 && !isStandalone) 2 else 1
                                 val currentListState = listStates[pageOrder.indexOf(viewMode).takeIf { it >= 0 } ?: 0]
                                 if (viewMode == ViewMode.MUSHAF) {
                                     val ayahsByPage = displayedData.groupBy { it.page }
@@ -385,7 +403,7 @@ fun SurahDetailScreen(
                     val currentListState = listStates[pageOrder.indexOf(viewMode).takeIf { it >= 0 } ?: 0]
                     val firstVisibleItemIndex by remember(currentListState) { derivedStateOf { currentListState.firstVisibleItemIndex } }
                     LaunchedEffect(firstVisibleItemIndex, viewMode, displayedData) {
-                        val headerCount = if (!isJuz && surahNumber != 1 && surahNumber != 9 && !isStandalone) 2 else 1
+                        val headerCount = if (activeSurahNumber != 1 && activeSurahNumber != 9 && !isStandalone) 2 else 1
                         if (viewMode == ViewMode.MUSHAF) {
                             val ayahsByPage = displayedData.groupBy { it.page }
                             val pagesList = ayahsByPage.keys.toList()
@@ -409,17 +427,17 @@ fun SurahDetailScreen(
                     
                     val surahData = com.example.data.QuranData.surahNames.find { it.first == activeSurahNumber }
                     val surahName = surahData?.second?.first ?: "সূরা $activeSurahNumber"
-                    val title = if (surahNumber == 2 && initialAyah == 255) {
+                    val title = if (surahNumber == 2 && effectiveInitialAyah == 255 && !isJuz) {
                         "আয়াতুল কুরসি"
-                    } else if (surahNumber == 2 && initialAyah == 285) {
+                    } else if (surahNumber == 2 && effectiveInitialAyah == 285 && !isJuz) {
                         "বাকারার শেষ ২ আয়াত"
                     } else {
                         surahName
                     }
-                    val subtitle = if (surahNumber == 2 && initialAyah == 255) "সূরা আল-বাকারাহ, আয়াত ২৫৫" else if (surahNumber == 2 && initialAyah == 285) "সূরা আল-বাকারাহ, আয়াত ২৮৫-২৮৬" else (surahData?.second?.second ?: "")
+                    val subtitle = if (surahNumber == 2 && effectiveInitialAyah == 255 && !isJuz) "সূরা আল-বাকারাহ, আয়াত ২৫৫" else if (surahNumber == 2 && effectiveInitialAyah == 285 && !isJuz) "সূরা আল-বাকারাহ, আয়াত ২৮৫-২৮৬" else (surahData?.second?.second ?: "")
                     val info1 = "সূরা: ${com.example.utils.DateUtil.toBengaliNumerals(activeSurahNumber)}"
                     val info2 = com.example.data.QuranData.getSurahType(activeSurahNumber)
-                    val info3 = if (surahNumber == 2 && initialAyah == 255) "১টি আয়াত" else if (surahNumber == 2 && initialAyah == 285) "২টি আয়াত" else "মোট আয়াত: ${com.example.utils.DateUtil.toBengaliNumerals(displayedData.size)}"
+                    val info3 = if (surahNumber == 2 && effectiveInitialAyah == 255 && !isJuz) "১টি আয়াত" else if (surahNumber == 2 && effectiveInitialAyah == 285 && !isJuz) "২টি আয়াত" else "মোট আয়াত: ${com.example.utils.DateUtil.toBengaliNumerals(displayedData.size)}"
 
                     var headerHeightPx by remember { mutableFloatStateOf(0f) }
                     val headerHeightDp = with(androidx.compose.ui.platform.LocalDensity.current) { headerHeightPx.toDp() }
@@ -1865,33 +1883,43 @@ fun ReaderSettingsBottomSheetContent(
         )
         Spacer(modifier = Modifier.height(12.dp))
         var translationExpanded by remember { mutableStateOf(false) }
-        val selectedTranslation = availableTranslations.find { selectedTranslationIds.contains(it.id.toString()) }?.name ?: "Select Translation"
+        val selectedTranslation = availableTranslations.find { selectedTranslationIds.contains(it.id.toString()) }?.let {
+            it.translatedName?.name ?: it.name ?: "Unknown"
+        } ?: "অনুবাদ নির্বাচন করুন"
         
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { translationExpanded = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-            ) {
-                Text(text = selectedTranslation, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+        OutlinedButton(
+            onClick = { translationExpanded = true },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+        ) {
+            Text(text = selectedTranslation, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+        }
+
+        if (translationExpanded) {
+            val selectionItems = availableTranslations.map { translation ->
+                com.example.ui.components.SelectionItem(
+                    id = translation.id.toString(),
+                    title = translation.translatedName?.name ?: translation.name ?: "Unknown",
+                    subtitle = translation.authorName ?: translation.languageName,
+                    icon = Icons.Default.Translate
+                )
             }
-            DropdownMenu(
-                expanded = translationExpanded,
-                onDismissRequest = { translationExpanded = false },
-                modifier = Modifier.fillMaxWidth(0.9f)
-            ) {
-                availableTranslations.forEach { translation ->
-                    DropdownMenuItem(
-                        text = { Text(translation.name ?: "Unknown") },
-                        onClick = {
-                            onSelectedTranslationIdsChange(setOf(translation.id.toString()))
-                            translationExpanded = false
-                        }
-                    )
-                }
-            }
+            com.example.ui.components.SmartSelectionDialog(
+                title = "অনুবাদ নির্বাচন করুন",
+                subtitle = "আপনার পছন্দের কুরআন অনুবাদ বেছে নিন",
+                headerIcon = Icons.Default.Translate,
+                items = selectionItems,
+                selectedId = selectedTranslationIds.firstOrNull() ?: "",
+                onSelectItem = { translationId ->
+                    onSelectedTranslationIdsChange(setOf(translationId))
+                    translationExpanded = false
+                },
+                onDismiss = { translationExpanded = false },
+                showSearch = true,
+                searchPlaceholder = "অনুবাদ খুঁজুন..."
+            )
         }
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -1904,33 +1932,41 @@ fun ReaderSettingsBottomSheetContent(
         )
         Spacer(modifier = Modifier.height(12.dp))
         var tafsirExpanded by remember { mutableStateOf(false) }
-        val selectedTafsir = availableTafsirs.find { selectedTafsirIds.contains(it.id.toString()) }?.name ?: "Select Tafsir"
+        val selectedTafsir = availableTafsirs.find { selectedTafsirIds.contains(it.id.toString()) }?.name ?: "তাফসির নির্বাচন করুন"
         
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { tafsirExpanded = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-            ) {
-                Text(text = selectedTafsir, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+        OutlinedButton(
+            onClick = { tafsirExpanded = true },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+        ) {
+            Text(text = selectedTafsir, modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+        }
+
+        if (tafsirExpanded) {
+            val selectionItems = availableTafsirs.map { tafsir ->
+                com.example.ui.components.SelectionItem(
+                    id = tafsir.id.toString(),
+                    title = tafsir.name ?: "Unknown",
+                    subtitle = tafsir.authorName ?: tafsir.languageName,
+                    icon = Icons.Default.MenuBook
+                )
             }
-            DropdownMenu(
-                expanded = tafsirExpanded,
-                onDismissRequest = { tafsirExpanded = false },
-                modifier = Modifier.fillMaxWidth(0.9f)
-            ) {
-                availableTafsirs.forEach { tafsir ->
-                    DropdownMenuItem(
-                        text = { Text(tafsir.name ?: "Unknown") },
-                        onClick = {
-                            onSelectedTafsirIdsChange(setOf(tafsir.id.toString()))
-                            tafsirExpanded = false
-                        }
-                    )
-                }
-            }
+            com.example.ui.components.SmartSelectionDialog(
+                title = "তাফসির নির্বাচন করুন",
+                subtitle = "আপনার পছন্দের তাফসির গ্রন্থ বেছে নিন",
+                headerIcon = Icons.Default.MenuBook,
+                items = selectionItems,
+                selectedId = selectedTafsirIds.firstOrNull() ?: "",
+                onSelectItem = { tafsirId ->
+                    onSelectedTafsirIdsChange(setOf(tafsirId))
+                    tafsirExpanded = false
+                },
+                onDismiss = { tafsirExpanded = false },
+                showSearch = true,
+                searchPlaceholder = "তাফসির খুঁজুন..."
+            )
         }
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -2356,9 +2392,9 @@ fun MushafPageView(
                 com.example.ui.components.AyahNumberCircle(
                     number = ayah.numberInSurah,
                     size = circleSize,
-                    backgroundColor = Color(0xFFE8F5E9),
-                    borderColor = PrimaryGreen,
-                    textColor = PrimaryGreen,
+                    backgroundColor = Color.Transparent,
+                    borderColor = MaterialTheme.colorScheme.onSurface,
+                    textColor = MaterialTheme.colorScheme.onSurface,
                     fontSize = circleFontSize
                 )
             }
@@ -2454,7 +2490,7 @@ fun AyahCircle(
     AyahNumberCircle(
         number = number,
         size = (fontSize * 0.95f).coerceIn(28f, 36f).dp,
-        backgroundColor = Color(0xFFE8F5E9),
+        backgroundColor = Color.Transparent,
         borderColor = color,
         textColor = color,
         fontSize = (fontSize * 0.45f).coerceIn(11f, 16f).sp,
@@ -2495,9 +2531,9 @@ fun AyahInlineText(
             AyahNumberCircle(
                 number = ayahNumber,
                 size = circleSize,
-                backgroundColor = Color(0xFFE8F5E9),
-                borderColor = PrimaryGreen,
-                textColor = PrimaryGreen,
+                backgroundColor = Color.Transparent,
+                borderColor = color,
+                textColor = color,
                 fontSize = circleFontSize
             )
         }
