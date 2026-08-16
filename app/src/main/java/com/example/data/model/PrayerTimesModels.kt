@@ -22,7 +22,9 @@ enum class PrayerName(val id: String, val nameBn: String, val nameEn: String, va
     DHUHR("dhuhr", "যোহর", "Dhuhr", "☀️"),
     ASR("asr", "আসর", "Asr", "🌤️"),
     MAGHRIB("maghrib", "মাগরিব", "Maghrib", "🌇"),
-    ISHA("isha", "এশা", "Isha", "🌙")
+    ISHA("isha", "এশা", "Isha", "🌙"),
+    SAHRI("sahri", "সাহরি শেষ", "Sahri", "🌙"),
+    IFTAR("iftar", "ইফতার", "Iftar", "✨")
 }
 
 data class SinglePrayerTime(

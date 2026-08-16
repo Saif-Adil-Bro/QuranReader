@@ -64,22 +64,6 @@ class ReminderReceiver : BroadcastReceiver() {
         val title = titles.random()
         val message = messages.random()
 
-        try {
-            val db = com.example.data.local.NotificationDatabase.getDatabase(context)
-            val entity = com.example.data.local.entity.LocalNotificationEntity(
-                title = title,
-                content = message,
-                category = "নোটিফিকেশন",
-                author = "কুরআন প্ল্যানার",
-                timestamp = System.currentTimeMillis()
-            )
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                db.localNotificationDao().insertNotification(entity)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
         val iconRes = com.example.R.mipmap.ic_launcher
 
         val notification = NotificationCompat.Builder(context, channelId)

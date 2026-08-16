@@ -273,10 +273,10 @@ private fun PrayerColumnItem(
         // Golden minimal Islamic prayer icon
         GoldenPrayerIcon(
             prayerName = prayer.name,
-            modifier = Modifier.size(15.dp)
+            modifier = Modifier.size(17.dp)
         )
 
-        Spacer(modifier = Modifier.height(1.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
         // Bengali Name (Tight line spacing)
         Text(
@@ -319,12 +319,12 @@ private fun GoldenPrayerIcon(
 
         when (prayerName) {
             PrayerName.FAJR -> {
-                // Rising sun with horizontal horizon and rays
+                // Rising sun with horizontal horizon and bold rays
                 drawLine(
                     color = goldColor,
                     start = Offset(0f, height * 0.75f),
                     end = Offset(width, height * 0.75f),
-                    strokeWidth = 1.5f,
+                    strokeWidth = 2.5f,
                     cap = StrokeCap.Round
                 )
                 drawArc(
@@ -332,24 +332,24 @@ private fun GoldenPrayerIcon(
                     startAngle = 180f,
                     sweepAngle = 180f,
                     useCenter = false,
-                    topLeft = Offset(width * 0.25f, height * 0.35f),
-                    size = Size(width * 0.5f, height * 0.5f),
-                    style = Stroke(width = 1.5f)
+                    topLeft = Offset(width * 0.22f, height * 0.32f),
+                    size = Size(width * 0.56f, height * 0.56f),
+                    style = Stroke(width = 2.5f, cap = StrokeCap.Round)
                 )
-                // Rays
-                drawLine(goldColor, Offset(width * 0.5f, height * 0.1f), Offset(width * 0.5f, height * 0.25f), 1.3f, StrokeCap.Round)
-                drawLine(goldColor, Offset(width * 0.2f, height * 0.25f), Offset(width * 0.32f, height * 0.38f), 1.3f, StrokeCap.Round)
-                drawLine(goldColor, Offset(width * 0.8f, height * 0.25f), Offset(width * 0.68f, height * 0.38f), 1.3f, StrokeCap.Round)
+                // Bold Rays
+                drawLine(goldColor, Offset(width * 0.5f, height * 0.08f), Offset(width * 0.5f, height * 0.24f), 2.2f, StrokeCap.Round)
+                drawLine(goldColor, Offset(width * 0.16f, height * 0.22f), Offset(width * 0.30f, height * 0.36f), 2.2f, StrokeCap.Round)
+                drawLine(goldColor, Offset(width * 0.84f, height * 0.22f), Offset(width * 0.70f, height * 0.36f), 2.2f, StrokeCap.Round)
             }
             PrayerName.DHUHR, PrayerName.SUNRISE -> {
-                // High bright midday sun with radial rays
+                // High bright midday sun with bold radial rays
                 drawCircle(
                     color = goldColor,
                     radius = width * 0.22f,
                     center = center,
-                    style = Stroke(width = 1.5f)
+                    style = Stroke(width = 2.5f)
                 )
-                val rayLen = width * 0.12f
+                val rayLen = width * 0.14f
                 for (i in 0 until 8) {
                     val angle = Math.toRadians((i * 45).toDouble())
                     val startR = width * 0.30f
@@ -358,13 +358,13 @@ private fun GoldenPrayerIcon(
                         color = goldColor,
                         start = Offset((center.x + startR * Math.cos(angle)).toFloat(), (center.y + startR * Math.sin(angle)).toFloat()),
                         end = Offset((center.x + endR * Math.cos(angle)).toFloat(), (center.y + endR * Math.sin(angle)).toFloat()),
-                        strokeWidth = 1.3f,
+                        strokeWidth = 2.2f,
                         cap = StrokeCap.Round
                     )
                 }
             }
             PrayerName.ASR -> {
-                // Afternoon sun with tilted rays
+                // Afternoon sun with bold tilted rays
                 drawArc(
                     color = goldColor,
                     startAngle = 180f,
@@ -372,49 +372,72 @@ private fun GoldenPrayerIcon(
                     useCenter = false,
                     topLeft = Offset(width * 0.22f, height * 0.32f),
                     size = Size(width * 0.56f, height * 0.56f),
-                    style = Stroke(width = 1.5f)
+                    style = Stroke(width = 2.5f, cap = StrokeCap.Round)
                 )
-                drawLine(goldColor, Offset(width * 0.1f, height * 0.75f), Offset(width * 0.9f, height * 0.75f), 1.5f, StrokeCap.Round)
-                drawLine(goldColor, Offset(width * 0.5f, height * 0.12f), Offset(width * 0.5f, height * 0.24f), 1.3f, StrokeCap.Round)
-                drawLine(goldColor, Offset(width * 0.22f, height * 0.2f), Offset(width * 0.32f, height * 0.32f), 1.3f, StrokeCap.Round)
-                drawLine(goldColor, Offset(width * 0.78f, height * 0.2f), Offset(width * 0.68f, height * 0.32f), 1.3f, StrokeCap.Round)
+                drawLine(goldColor, Offset(width * 0.08f, height * 0.75f), Offset(width * 0.92f, height * 0.75f), 2.5f, StrokeCap.Round)
+                drawLine(goldColor, Offset(width * 0.5f, height * 0.08f), Offset(width * 0.5f, height * 0.24f), 2.2f, StrokeCap.Round)
+                drawLine(goldColor, Offset(width * 0.18f, height * 0.18f), Offset(width * 0.30f, height * 0.32f), 2.2f, StrokeCap.Round)
+                drawLine(goldColor, Offset(width * 0.82f, height * 0.18f), Offset(width * 0.70f, height * 0.32f), 2.2f, StrokeCap.Round)
             }
             PrayerName.MAGHRIB -> {
-                // Sunset (Sun dipping into horizon)
-                drawLine(goldColor, Offset(0f, height * 0.65f), Offset(width, height * 0.65f), 1.5f, StrokeCap.Round)
-                drawLine(goldColor, Offset(width * 0.15f, height * 0.82f), Offset(width * 0.85f, height * 0.82f), 1.1f, StrokeCap.Round)
+                // Sunset (Sun dipping into horizon) with bold strokes
+                drawLine(goldColor, Offset(0f, height * 0.65f), Offset(width, height * 0.65f), 2.5f, StrokeCap.Round)
+                drawLine(goldColor, Offset(width * 0.15f, height * 0.82f), Offset(width * 0.85f, height * 0.82f), 2.0f, StrokeCap.Round)
                 drawArc(
                     color = goldColor,
                     startAngle = 180f,
                     sweepAngle = 180f,
                     useCenter = false,
-                    topLeft = Offset(width * 0.28f, height * 0.32f),
-                    size = Size(width * 0.44f, height * 0.44f),
-                    style = Stroke(width = 1.5f)
+                    topLeft = Offset(width * 0.26f, height * 0.30f),
+                    size = Size(width * 0.48f, height * 0.48f),
+                    style = Stroke(width = 2.5f, cap = StrokeCap.Round)
                 )
-                drawLine(goldColor, Offset(width * 0.5f, height * 0.14f), Offset(width * 0.5f, height * 0.24f), 1.3f, StrokeCap.Round)
+                drawLine(goldColor, Offset(width * 0.5f, height * 0.10f), Offset(width * 0.5f, height * 0.22f), 2.2f, StrokeCap.Round)
             }
             PrayerName.ISHA -> {
-                // Golden Crescent Moon & Star
+                // Golden Crescent Moon & Star (Bolder profile)
                 val moonPath = Path().apply {
-                    moveTo(width * 0.55f, height * 0.15f)
+                    moveTo(width * 0.58f, height * 0.12f)
                     cubicTo(
-                        width * 0.15f, height * 0.25f,
-                        width * 0.15f, height * 0.75f,
-                        width * 0.55f, height * 0.85f
+                        width * 0.10f, height * 0.22f,
+                        width * 0.10f, height * 0.78f,
+                        width * 0.58f, height * 0.88f
                     )
                     cubicTo(
-                        width * 0.32f, height * 0.7f,
-                        width * 0.32f, height * 0.3f,
-                        width * 0.55f, height * 0.15f
+                        width * 0.30f, height * 0.70f,
+                        width * 0.30f, height * 0.30f,
+                        width * 0.58f, height * 0.12f
                     )
                     close()
                 }
                 drawPath(moonPath, goldColor, style = Fill)
 
                 // Little star
-                val starCenter = Offset(width * 0.75f, height * 0.4f)
-                drawCircle(goldColor, radius = width * 0.08f, center = starCenter)
+                val starCenter = Offset(width * 0.75f, height * 0.38f)
+                drawCircle(goldColor, radius = width * 0.10f, center = starCenter)
+            }
+            PrayerName.SAHRI -> {
+                // Sahri icon: bold crescent
+                val moonPath = Path().apply {
+                    moveTo(width * 0.54f, height * 0.15f)
+                    cubicTo(width * 0.15f, height * 0.25f, width * 0.15f, height * 0.75f, width * 0.54f, height * 0.85f)
+                    cubicTo(width * 0.32f, height * 0.68f, width * 0.32f, height * 0.32f, width * 0.54f, height * 0.15f)
+                    close()
+                }
+                drawPath(moonPath, goldColor, style = Fill)
+            }
+            PrayerName.IFTAR -> {
+                // Iftar icon: setting sun with horizon
+                drawLine(goldColor, Offset(0f, height * 0.7f), Offset(width, height * 0.7f), 2.5f, StrokeCap.Round)
+                drawArc(
+                    color = goldColor,
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = Offset(width * 0.26f, height * 0.36f),
+                    size = Size(width * 0.48f, height * 0.48f),
+                    style = Stroke(width = 2.5f, cap = StrokeCap.Round)
+                )
             }
         }
     }

@@ -1698,7 +1698,7 @@ fun ReaderSettingsBottomSheetContent(
     onArabicFontNameChange: (String) -> Unit = {},
     bengaliFontName: String = "SolaimanLipi",
     onBengaliFontNameChange: (String) -> Unit = {},
-    tanzilTextStyle: String = "quran-simple",
+    tanzilTextStyle: String = "default-indopak",
     onTanzilTextStyleChange: (String) -> Unit = {},
     isDownloadingOffline: Boolean,
     downloadProgress: Int,
@@ -2049,6 +2049,7 @@ fun ReaderSettingsBottomSheetContent(
         )
         Spacer(modifier = Modifier.height(12.dp))
         val scriptOptions = listOf(
+            Pair("default-indopak", "ডিফল্ট (Indo-Pak)"),
             Pair("quran-uthmani", "উসমানী স্ক্রিপ্ট"),
             Pair("quran-simple", "সহজ স্ক্রিপ্ট"),
             Pair("quran-simple-clean", "হরকত ছাড়া ক্লিন"),
@@ -2218,7 +2219,7 @@ fun MushafPageView(
     highlightedAyahNumber: Int? = null,
     isPlaying: Boolean = false,
     arabicLineSpacing: Float = 2.0f,
-    tanzilTextStyle: String = "quran-simple"
+    tanzilTextStyle: String = "default-indopak"
 ) {
     val arabicFont = com.example.ui.theme.getArabicFont(arabicFontName)
     

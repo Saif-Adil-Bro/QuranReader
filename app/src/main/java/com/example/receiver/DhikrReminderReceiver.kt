@@ -84,23 +84,6 @@ class DhikrReminderReceiver : BroadcastReceiver() {
 
         val notifContent = "${selectedOption.arabicText}\n${selectedOption.phoneticText}\n(${selectedOption.translationText})"
 
-        // Save into local notification database for the Notification Center inbox
-        try {
-            val db = com.example.data.local.NotificationDatabase.getDatabase(context)
-            val entity = com.example.data.local.entity.LocalNotificationEntity(
-                title = notifTitle,
-                content = notifContent,
-                category = "নোটিফিকেশন",
-                author = type.author,
-                timestamp = System.currentTimeMillis()
-            )
-            GlobalScope.launch(Dispatchers.IO) {
-                db.localNotificationDao().insertNotification(entity)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
         val openIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("navigate_to", "notifications")

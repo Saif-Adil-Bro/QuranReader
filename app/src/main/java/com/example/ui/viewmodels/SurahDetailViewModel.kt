@@ -192,7 +192,7 @@ class SurahDetailViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = "quran-simple"
+            initialValue = "default-indopak"
         )
 
     val arabicLineSpacing: StateFlow<Float> = settingsRepository.arabicLineSpacingFlow

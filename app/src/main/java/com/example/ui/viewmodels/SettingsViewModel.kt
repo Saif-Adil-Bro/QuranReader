@@ -552,7 +552,7 @@ class SettingsViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = "quran-simple"
+            initialValue = "default-indopak"
         )
 
     fun toggleTranslation(show: Boolean) {

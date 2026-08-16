@@ -175,7 +175,9 @@ object PrayerTimesCalculator {
         district: DistrictInfo = getDefaultDistrict(),
         isHanafi: Boolean = true,
         fajrAngle: Double = district.fajrAngle,
-        ishaAngle: Double = district.ishaAngle
+        ishaAngle: Double = district.ishaAngle,
+        sahriOffsetMinutes: Int = -3,
+        iftarOffsetMinutes: Int = 0
     ): DailyPrayerSchedule {
         val lat = district.latitude
         val lng = district.longitude
@@ -251,8 +253,8 @@ object PrayerTimesCalculator {
         val ishaTime = decimalToLocalTime(ishaDecimal)
 
         // Extra times
-        val sahriEndTime = fajrTime.minusMinutes(3) // 3 mins precaution before Fajr
-        val iftarTime = maghribTime
+        val sahriEndTime = fajrTime.plusMinutes(sahriOffsetMinutes.toLong()) // Precaution before/around Fajr (default -3 mins)
+        val iftarTime = maghribTime.plusMinutes(iftarOffsetMinutes.toLong()) // Precaution before/around Maghrib
         val tahajjudEndTime = fajrTime.minusMinutes(15)
         val ishraqStartTime = sunriseTime.plusMinutes(15)
 
@@ -479,8 +481,8 @@ object PrayerTimesCalculator {
             forbiddenEveningRange = fEveRange,
             sunriseTimeDigits = formatTimeDigits(sunriseTime),
             sunsetTimeDigits = formatTimeDigits(maghribTime),
-            sahriTimeDigits = formatTimeDigits(fajrTime),
-            iftarTimeDigits = formatTimeDigits(maghribTime)
+            sahriTimeDigits = formatTimeDigits(sahriEndTime),
+            iftarTimeDigits = formatTimeDigits(iftarTime)
         )
     }
 

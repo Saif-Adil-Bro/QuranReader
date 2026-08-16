@@ -65,6 +65,8 @@ private val ForbiddenTextRed = Color(0xFFF87171)
 private val MutedText = Color(0xFF94A3B8)
 private val AmberBullet = Color(0xFFFB923C)
 private val GreenBullet = Color(0xFF34D399)
+private val AmberWarning = Color(0xFFF59E0B)
+private val DarkModalBg = Color(0xFF182228)
 
 enum class ReferenceType(val title: String) {
     FARD_PRAYERS("সালাতের ওয়াক্ত সম্পর্কিত হাদিস ও রেফারেন্স"),
@@ -97,7 +99,15 @@ fun PrayerTimesDetailSheet(
     var isNotifAsr by remember { mutableStateOf(com.example.utils.PrayerNotificationHelper.isPrayerEnabled(context, com.example.data.model.PrayerName.ASR)) }
     var isNotifMaghrib by remember { mutableStateOf(com.example.utils.PrayerNotificationHelper.isPrayerEnabled(context, com.example.data.model.PrayerName.MAGHRIB)) }
     var isNotifIsha by remember { mutableStateOf(com.example.utils.PrayerNotificationHelper.isPrayerEnabled(context, com.example.data.model.PrayerName.ISHA)) }
+    var isNotifSahri by remember { mutableStateOf(com.example.utils.PrayerNotificationHelper.isPrayerEnabled(context, com.example.data.model.PrayerName.SAHRI)) }
+    var isNotifIftar by remember { mutableStateOf(com.example.utils.PrayerNotificationHelper.isPrayerEnabled(context, com.example.data.model.PrayerName.IFTAR)) }
     var isNotifSound by remember { mutableStateOf(com.example.utils.PrayerNotificationHelper.isSoundEnabled(context)) }
+
+    val settingsRepo = remember(context) { com.example.data.repository.SettingsRepository.getInstance(context) }
+    val sahriOffset by settingsRepo.sahriOffsetFlow.collectAsState(initial = -3)
+    val iftarOffset by settingsRepo.iftarOffsetFlow.collectAsState(initial = 0)
+
+    var showSawmAdjustDialog by remember { mutableStateOf(false) }
 
     val notifPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -116,11 +126,13 @@ fun PrayerTimesDetailSheet(
     val isToday = remember(selectedDate) { selectedDate == LocalDate.now() }
 
     // Calculate active schedule dynamically for selected date
-    val activeSchedule = remember(selectedDate, schedule.district, isHanafi) {
+    val activeSchedule = remember(selectedDate, schedule.district, isHanafi, sahriOffset, iftarOffset) {
         PrayerTimesCalculator.calculatePrayerSchedule(
             date = selectedDate,
             district = schedule.district,
-            isHanafi = isHanafi
+            isHanafi = isHanafi,
+            sahriOffsetMinutes = sahriOffset,
+            iftarOffsetMinutes = iftarOffset
         )
     }
 
@@ -591,12 +603,20 @@ fun PrayerTimesDetailSheet(
 
             // 6. Section 4: সাওমের সময়সূচী (Fasting / Sawm)
             DarkSectionCard(
-                title = "সাওমের সময়সূচী"
+                title = "সাওমের সময়সূচী",
+                referenceLabel = "সেটিংস ও সতর্কতা",
+                onReferenceClick = { showSawmAdjustDialog = true }
             ) {
                 PrayerDetailRow(
                     icon = Icons.Outlined.Restaurant,
                     name = "সাহরি",
-                    timeRange = activeSchedule.sahriTimeDigits
+                    timeRange = activeSchedule.sahriTimeDigits,
+                    subItems = listOf(
+                        BulletSubItem(
+                            text = if (sahriOffset != 0) "সতর্কতামূলক অফসেট: ${DateUtil.toBengaliNumerals(sahriOffset)} মি." else "স্ট্যান্ডার্ড ফজর ওয়াক্ত",
+                            color = EmeraldAccent
+                        )
+                    )
                 )
 
                 PrayerDivider()
@@ -604,7 +624,13 @@ fun PrayerTimesDetailSheet(
                 PrayerDetailRow(
                     icon = Icons.Outlined.SoupKitchen,
                     name = "ইফতার",
-                    timeRange = activeSchedule.iftarTimeDigits
+                    timeRange = activeSchedule.iftarTimeDigits,
+                    subItems = listOf(
+                        BulletSubItem(
+                            text = if (iftarOffset != 0) "সতর্কতামূলক অফসেট: ${DateUtil.toBengaliNumerals(iftarOffset)} মি." else "মাগরিব ওয়াক্ত শুরু",
+                            color = AmberWarning
+                        )
+                    )
                 )
             }
 
@@ -720,10 +746,12 @@ fun PrayerTimesDetailSheet(
 
                         // Chips for individual prayers
                         val prayersToToggle = listOf(
+                            Triple("সাহরি", isNotifSahri, com.example.data.model.PrayerName.SAHRI),
                             Triple("ফজর", isNotifFajr, com.example.data.model.PrayerName.FAJR),
                             Triple("যুহর", isNotifDhuhr, com.example.data.model.PrayerName.DHUHR),
                             Triple("আসর", isNotifAsr, com.example.data.model.PrayerName.ASR),
                             Triple("মাগরিব", isNotifMaghrib, com.example.data.model.PrayerName.MAGHRIB),
+                            Triple("ইফতার", isNotifIftar, com.example.data.model.PrayerName.IFTAR),
                             Triple("এশা", isNotifIsha, com.example.data.model.PrayerName.ISHA)
                         )
 
@@ -745,10 +773,12 @@ fun PrayerTimesDetailSheet(
                                         .clickable {
                                             val nextVal = !isEnabled
                                             when (pEnum) {
+                                                com.example.data.model.PrayerName.SAHRI -> isNotifSahri = nextVal
                                                 com.example.data.model.PrayerName.FAJR -> isNotifFajr = nextVal
                                                 com.example.data.model.PrayerName.DHUHR -> isNotifDhuhr = nextVal
                                                 com.example.data.model.PrayerName.ASR -> isNotifAsr = nextVal
                                                 com.example.data.model.PrayerName.MAGHRIB -> isNotifMaghrib = nextVal
+                                                com.example.data.model.PrayerName.IFTAR -> isNotifIftar = nextVal
                                                 com.example.data.model.PrayerName.ISHA -> isNotifIsha = nextVal
                                                 else -> {}
                                             }
@@ -761,7 +791,7 @@ fun PrayerTimesDetailSheet(
                                     ) {
                                         Text(
                                             text = name,
-                                            fontSize = 11.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = if (isEnabled) FontWeight.Bold else FontWeight.Normal,
                                             color = if (isEnabled) EmeraldAccent else Color.White.copy(alpha = 0.6f)
                                         )
@@ -932,6 +962,35 @@ fun PrayerTimesDetailSheet(
             }
         )
     }
+
+    // Sawm (Sahri & Iftar) Offset & Notification Settings Dialog
+    if (showSawmAdjustDialog) {
+        SawmSettingsDialog(
+            currentSahriOffset = sahriOffset,
+            currentIftarOffset = iftarOffset,
+            isNotifSahri = isNotifSahri,
+            isNotifIftar = isNotifIftar,
+            onUpdateSahriOffset = { newOffset ->
+                coroutineScope.launch {
+                    settingsRepo.setSahriOffset(newOffset)
+                }
+            },
+            onUpdateIftarOffset = { newOffset ->
+                coroutineScope.launch {
+                    settingsRepo.setIftarOffset(newOffset)
+                }
+            },
+            onToggleSahriNotif = { enabled ->
+                isNotifSahri = enabled
+                com.example.utils.PrayerNotificationHelper.setPrayerEnabled(context, com.example.data.model.PrayerName.SAHRI, enabled)
+            },
+            onToggleIftarNotif = { enabled ->
+                isNotifIftar = enabled
+                com.example.utils.PrayerNotificationHelper.setPrayerEnabled(context, com.example.data.model.PrayerName.IFTAR, enabled)
+            },
+            onDismiss = { showSawmAdjustDialog = false }
+        )
+    }
 }
 
 data class BulletSubItem(val text: String, val color: Color)
@@ -939,6 +998,7 @@ data class BulletSubItem(val text: String, val color: Color)
 @Composable
 private fun DarkSectionCard(
     title: String,
+    referenceLabel: String = "রেফারেন্স দেখুন",
     onReferenceClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -963,7 +1023,7 @@ private fun DarkSectionCard(
 
                 if (onReferenceClick != null) {
                     Text(
-                        text = "রেফারেন্স দেখুন",
+                        text = referenceLabel,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = EmeraldAccent,
@@ -1728,6 +1788,260 @@ private fun PrayerTimesCalendarDialog(
                     ) {
                         Text("ঠিক আছে", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SawmSettingsDialog(
+    currentSahriOffset: Int,
+    currentIftarOffset: Int,
+    isNotifSahri: Boolean,
+    isNotifIftar: Boolean,
+    onUpdateSahriOffset: (Int) -> Unit,
+    onUpdateIftarOffset: (Int) -> Unit,
+    onToggleSahriNotif: (Boolean) -> Unit,
+    onToggleIftarNotif: (Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = DarkModalBg,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2D3B47)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(EmeraldAccent.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Restaurant,
+                                contentDescription = null,
+                                tint = EmeraldAccent,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "সাওম (রোজা) সেটিংস",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = Color(0xFF26333D), thickness = 1.dp)
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // 1. Sahri Offset Selector
+                Text(
+                    text = "সাহরির সতর্কতামূলক অফসেট",
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFF1F5F9)
+                )
+                Text(
+                    text = "ফজর ওয়াক্ত শুরুর আগে সাহরি শেষ করার সতর্কতা সময় (ডিফল্ট -৩ মিনিট)",
+                    fontSize = 11.sp,
+                    color = MutedText,
+                    lineHeight = 15.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val sahriOptions = listOf(0, -1, -2, -3, -4, -5)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    sahriOptions.forEach { offset ->
+                        val isSelected = currentSahriOffset == offset
+                        val label = if (offset == 0) "০ মি." else "${DateUtil.toBengaliNumerals(offset)} মি."
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) EmeraldAccent.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isSelected) EmeraldAccent else Color(0xFF334155)
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onUpdateSahriOffset(offset) }
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(vertical = 7.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) EmeraldAccent else Color.White.copy(alpha = 0.75f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 2. Iftar Offset Selector
+                Text(
+                    text = "ইফতারের সতর্কতামূলক অফসেট",
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFF1F5F9)
+                )
+                Text(
+                    text = "মাগরিব ওয়াক্তের সাথে সতর্কতামূলক অতিরিক্ত সময় (ডিফল্ট ০ মিনিট)",
+                    fontSize = 11.sp,
+                    color = MutedText,
+                    lineHeight = 15.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val iftarOptions = listOf(0, 1, 2, 3, 4, 5)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    iftarOptions.forEach { offset ->
+                        val isSelected = currentIftarOffset == offset
+                        val label = if (offset == 0) "০ মি." else "+${DateUtil.toBengaliNumerals(offset)} মি."
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) AmberWarning.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isSelected) AmberWarning else Color(0xFF334155)
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onUpdateIftarOffset(offset) }
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(vertical = 7.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) AmberWarning else Color.White.copy(alpha = 0.75f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color(0xFF26333D), thickness = 1.dp)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 3. Notification Toggles for Sahri & Iftar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "সাহরির শেষ সময়ের নোটিফিকেশন",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "সাহরির শেষ সময় হলে সতর্কবার্তা দেবে",
+                            fontSize = 11.sp,
+                            color = MutedText
+                        )
+                    }
+                    Switch(
+                        checked = isNotifSahri,
+                        onCheckedChange = { onToggleSahriNotif(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = EmeraldAccent,
+                            uncheckedThumbColor = Color.LightGray,
+                            uncheckedTrackColor = Color(0xFF334155)
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "ইফতারের সময়ের নোটিফিকেশন",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "ইফতারের ওয়াক্ত হওয়ার সাথে সাথে বার্তা পাঠাবে",
+                            fontSize = 11.sp,
+                            color = MutedText
+                        )
+                    }
+                    Switch(
+                        checked = isNotifIftar,
+                        onCheckedChange = { onToggleIftarNotif(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = EmeraldAccent,
+                            uncheckedThumbColor = Color.LightGray,
+                            uncheckedTrackColor = Color(0xFF334155)
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Done Button
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("সংরক্ষণ করুন ও বন্ধ করুন", color = Color.Black, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

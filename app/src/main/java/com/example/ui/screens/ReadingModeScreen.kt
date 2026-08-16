@@ -514,6 +514,7 @@ fun ReadingSettingsContent(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             val scripts = listOf(
+                Pair("default-indopak", "ডিফল্ট"),
                 Pair("quran-uthmani", "উসমানী"),
                 Pair("quran-simple", "সহজ"),
                 Pair("quran-simple-clean", "ক্লিন"),

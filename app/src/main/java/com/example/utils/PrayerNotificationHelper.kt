@@ -24,6 +24,8 @@ object PrayerNotificationHelper {
     const val KEY_NOTIF_ASR = "prayer_notif_asr"
     const val KEY_NOTIF_MAGHRIB = "prayer_notif_maghrib"
     const val KEY_NOTIF_ISHA = "prayer_notif_isha"
+    const val KEY_NOTIF_SAHRI = "prayer_notif_sahri"
+    const val KEY_NOTIF_IFTAR = "prayer_notif_iftar"
     const val KEY_NOTIF_SOUND = "prayer_notif_sound"
 
     private fun getPrefs(context: Context): SharedPreferences {
@@ -51,6 +53,8 @@ object PrayerNotificationHelper {
             PrayerName.ASR -> prefs.getBoolean(KEY_NOTIF_ASR, true)
             PrayerName.MAGHRIB -> prefs.getBoolean(KEY_NOTIF_MAGHRIB, true)
             PrayerName.ISHA -> prefs.getBoolean(KEY_NOTIF_ISHA, true)
+            PrayerName.SAHRI -> prefs.getBoolean(KEY_NOTIF_SAHRI, true)
+            PrayerName.IFTAR -> prefs.getBoolean(KEY_NOTIF_IFTAR, true)
             PrayerName.SUNRISE -> false
         }
     }
@@ -62,6 +66,8 @@ object PrayerNotificationHelper {
             PrayerName.ASR -> KEY_NOTIF_ASR
             PrayerName.MAGHRIB -> KEY_NOTIF_MAGHRIB
             PrayerName.ISHA -> KEY_NOTIF_ISHA
+            PrayerName.SAHRI -> KEY_NOTIF_SAHRI
+            PrayerName.IFTAR -> KEY_NOTIF_IFTAR
             PrayerName.SUNRISE -> return
         }
         getPrefs(context).edit().putBoolean(key, enabled).apply()
@@ -84,6 +90,8 @@ object PrayerNotificationHelper {
             PrayerName.MAGHRIB -> 3004
             PrayerName.ISHA -> 3005
             PrayerName.SUNRISE -> 3006
+            PrayerName.SAHRI -> 3007
+            PrayerName.IFTAR -> 3008
         }
     }
 

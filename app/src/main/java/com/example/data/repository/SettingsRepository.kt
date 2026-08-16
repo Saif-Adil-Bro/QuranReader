@@ -61,6 +61,8 @@ class SettingsRepository(val context: Context) {
     private val MUSHAF_PAGE_HEIGHT_SCALE_KEY = floatPreferencesKey("mushaf_page_height_scale")
     private val DEFAULT_MUSHAF_ID_KEY = stringPreferencesKey("default_mushaf_id")
     private val HIJRI_OFFSET_KEY = intPreferencesKey("hijri_offset")
+    private val SAHRI_OFFSET_KEY = intPreferencesKey("sahri_offset_minutes")
+    private val IFTAR_OFFSET_KEY = intPreferencesKey("iftar_offset_minutes")
 
     val showTranslationFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[SHOW_TRANSLATION_KEY] ?: true }
@@ -101,7 +103,7 @@ class SettingsRepository(val context: Context) {
         .map { preferences -> preferences[BENGALI_FONT_NAME_KEY] ?: "SolaimanLipi" }
 
     val tanzilTextStyleFlow: Flow<String> = context.dataStore.data
-        .map { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] ?: "quran-simple" }
+        .map { preferences -> preferences[TANZIL_TEXT_STYLE_KEY] ?: "default-indopak" }
 
     val arabicLineSpacingFlow: Flow<Float> = context.dataStore.data
         .map { preferences -> (preferences[ARABIC_LINE_SPACING_KEY] ?: 2.0f).coerceAtLeast(2.0f) }
@@ -144,6 +146,12 @@ class SettingsRepository(val context: Context) {
 
     val keepScreenOnFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[KEEP_SCREEN_ON_KEY] ?: false }
+
+    val sahriOffsetFlow: Flow<Int> = context.dataStore.data
+        .map { preferences -> preferences[SAHRI_OFFSET_KEY] ?: -3 }
+
+    val iftarOffsetFlow: Flow<Int> = context.dataStore.data
+        .map { preferences -> preferences[IFTAR_OFFSET_KEY] ?: 0 }
 
     private val _globalHijriOffsetFlow = MutableStateFlow(0)
     val globalHijriOffsetFlow: StateFlow<Int> = _globalHijriOffsetFlow.asStateFlow()
@@ -282,6 +290,14 @@ class SettingsRepository(val context: Context) {
         context.dataStore.edit { preferences -> preferences[KEEP_SCREEN_ON_KEY] = keep }
     }
 
+    suspend fun setSahriOffset(offsetMinutes: Int) {
+        context.dataStore.edit { preferences -> preferences[SAHRI_OFFSET_KEY] = offsetMinutes }
+    }
+
+    suspend fun setIftarOffset(offsetMinutes: Int) {
+        context.dataStore.edit { preferences -> preferences[IFTAR_OFFSET_KEY] = offsetMinutes }
+    }
+
     fun getMushafOffset(mushafId: String): Flow<Int?> {
         return context.dataStore.data.map { preferences ->
             preferences[intPreferencesKey("offset_$mushafId")]
@@ -300,4 +316,14 @@ class SettingsRepository(val context: Context) {
         }
     }
 
+    companion object {
+        @Volatile
+        private var INSTANCE: SettingsRepository? = null
+
+        fun getInstance(context: Context): SettingsRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: SettingsRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
 }

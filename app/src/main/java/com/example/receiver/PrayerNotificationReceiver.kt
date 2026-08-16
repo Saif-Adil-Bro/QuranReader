@@ -72,6 +72,8 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
                 PrayerName.MAGHRIB -> "মাগরিবের ওয়াক্ত শুরু হয়েছে 🕌"
                 PrayerName.ISHA -> "এশার ওয়াক্ত শুরু হয়েছে 🌙"
                 PrayerName.SUNRISE -> "সূর্যোদয় হয়েছে ☀️"
+                PrayerName.SAHRI -> "সাহরির সময় শেষ হয়েছে 🌙"
+                PrayerName.IFTAR -> "ইফতারের সময় হয়েছে ✨"
             }
 
             val prayerDisplayTitle = when (prayerName) {
@@ -81,12 +83,26 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
                 PrayerName.MAGHRIB -> "মাগরিব"
                 PrayerName.ISHA -> "এশা"
                 PrayerName.SUNRISE -> "সূর্যোদয়"
+                PrayerName.SAHRI -> "সাহরি শেষ"
+                PrayerName.IFTAR -> "ইফতার"
             }
 
-            val message = if (prayerTimeFormatted.isNotBlank()) {
-                "$prayerDisplayTitle সালাতের সময়: $prayerTimeFormatted ($districtNameBn)। ওয়াক্তমত সালাত আদায় করার প্রস্তুতি নিন।"
-            } else {
-                "$prayerDisplayTitle সালাতের সময় হয়েছে ($districtNameBn)। ওয়াক্তমত সালাত আদায় করার প্রস্তুতি নিন।"
+            val message = when (prayerName) {
+                PrayerName.SAHRI -> {
+                    if (prayerTimeFormatted.isNotBlank()) "সাহরির শেষ সময়: $prayerTimeFormatted ($districtNameBn)। রোজার নিয়ত করে নিন।"
+                    else "সাহরির শেষ সময় হয়েছে ($districtNameBn)। রোজার নিয়ত করে নিন।"
+                }
+                PrayerName.IFTAR -> {
+                    if (prayerTimeFormatted.isNotBlank()) "ইফতারের সময়: $prayerTimeFormatted ($districtNameBn)। দুআ পাঠ করে ইফতার করুন: আল্লাহুম্মা লাকা সুমতু..."
+                    else "ইফতারের সময় হয়েছে ($districtNameBn)। দুআ পাঠ করে ইফতার করুন।"
+                }
+                else -> {
+                    if (prayerTimeFormatted.isNotBlank()) {
+                        "$prayerDisplayTitle সালাতের সময়: $prayerTimeFormatted ($districtNameBn)। ওয়াক্তমত সালাত আদায় করার প্রস্তুতি নিন।"
+                    } else {
+                        "$prayerDisplayTitle সালাতের সময় হয়েছে ($districtNameBn)। ওয়াক্তমত সালাত আদায় করার প্রস্তুতি নিন।"
+                    }
+                }
             }
 
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -118,23 +134,6 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
                 openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-
-            // Save in local in-app notification database
-            try {
-                val db = com.example.data.local.NotificationDatabase.getDatabase(context)
-                val entity = com.example.data.local.entity.LocalNotificationEntity(
-                    title = title,
-                    content = message,
-                    category = "সালাত রিমাইন্ডার",
-                    author = "নামাজের সময়সূচি",
-                    timestamp = System.currentTimeMillis()
-                )
-                GlobalScope.launch(Dispatchers.IO) {
-                    db.localNotificationDao().insertNotification(entity)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
 
             val iconRes = R.mipmap.ic_launcher
             val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)

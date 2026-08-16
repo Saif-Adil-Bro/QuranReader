@@ -509,7 +509,7 @@ class QuranRepository(
      * Fetches a specific Surah with both Arabic text and Bengali translation,
      * and combines them into a list of CombinedAyah for easy UI consumption.
      */
-    suspend fun getSurahDetailsCombined(surahNumber: Int, arabicEdition: String = "quran-uthmani", audioEditionOverride: String? = null): List<CombinedAyah> {
+    suspend fun getSurahDetailsCombined(surahNumber: Int, arabicEdition: String = "default-indopak", audioEditionOverride: String? = null): List<CombinedAyah> {
         val tafsirIdsSet = settingsRepository.selectedTafsirIdsFlow.first()
         val tafsirIdsStr = tafsirIdsSet.joinToString(",")
         val translationIdsSet = settingsRepository.selectedTranslationIdsFlow.first()
@@ -555,8 +555,8 @@ class QuranRepository(
                 }
             }
 
-            // Fallback to pre-packaged SQLite if cache is missing or incomplete
-            if (cachedList.isNullOrEmpty()) {
+            // Fallback to pre-packaged SQLite (quran.db) if cache is missing, or enforce Indo-Pak text when default-indopak
+            if (cachedList.isNullOrEmpty() || arabicEdition == "default-indopak") {
                 try {
                     val offlineAyahs = offlineDao.getAyahsBySurah(surahNumber)
                     if (offlineAyahs.isNotEmpty()) {
@@ -575,7 +575,15 @@ class QuranRepository(
                                 textUthmaniTajweed = null
                             )
                         }
-                        cachedList = cleanCombinedAyahList(dbList)
+                        if (cachedList.isNullOrEmpty()) {
+                            cachedList = cleanCombinedAyahList(dbList)
+                        } else if (arabicEdition == "default-indopak") {
+                            // Ensure Arabic text is strictly the offline Indo-Pak text from quran.db
+                            cachedList = cachedList.mapIndexed { idx, item ->
+                                val dbAyah = dbList.getOrNull(idx)
+                                if (dbAyah != null && dbAyah.arabicText.isNotBlank()) item.copy(arabicText = dbAyah.arabicText) else item
+                            }
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -991,11 +999,9 @@ class QuranRepository(
         arabicEdition: String,
         fallbackList: List<CombinedAyah>?
     ) {
-        val response = if (arabicEdition == "quran-uthmani") {
-            api.getSurahWithEditions(surahNumber, "quran-uthmani,bn.bengali,$audioEdition")
-        } else {
-            api.getSurahWithEditions(surahNumber, "$arabicEdition,bn.bengali,$audioEdition")
-        }
+        val isDefaultIndoPak = arabicEdition == "default-indopak" || arabicEdition.isBlank()
+        val editionToFetch = if (isDefaultIndoPak) "quran-uthmani" else arabicEdition
+        val response = api.getSurahWithEditions(surahNumber, "$editionToFetch,bn.bengali,$audioEdition")
         
         val quranComResponse = try {
             quranComApi.getSurahVerses(surahNumber, translations = translationIdsStr)
@@ -1007,7 +1013,7 @@ class QuranRepository(
         val quranComTafsirResponse = getCombinedSurahTafsirs(surahNumber, tafsirIdsStr)
 
         if (response.code == 200 && response.data.size >= 2) {
-            val arabicEditionObj = response.data.find { it.edition.identifier == arabicEdition }
+            val arabicEditionObj = response.data.find { it.edition.identifier == editionToFetch }
                 ?: response.data.find { it.edition.language == "ar" && it.edition.format == "text" }
             val bengaliEdition = response.data.find { it.edition.identifier == "bn.bengali" }
             val audioEditionObj = response.data.find { it.edition.identifier == audioEdition }
@@ -1017,18 +1023,31 @@ class QuranRepository(
                 val bengaliAyahs = bengaliEdition.ayahs
                 val audioAyahs = audioEditionObj?.ayahs
 
+                val offlineAyahs = if (isDefaultIndoPak && fallbackList.isNullOrEmpty()) {
+                    try { offlineDao.getAyahsBySurah(surahNumber) } catch (e: Exception) { emptyList() }
+                } else emptyList()
+
                 val combined = arabicAyahs.mapIndexed { index, arabicAyah ->
                     val quranComVerse = quranComResponse?.verses?.find { it.verseNumber == arabicAyah.numberInSurah }
                     val verseKey = "$surahNumber:${arabicAyah.numberInSurah}"
                     val tafsir = buildCombinedTafsirText(quranComTafsirResponse?.tafsirs, verseKey)
                     val cachedWords = fallbackList?.getOrNull(index)?.words ?: emptyList()
+
+                    val finalArabicText = if (isDefaultIndoPak) {
+                        fallbackList?.getOrNull(index)?.arabicText?.takeIf { it.isNotBlank() }
+                            ?: offlineAyahs.getOrNull(index)?.arabicText?.takeIf { it.isNotBlank() }
+                            ?: processArabicText(arabicAyah, surahNumber)
+                    } else {
+                        processArabicText(arabicAyah, surahNumber)
+                    }
+
                     CombinedAyah(
                         number = arabicAyah.number,
                         numberInSurah = arabicAyah.numberInSurah,
                         page = arabicAyah.page,
                         juz = arabicAyah.juz,
                         surahNumber = surahNumber,
-                        arabicText = processArabicText(arabicAyah, surahNumber),
+                        arabicText = finalArabicText,
                         bengaliText = bengaliAyahs.getOrNull(index)?.text ?: "Translation not available",
                         translations = quranComVerse?.translations ?: fallbackList?.getOrNull(index)?.translations ?: emptyList(),
                         tafsirText = tafsir,

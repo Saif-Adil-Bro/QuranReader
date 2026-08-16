@@ -918,17 +918,18 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "পঠন মোড ও সার্চের জন্য তানজিল.নেট স্ক্রিপ্ট অপশন নির্বাচন করুন",
+                        text = "ডিফল্টভাবে অফলাইন ও অনলাইন উভয় অবস্থায় লোকাল quran.db (Indo-Pak) ব্যবহৃত হবে। প্রয়োজনে তানজিল স্ক্রিপ্ট নির্বাচন করতে পারেন।",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
                     val scriptOptions = listOf(
-                        Pair("quran-uthmani", "উসমানী স্ক্রিপ্ট (Uthmani)"),
-                        Pair("quran-simple", "সহজ স্ক্রিপ্ট (Simple)"),
-                        Pair("quran-simple-clean", "হরকত ছাড়া ক্লিন (Simple Clean)"),
-                        Pair("quran-simple-plain", "প্লেইন স্ক্রিপ্ট (Simple Plain)")
+                        Pair("default-indopak", "ডিফল্ট অফলাইন স্ক্রিপ্ট (Indo-Pak / Local DB)"),
+                        Pair("quran-uthmani", "উসমানী স্ক্রিপ্ট (Uthmani - Online)"),
+                        Pair("quran-simple", "সহজ স্ক্রিপ্ট (Simple - Online)"),
+                        Pair("quran-simple-clean", "হরকত ছাড়া ক্লিন (Simple Clean - Online)"),
+                        Pair("quran-simple-plain", "প্লেইন স্ক্রিপ্ট (Simple Plain - Online)")
                     )
 
                     scriptOptions.forEach { (styleId, styleName) ->
