@@ -46,6 +46,19 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
                 return
             }
 
+            // Deduplication Guard: Do not show notification for the same prayer within 30 minutes
+            val prefs = context.getSharedPreferences("prayer_notification_prefs", Context.MODE_PRIVATE)
+            val lastNotifiedKey = "last_notified_${prayerName.name}"
+            val lastNotifiedTime = prefs.getLong(lastNotifiedKey, 0L)
+            val nowTime = System.currentTimeMillis()
+
+            if (nowTime - lastNotifiedTime < 30 * 60 * 1000L) {
+                // Already notified within the last 30 minutes, skip sending again
+                PrayerNotificationHelper.scheduleNextPrayerAlarms(context)
+                return
+            }
+            prefs.edit().putLong(lastNotifiedKey, nowTime).apply()
+
             val prayerTimeFormatted = intent.getStringExtra("prayer_time_formatted") ?: ""
             val districtNameBn = intent.getStringExtra("district_name_bn") ?: "ঢাকা"
 

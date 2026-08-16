@@ -20,13 +20,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import androidx.compose.ui.platform.LocalContext
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import com.example.data.model.DownloadState
 import com.example.data.model.DownloadStatus
 import com.example.data.model.MushafStyle
+import com.example.util.StorageManager
+import java.io.File
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Check
@@ -122,21 +124,38 @@ fun MushafCard(
                     .clip(defaultShape)
             ) {
                 val context = LocalContext.current
-                val cardImageRequest = remember(mushaf.thumbnailUrl) {
+                val storageManager = remember(context) { StorageManager(context) }
+                val localPageFile = remember(mushaf.id, downloadStatus?.state) {
+                    val page2 = storageManager.getPageFile(mushaf.id, 2)
+                    val page1 = storageManager.getPageFile(mushaf.id, 1)
+                    when {
+                        page2.exists() -> page2
+                        page1.exists() -> page1
+                        else -> null
+                    }
+                }
+                val cardImageModel: Any = localPageFile ?: mushaf.thumbnailUrl
+                val cardImageRequest = remember(cardImageModel) {
                     ImageRequest.Builder(context)
-                        .data(mushaf.thumbnailUrl)
+                        .data(cardImageModel)
                         .crossfade(true)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .build()
                 }
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = cardImageRequest,
                     contentDescription = "Page Preview",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(defaultShape)
+                        .clip(defaultShape),
+                    loading = {
+                        OfflineMushafCover(mushaf = mushaf)
+                    },
+                    error = {
+                        OfflineMushafCover(mushaf = mushaf)
+                    }
                 )
                 
                 if (downloadStatus?.state == DownloadState.Downloading) {
@@ -371,19 +390,36 @@ fun MushafBookCoverPreview(
             .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
     ) {
         val context = LocalContext.current
-        val previewImageRequest = remember(mushaf.thumbnailUrl) {
+        val storageManager = remember(context) { StorageManager(context) }
+        val localPageFile = remember(mushaf.id, isDownloaded) {
+            val page2 = storageManager.getPageFile(mushaf.id, 2)
+            val page1 = storageManager.getPageFile(mushaf.id, 1)
+            when {
+                page2.exists() -> page2
+                page1.exists() -> page1
+                else -> null
+            }
+        }
+        val previewImageModel: Any = localPageFile ?: mushaf.thumbnailUrl
+        val previewImageRequest = remember(previewImageModel) {
             ImageRequest.Builder(context)
-                .data(mushaf.thumbnailUrl)
+                .data(previewImageModel)
                 .crossfade(true)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build()
         }
-        AsyncImage(
+        SubcomposeAsyncImage(
             model = previewImageRequest,
             contentDescription = "Page Preview",
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            loading = {
+                OfflineMushafCover(mushaf = mushaf)
+            },
+            error = {
+                OfflineMushafCover(mushaf = mushaf)
+            }
         )
 
         if (isDownloaded) {
@@ -400,6 +436,88 @@ fun MushafBookCoverPreview(
                     color = Color.White,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun OfflineMushafCover(
+    mushaf: MushafStyle,
+    modifier: Modifier = Modifier
+) {
+    val (bgGradients, accentColor) = remember(mushaf.id) {
+        when (mushaf.id) {
+            "imdadia_hafezi" -> listOf(Color(0xFF064E3B), Color(0xFF042F2E), Color(0xFF022C22)) to Color(0xFFF59E0B)
+            "hafizi_15line" -> listOf(Color(0xFF1E3A8A), Color(0xFF1E1B4B), Color(0xFF0F172A)) to Color(0xFF38BDF8)
+            "indopak" -> listOf(Color(0xFF701A75), Color(0xFF4C0519), Color(0xFF2E1065)) to Color(0xFFF472B6)
+            else -> listOf(Color(0xFF064E3B), Color(0xFF042F2E), Color(0xFF022C22)) to Color(0xFF10B981)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(bgGradients)),
+        contentAlignment = Alignment.Center
+    ) {
+        // Gold / Decorative frame border
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+                .border(1.5.dp, accentColor.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                .padding(4.dp)
+                .border(0.8.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+        )
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(10.dp)
+        ) {
+            // Emblem symbol
+            IslamicEmblem(
+                modifier = Modifier.size(40.dp),
+                color = accentColor
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "القرآن الكريم",
+                color = accentColor,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = mushaf.nameBengali,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Surface(
+                color = accentColor.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(0.6.dp, accentColor.copy(alpha = 0.6f))
+            ) {
+                Text(
+                    text = if (mushaf.isPdf) "অফলাইন পিডিএফ" else "১৫ লাইন",
+                    color = accentColor,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }

@@ -145,10 +145,6 @@ fun MushafViewerScreen(
     val surahListState = rememberLazyListState()
     val juzListState = rememberLazyListState()
 
-    BackHandler(enabled = !showSelectorSheet) {
-        showSelectorSheet = true
-    }
-
     val pagerState = rememberPagerState(initialPage = initialPage - 1, pageCount = { totalPages })
     var showOffsetDialog by remember { mutableStateOf(false) }
     var showJumpDialog by remember { mutableStateOf(false) }
@@ -173,21 +169,28 @@ fun MushafViewerScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        text = "পৃষ্ঠা $currentPage", 
+                        text = "পৃষ্ঠা ${com.example.utils.DateUtil.toBengaliNumerals(currentPage)}", 
                         fontWeight = FontWeight.Bold, 
                         fontSize = 18.sp,
                         color = Color(0xFF10B981)
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        showSelectorSheet = true
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack, 
-                            contentDescription = "Back",
-                            tint = if (isDark) Color.White else Color.Black
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack, 
+                                contentDescription = "Back",
+                                tint = if (isDark) Color.White else Color.Black
+                            )
+                        }
+                        IconButton(onClick = { showSettingsSheet = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "পড়ার সেটিংস",
+                                tint = Color(0xFF10B981)
+                            )
+                        }
                     }
                 },
                 actions = {
@@ -201,13 +204,6 @@ fun MushafViewerScreen(
                             tint = Color(0xFF10B981)
                         )
                     }
-                    IconButton(onClick = { showSettingsSheet = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "পড়ার সেটিংস",
-                            tint = Color(0xFF10B981)
-                        )
-                    }
                     IconButton(onClick = { viewModel.toggleBookmark() }) {
                         Icon(
                             imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
@@ -218,7 +214,11 @@ fun MushafViewerScreen(
                     IconButton(onClick = { 
                         showSelectorSheet = true 
                     }) {
-                        Icon(Icons.Default.List, contentDescription = "Surah / Para Selector", tint = Color(0xFF10B981))
+                        Icon(
+                            imageVector = Icons.Default.List, 
+                            contentDescription = "সূচী", 
+                            tint = Color(0xFF10B981)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -335,37 +335,18 @@ fun MushafViewerScreen(
     }
 
     if (showSelectorSheet) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = if (isDark) Color(0xFF1C1C1E) else Color.White
+        ModalBottomSheet(
+            onDismissRequest = { showSelectorSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = if (isDark) Color(0xFF1C1C1E) else Color.White,
+            scrimColor = Color.Black.copy(alpha = 0.5f),
+            dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
-            val focusRequester = remember { FocusRequester() }
-            LaunchedEffect(showSelectorSheet) {
-                if (showSelectorSheet) {
-                    focusRequester.requestFocus()
-                }
-            }
-            BackHandler(enabled = true) {
-                showSelectorSheet = false
-                onBack()
-            }
-            
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .systemBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .focusRequester(focusRequester)
-                    .focusable()
-                    .onPreviewKeyEvent { keyEvent ->
-                        if (keyEvent.key == Key.Back && keyEvent.type == KeyEventType.KeyUp) {
-                            showSelectorSheet = false
-                            onBack()
-                            true
-                        } else {
-                            false
-                        }
-                    }
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.88f)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
                 var selectedParaIndex by remember { mutableStateOf(0) }
                 var pageInput by remember { mutableStateOf("") }
@@ -401,29 +382,32 @@ fun MushafViewerScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp)
-                        .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            showSelectorSheet = false
-                            onBack()
-                        },
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "পরিচিতি",
-                        tint = Color(0xFF10B981),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "দ্রুত নেভিগেশন",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = Color(0xFF10B981)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.List,
+                            contentDescription = "সূচী",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "কুরআন সূচী",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFF10B981)
+                        )
+                    }
+                    IconButton(onClick = { showSelectorSheet = false }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "বন্ধ করুন",
+                            tint = if (isDark) Color.LightGray else Color.Gray
+                        )
+                    }
                 }
 
                 // Jump to page setting row in place of scroll settings
@@ -1569,7 +1553,7 @@ fun OnDemandPageViewer(
     mushafId: String,
     pageNumber: Int,
     pdfPageOffset: Int,
-    pageHeightScale: Float = 1.0f,
+    pageHeightScale: Float = 1.2f,
     isDark: Boolean,
     viewModel: MushafViewerViewModel
 ) {

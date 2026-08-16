@@ -121,10 +121,7 @@ fun getArabicFont(name: String): FontFamily {
 }
 
 fun getArabicFontForTajweed(name: String): FontFamily {
-    return when (name) {
-        "PDMS Saleem", "মলভি এ-এম", "সেলিম", "Noorehira", "নুরে হুদা", "নূরে হেরা" -> meQuranFont
-        else -> getArabicFont(name)
-    }
+    return getArabicFont(name)
 }
 
 fun getTypographyForBengaliFont(bengaliFontFamily: FontFamily): Typography {

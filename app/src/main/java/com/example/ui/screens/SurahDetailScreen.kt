@@ -1268,16 +1268,6 @@ fun AyahCard(
                         ayahNumberInSurah = ayah.numberInSurah,
                         modifier = Modifier.fillMaxWidth()
                     )
-                } else if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
-                    com.example.ui.components.TajweedText(
-                        rawTajweedText = ayah.textUthmaniTajweed ?: "",
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = arabicFontSize.sp,
-                        lineHeight = (arabicFontSize * arabicLineSpacing).sp,
-                        fontFamily = com.example.ui.theme.getArabicFontForTajweed(arabicFontName),
-                        textAlign = TextAlign.Right
-                    )
                 } else {
                     AyahInlineText(
                         arabicText = ayah.arabicText,
@@ -1286,7 +1276,9 @@ fun AyahCard(
                         fontFamily = arabicFont,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.fillMaxWidth(),
-                        lineSpacing = arabicLineSpacing
+                        lineSpacing = arabicLineSpacing,
+                        arabicFontName = arabicFontName,
+                        showTajweed = showTajweed
                     )
                 }
                                 if (showTranslation) {
@@ -1344,27 +1336,17 @@ fun AyahCard(
                     }
                 }
             } else if (viewMode == ViewMode.TAFSIR) {
-                if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
-                    com.example.ui.components.TajweedText(
-                        rawTajweedText = ayah.textUthmaniTajweed ?: "",
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = arabicFontSize.sp,
-                        lineHeight = (arabicFontSize * arabicLineSpacing).sp,
-                        fontFamily = com.example.ui.theme.getArabicFontForTajweed(arabicFontName),
-                        textAlign = TextAlign.Right
-                    )
-                } else {
-                    AyahInlineText(
-                        arabicText = ayah.arabicText,
-                        ayahNumber = ayah.numberInSurah,
-                        fontSize = arabicFontSize.toFloat(),
-                        fontFamily = arabicFont,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.fillMaxWidth(),
-                        lineSpacing = arabicLineSpacing
-                    )
-                }
+                AyahInlineText(
+                    arabicText = ayah.arabicText,
+                    ayahNumber = ayah.numberInSurah,
+                    fontSize = arabicFontSize.toFloat(),
+                    fontFamily = arabicFont,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth(),
+                    lineSpacing = arabicLineSpacing,
+                    arabicFontName = arabicFontName,
+                    showTajweed = showTajweed
+                )
                 if (showTranslation) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -2507,11 +2489,23 @@ fun AyahInlineText(
     color: Color,
     modifier: Modifier = Modifier,
     lineSpacing: Float = 2.0f,
-    arabicFontName: String = "Me Quran"
+    arabicFontName: String = "Me Quran",
+    showTajweed: Boolean = false
 ) {
     val inlineContentId = "ayah_circle_$ayahNumber"
     val annotatedText = androidx.compose.ui.text.buildAnnotatedString {
-        appendStyledWaqfText(arabicText, fontSize, showWaqfSigns = true, arabicFontName = arabicFontName)
+        if (showTajweed) {
+            val tajweedParsed = com.example.utils.IndoPakTajweedParser.parseIndoPakTajweed(
+                text = arabicText,
+                defaultColor = color,
+                fontSize = fontSize,
+                showWaqfSigns = true,
+                arabicFontName = arabicFontName
+            )
+            append(tajweedParsed)
+        } else {
+            appendStyledWaqfText(arabicText, fontSize, showWaqfSigns = true, arabicFontName = arabicFontName)
+        }
         append(" ")
         appendInlineContent(inlineContentId, "[$ayahNumber]")
     }

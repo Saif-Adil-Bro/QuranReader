@@ -279,6 +279,11 @@ fun AppNavGraph(
                     navController.navigate("settings?highlightHijri=true") {
                         launchSingleTop = true
                     }
+                },
+                onNavigateToPrayerTimes = {
+                    navController.navigate("settings?subScreen=prayer_times") {
+                        launchSingleTop = true
+                    }
                 }
             )
         }

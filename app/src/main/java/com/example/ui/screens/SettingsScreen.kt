@@ -147,6 +147,7 @@ fun SettingsScreen(
             title = "দুআ ও ইবাদত",
             icon = Icons.Default.AutoAwesome,
             items = listOf(
+                MenuItem("prayer_times", "নামাজের সময়সূচি", Icons.Default.AccessTime, Color(0xFF059669)),
                 MenuItem("dua", "কুরআনিক দুআ", Icons.Default.Schedule, Color(0xFF8B5CF6)),
                 MenuItem("morning_evening_dua", "সকাল সন্ধ্যার দুআ", Icons.Default.WbSunny, Color(0xFFF59E0B)),
                 MenuItem("manzil", "মানযিল", Icons.Default.AutoAwesome, Color(0xFF10B981)),
@@ -961,7 +962,26 @@ fun SettingsScreen(
     }
     
     // --- DIALOGS AND BOTTOM SHEETS ---
-    if (activeDialog != null) {
+    if (activeDialog == "prayer_times") {
+        val prayerRepo = remember(context) { com.example.data.repository.PrayerTimesRepository.getInstance(context) }
+        val prayerSchedule by prayerRepo.todaySchedule.collectAsState()
+        val isHanafiAsr by prayerRepo.isHanafi.collectAsState()
+
+        com.example.ui.components.PrayerTimesDetailSheet(
+            schedule = prayerSchedule,
+            isHanafi = isHanafiAsr,
+            hijriOffset = combinedHijriOffset,
+            onDistrictSelected = { prayerRepo.setDistrict(it) },
+            onHanafiChanged = { prayerRepo.setHanafi(it) },
+            onDismiss = {
+                if (initialSubScreen != null) {
+                    onNavigateBack()
+                } else {
+                    activeDialog = null
+                }
+            }
+        )
+    } else if (activeDialog != null) {
         MenuDetailDialog(
             type = activeDialog!!,
             viewModel = viewModel,

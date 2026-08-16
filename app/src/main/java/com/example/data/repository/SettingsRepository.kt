@@ -134,7 +134,7 @@ class SettingsRepository(val context: Context) {
         .map { preferences -> preferences[MUSHAF_SCROLL_DIRECTION_KEY] ?: "Horizontal" }
 
     val mushafPageHeightScaleFlow: Flow<Float> = context.dataStore.data
-        .map { preferences -> preferences[MUSHAF_PAGE_HEIGHT_SCALE_KEY] ?: 1.0f }
+        .map { preferences -> preferences[MUSHAF_PAGE_HEIGHT_SCALE_KEY] ?: 1.2f }
 
     val defaultMushafIdFlow: Flow<String> = context.dataStore.data
         .map { preferences -> preferences[DEFAULT_MUSHAF_ID_KEY] ?: "imdadia_hafezi" }

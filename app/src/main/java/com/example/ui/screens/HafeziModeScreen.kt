@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import com.example.ui.components.AyahOptionsBottomSheet
 import com.example.ui.components.quranPageSlideTransition
 
 import androidx.compose.foundation.BorderStroke
@@ -7,6 +8,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.withStyle
@@ -159,6 +162,7 @@ fun HafeziModeScreen(
     
     var showSettings by remember { mutableStateOf(false) }
     var showJuzList by remember { mutableStateOf(false) }
+    var selectedAyahForOptions by remember { mutableStateOf<CombinedAyah?>(null) }
     var hafeziSelectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val hafeziJuzListState = rememberLazyListState()
     val hafeziSurahListState = rememberLazyListState()
@@ -320,7 +324,8 @@ fun HafeziModeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 600.dp),
-                        onAyahClick = { viewModel.playAyah(it) }
+                        onAyahClick = { viewModel.playAyah(it) },
+                        onAyahLongClick = { selectedAyahForOptions = it }
                     )
                 }
             }
@@ -349,7 +354,8 @@ fun HafeziModeScreen(
                         arabicLineSpacing = arabicLineSpacing,
                         showTajweed = showTajweed,
                         isVerticalScrollEnabled = true,
-                        onAyahClick = { viewModel.playAyah(it) }
+                        onAyahClick = { viewModel.playAyah(it) },
+                        onAyahLongClick = { selectedAyahForOptions = it }
                     )
                 }
             }
@@ -804,6 +810,27 @@ fun HafeziModeScreen(
                 containerColor = containerColor
             )
         }
+
+        // Ayah Options Bottom Sheet (Translation, Copy, Share, Tafsir)
+        if (selectedAyahForOptions != null) {
+            val ayahForOptions = selectedAyahForOptions!!
+            AyahOptionsBottomSheet(
+                ayah = ayahForOptions,
+                isPlaying = isPlaying && currentPlayingAyahNumber == ayahForOptions.number,
+                onPlayToggle = { ayah ->
+                    if (isPlaying && currentPlayingAyahNumber == ayah.number) {
+                        viewModel.pauseAudio()
+                    } else {
+                        viewModel.playAyah(ayah.number)
+                    }
+                },
+                onDismiss = { selectedAyahForOptions = null },
+                theme = theme,
+                showTajweed = showTajweed,
+                arabicFontName = arabicFontName,
+                arabicFontSize = arabicFontSize
+            )
+        }
     }
 }
 
@@ -819,7 +846,8 @@ fun HafeziPageContent(
     arabicLineSpacing: Float = 2.0f,
     showTajweed: Boolean = false,
     isVerticalScrollEnabled: Boolean = true,
-    onAyahClick: (Int) -> Unit
+    onAyahClick: (Int) -> Unit,
+    onAyahLongClick: (CombinedAyah) -> Unit = {}
 ) {
     val arabicFont = if (showTajweed) com.example.ui.theme.getArabicFontForTajweed(arabicFontName) else getArabicFont(arabicFontName)
     val firstAyah = ayahs.firstOrNull()
@@ -958,43 +986,34 @@ fun HafeziPageContent(
                                         "بسم الله الرحمن الرحيم"
                                     )
 
-                                    if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
-                                        val textToParse = if (showWaqfSigns) ayah.textUthmaniTajweed.trim() else ayah.textUthmaniTajweed.trim().removeWaqfSigns()
-                                        val tajweedParsed = com.example.ui.components.parseTajweedText(textToParse, when (theme) {
+                                    if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
+                                        for (prefix in prefixes) {
+                                            if (textToDisplay.startsWith(prefix)) {
+                                                textToDisplay = textToDisplay.removePrefix(prefix).trim()
+                                                break
+                                            }
+                                        }
+                                    }
+
+                                    if (showTajweed) {
+                                        val defaultTextColor = when (theme) {
                                             "Dark" -> Color(0xFFE0E0E0)
                                             "Sepia" -> Color(0xFF4E342E)
                                             else -> Color(0xFF1A1A1A)
-                                        })
-                                        
-                                        var finalParsed = tajweedParsed
-                                        if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
-                                            for (prefix in prefixes) {
-                                                if (finalParsed.text.startsWith(prefix)) {
-                                                    val stripLen = prefix.length
-                                                    finalParsed = finalParsed.subSequence(stripLen, finalParsed.length)
-                                                    // Also remove leading spaces if any
-                                                    while(finalParsed.text.isNotEmpty() && finalParsed.text[0] == ' ') {
-                                                        finalParsed = finalParsed.subSequence(1, finalParsed.length)
-                                                    }
-                                                    break
-                                                }
-                                            }
                                         }
-                                        append(finalParsed)
-                                        if (!finalParsed.text.contains("﴿") && !finalParsed.text.contains("۝")) {
-                                            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
-                                                append(" ﴿${ayah.numberInSurah.toArabicNumerals()}﴾ ")
-                                            }
+                                        val tajweedParsed = com.example.utils.IndoPakTajweedParser.parseIndoPakTajweed(
+                                            text = textToDisplay,
+                                            defaultColor = defaultTextColor,
+                                            fontSize = arabicFontSize,
+                                            showWaqfSigns = showWaqfSigns,
+                                            arabicFontName = arabicFontName
+                                        )
+                                        append(tajweedParsed)
+                                        val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
+                                        withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
+                                            append(" ﴿$numInSurahStr﴾ ")
                                         }
                                     } else {
-                                        if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
-                                            for (prefix in prefixes) {
-                                                if (textToDisplay.startsWith(prefix)) {
-                                                    textToDisplay = textToDisplay.removePrefix(prefix).trim()
-                                                    break
-                                                }
-                                            }
-                                        }
                                         appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns, arabicFontName)
                                         val numInSurahStr = ayah.numberInSurah.toArabicNumerals()
                                         withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
@@ -1033,17 +1052,9 @@ fun HafeziPageContent(
 
                         var textLayoutResult by remember { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
 
-                        ClickableText(
+                        Text(
                             text = annotatedString,
                             onTextLayout = { textLayoutResult = it },
-                            onClick = { offset ->
-                                annotatedString.getStringAnnotations(tag = "AYAH_NUMBER", start = offset, end = offset)
-                                    .firstOrNull()?.let { annotation ->
-                                        annotation.item.toIntOrNull()?.let { ayahNumber ->
-                                            onAyahClick(ayahNumber)
-                                        }
-                                    }
-                            },
                             style = androidx.compose.ui.text.TextStyle(
                                 fontSize = arabicFontSize.sp,
                                 lineHeight = (arabicFontSize * arabicLineSpacing).sp,
@@ -1058,6 +1069,35 @@ fun HafeziPageContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 4.dp)
+                                .pointerInput(annotatedString) {
+                                    detectTapGestures(
+                                        onTap = { offset ->
+                                            textLayoutResult?.let { currentLayout ->
+                                                val charIndex = currentLayout.getOffsetForPosition(offset)
+                                                annotatedString.getStringAnnotations(tag = "AYAH_NUMBER", start = charIndex, end = charIndex)
+                                                    .firstOrNull()?.let { annotation ->
+                                                        annotation.item.toIntOrNull()?.let { ayahNumber ->
+                                                            onAyahClick(ayahNumber)
+                                                        }
+                                                    }
+                                            }
+                                        },
+                                        onLongPress = { offset ->
+                                            textLayoutResult?.let { currentLayout ->
+                                                val charIndex = currentLayout.getOffsetForPosition(offset)
+                                                annotatedString.getStringAnnotations(tag = "AYAH_NUMBER", start = charIndex, end = charIndex)
+                                                    .firstOrNull()?.let { annotation ->
+                                                        annotation.item.toIntOrNull()?.let { ayahNumber ->
+                                                            val targetAyah = ayahs.find { it.number == ayahNumber }
+                                                            if (targetAyah != null) {
+                                                                onAyahLongClick(targetAyah)
+                                                            }
+                                                        }
+                                                    }
+                                            }
+                                        }
+                                    )
+                                }
                                 .drawBehind {
                                     textLayoutResult?.let { layoutResult ->
                                         val lineCount = layoutResult.lineCount
@@ -1233,7 +1273,8 @@ fun HafeziPageLoader(
     showTajweed: Boolean,
     isVerticalScrollEnabled: Boolean = true,
     modifier: Modifier = Modifier,
-    onAyahClick: (Int) -> Unit
+    onAyahClick: (Int) -> Unit,
+    onAyahLongClick: (CombinedAyah) -> Unit = {}
 ) {
     var pageData by remember(pageNumber) { mutableStateOf<List<CombinedAyah>?>(null) }
     var isLoading by remember(pageNumber) { mutableStateOf(true) }
@@ -1300,7 +1341,8 @@ fun HafeziPageLoader(
                     arabicLineSpacing = arabicLineSpacing,
                     showTajweed = showTajweed,
                     isVerticalScrollEnabled = isVerticalScrollEnabled,
-                    onAyahClick = onAyahClick
+                    onAyahClick = onAyahClick,
+                    onAyahLongClick = onAyahLongClick
                 )
             }
         }

@@ -35,7 +35,7 @@ import java.io.File
 fun PageViewer(
     pagePath: String?,
     isDark: Boolean = false,
-    pageHeightScale: Float = 1.0f,
+    pageHeightScale: Float = 1.2f,
     onZoomChanged: (Float) -> Unit = {},
     onTap: (() -> Unit)? = null
 ) {

@@ -204,7 +204,7 @@ class MainActivity : ComponentActivity() {
                       targetIntent.removeExtra("dua_id")
                       currentIntentState.value = null
                   } else if (navigateTo == "prayer_times" || navigateTo == "planner" || navigateTo == "manzil" || navigateTo == "subjectwise" || navigateTo == "calendar") {
-                      val sub = if (navigateTo == "prayer_times") "calendar" else navigateTo
+                      val sub = navigateTo
                       if (currentRoute != "notifications") {
                           navController.navigate("notifications") { launchSingleTop = true }
                       }

@@ -284,7 +284,7 @@ object PrayerTimesCalculator {
         )
 
         // Determine current & next prayer
-        val isToday = (date == LocalDate.now())
+        val isToday = (date == LocalDate.now(zoneId))
         var currentPrayer: SinglePrayerTime? = null
         var nextPrayer: SinglePrayerTime? = null
         var remainingMillis = 0L
@@ -490,7 +490,7 @@ object PrayerTimesCalculator {
         if (hour > 12) hour -= 12
         if (hour == 0) hour = 12
 
-        val hourStr = toBengaliDigits(hour)
+        val hourStr = toBengaliDigits(hour).padStart(2, '০')
         val minuteStr = toBengaliDigits(minute).padStart(2, '০')
         return "$hourStr:$minuteStr"
     }
@@ -508,7 +508,7 @@ object PrayerTimesCalculator {
         if (hour > 12) hour -= 12
         if (hour == 0) hour = 12
 
-        val hourStr = toBengaliDigits(hour)
+        val hourStr = toBengaliDigits(hour).padStart(2, '০')
         val minuteStr = toBengaliDigits(minute).padStart(2, '০')
 
         return "$hourStr:$minuteStr $amPmBn"

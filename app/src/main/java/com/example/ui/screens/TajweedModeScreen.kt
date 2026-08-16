@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import com.example.ui.components.AyahOptionsBottomSheet
 import com.example.ui.components.quranPageSlideTransition
 
 import androidx.compose.foundation.*
@@ -154,6 +155,7 @@ fun TajweedModeScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showTajweedInfo by remember { mutableStateOf(false) }
     var showJuzList by remember { mutableStateOf(false) }
+    var selectedAyahForOptions by remember { mutableStateOf<CombinedAyah?>(null) }
     var tajweedSelectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tajweedJuzListState = rememberLazyListState()
     val tajweedSurahListState = rememberLazyListState()
@@ -344,7 +346,8 @@ fun TajweedModeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 600.dp),
-                        onAyahClick = { viewModel.playAyah(it) }
+                        onAyahClick = { viewModel.playAyah(it) },
+                        onAyahLongClick = { selectedAyahForOptions = it }
                     )
                 }
             }
@@ -373,7 +376,8 @@ fun TajweedModeScreen(
                         arabicLineSpacing = arabicLineSpacing,
                         showTajweed = showTajweed,
                         isVerticalScrollEnabled = true,
-                        onAyahClick = { viewModel.playAyah(it) }
+                        onAyahClick = { viewModel.playAyah(it) },
+                        onAyahLongClick = { selectedAyahForOptions = it }
                     )
                 }
             }
@@ -935,6 +939,27 @@ fun TajweedModeScreen(
                 }
             }
         }
+
+        // Ayah Options Bottom Sheet (Translation, Copy, Share, Tafsir)
+        if (selectedAyahForOptions != null) {
+            val ayahForOptions = selectedAyahForOptions!!
+            AyahOptionsBottomSheet(
+                ayah = ayahForOptions,
+                isPlaying = isPlaying && currentPlayingAyahNumber == ayahForOptions.number,
+                onPlayToggle = { ayah ->
+                    if (isPlaying && currentPlayingAyahNumber == ayah.number) {
+                        viewModel.pauseAudio()
+                    } else {
+                        viewModel.playAyah(ayah.number)
+                    }
+                },
+                onDismiss = { selectedAyahForOptions = null },
+                theme = theme,
+                showTajweed = showTajweed,
+                arabicFontName = arabicFontName,
+                arabicFontSize = arabicFontSize
+            )
+        }
     }
 }
 
@@ -950,7 +975,8 @@ fun TajweedPageContent(
     arabicLineSpacing: Float = 2.0f,
     showTajweed: Boolean = true, // Defaults to true for Tajweed mode
     isVerticalScrollEnabled: Boolean = true,
-    onAyahClick: (Int) -> Unit
+    onAyahClick: (Int) -> Unit,
+    onAyahLongClick: (CombinedAyah) -> Unit = {}
 ) {
     val arabicFont = if (showTajweed) com.example.ui.theme.getArabicFontForTajweed(arabicFontName) else getArabicFont(arabicFontName)
     val firstAyah = ayahs.firstOrNull()
@@ -1095,46 +1121,34 @@ fun TajweedPageContent(
                                         "بسم الله الرحمن الرحيم"
                                     )
 
-                                    // Render Tajweed or standard text
-                                    if (showTajweed && !ayah.textUthmaniTajweed.isNullOrEmpty()) {
-                                        val textToParse = if (showWaqfSigns) ayah.textUthmaniTajweed.trim() else ayah.textUthmaniTajweed.trim().removeWaqfSigns()
-                                        val tajweedParsed = com.example.ui.components.parseTajweedText(
-                                            textToParse, 
-                                            when (theme) {
-                                                "Dark" -> Color(0xFFE0E0E0)
-                                                "Sepia" -> Color(0xFF4E342E)
-                                                else -> Color(0xFF1A1A1A)
-                                            }
-                                        )
-                                        
-                                        var finalParsed = tajweedParsed
-                                        if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
-                                            for (prefix in prefixes) {
-                                                if (finalParsed.text.startsWith(prefix)) {
-                                                    val stripLen = prefix.length
-                                                    finalParsed = finalParsed.subSequence(stripLen, finalParsed.length)
-                                                    while (finalParsed.text.isNotEmpty() && finalParsed.text[0] == ' ') {
-                                                        finalParsed = finalParsed.subSequence(1, finalParsed.length)
-                                                    }
-                                                    break
-                                                }
+                                    if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
+                                        for (prefix in prefixes) {
+                                            if (textToDisplay.startsWith(prefix)) {
+                                                textToDisplay = textToDisplay.removePrefix(prefix).trim()
+                                                break
                                             }
                                         }
-                                        append(finalParsed)
-                                        if (!finalParsed.text.contains("﴿") && !finalParsed.text.contains("۝")) {
-                                            withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
-                                                append(" ﴿${ayah.numberInSurah.toArabicNumerals()}﴾ ")
-                                            }
+                                    }
+
+                                    // Render Tajweed or standard text on native Indo-Pak script
+                                    if (showTajweed) {
+                                        val defaultTextColor = when (theme) {
+                                            "Dark" -> Color(0xFFE0E0E0)
+                                            "Sepia" -> Color(0xFF4E342E)
+                                            else -> Color(0xFF1A1A1A)
+                                        }
+                                        val tajweedParsed = com.example.utils.IndoPakTajweedParser.parseIndoPakTajweed(
+                                            text = textToDisplay,
+                                            defaultColor = defaultTextColor,
+                                            fontSize = arabicFontSize,
+                                            showWaqfSigns = showWaqfSigns,
+                                            arabicFontName = arabicFontName
+                                        )
+                                        append(tajweedParsed)
+                                        withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
+                                            append(" ﴿${ayah.numberInSurah.toArabicNumerals()}﴾ ")
                                         }
                                     } else {
-                                        if (ayah.numberInSurah == 1 && ayah.surahNumber != 1 && ayah.surahNumber != 9) {
-                                            for (prefix in prefixes) {
-                                                if (textToDisplay.startsWith(prefix)) {
-                                                    textToDisplay = textToDisplay.removePrefix(prefix).trim()
-                                                    break
-                                                }
-                                            }
-                                        }
                                         appendStyledWaqfText(textToDisplay, arabicFontSize, showWaqfSigns, arabicFontName)
                                         withStyle(androidx.compose.ui.text.SpanStyle(fontFamily = com.example.ui.theme.amiriFont)) {
                                             append(" ﴿${ayah.numberInSurah.toArabicNumerals()}﴾ ")
@@ -1200,6 +1214,20 @@ fun TajweedPageContent(
                                                     .firstOrNull()?.let { annotation ->
                                                         annotation.item.toIntOrNull()?.let { ayahNumber ->
                                                             onAyahClick(ayahNumber)
+                                                        }
+                                                    }
+                                            }
+                                        },
+                                        onLongPress = { offset ->
+                                            textLayoutResult?.let { currentLayout ->
+                                                val charIndex = currentLayout.getOffsetForPosition(offset)
+                                                annotatedString.getStringAnnotations(tag = "AYAH_NUMBER", start = charIndex, end = charIndex)
+                                                    .firstOrNull()?.let { annotation ->
+                                                        annotation.item.toIntOrNull()?.let { ayahNumber ->
+                                                            val targetAyah = ayahs.find { it.number == ayahNumber }
+                                                            if (targetAyah != null) {
+                                                                onAyahLongClick(targetAyah)
+                                                            }
                                                         }
                                                     }
                                             }
@@ -1377,7 +1405,8 @@ fun TajweedPageLoader(
     showTajweed: Boolean,
     isVerticalScrollEnabled: Boolean = true,
     modifier: Modifier = Modifier,
-    onAyahClick: (Int) -> Unit
+    onAyahClick: (Int) -> Unit,
+    onAyahLongClick: (CombinedAyah) -> Unit = {}
 ) {
     var pageData by remember(pageNumber) { mutableStateOf<List<CombinedAyah>?>(null) }
     var isLoading by remember(pageNumber) { mutableStateOf(true) }
@@ -1444,7 +1473,8 @@ fun TajweedPageLoader(
                     arabicLineSpacing = arabicLineSpacing,
                     showTajweed = showTajweed,
                     isVerticalScrollEnabled = isVerticalScrollEnabled,
-                    onAyahClick = onAyahClick
+                    onAyahClick = onAyahClick,
+                    onAyahLongClick = onAyahLongClick
                 )
             }
         }

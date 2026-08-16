@@ -101,7 +101,13 @@ object PrayerNotificationHelper {
         val district = prayerRepo.selectedDistrict.value
         val isHanafi = prayerRepo.isHanafi.value
 
-        val today = LocalDate.now()
+        val zoneId = try {
+            ZoneId.of(district.timeZoneId)
+        } catch (e: Exception) {
+            ZoneId.of("Asia/Dhaka")
+        }
+
+        val today = LocalDate.now(zoneId)
         val tomorrow = today.plusDays(1)
 
         val scheduleToday = PrayerTimesCalculator.calculatePrayerSchedule(today, district, isHanafi)
@@ -126,20 +132,24 @@ object PrayerNotificationHelper {
             val todayPrayer = scheduleToday.prayers.find { it.name == prayerName }
             val tomorrowPrayer = scheduleTomorrow.prayers.find { it.name == prayerName }
 
-            // Find the closest upcoming trigger timestamp
+            // Find the closest upcoming trigger timestamp that is strictly in the future
             val targetPrayer: SinglePrayerTime? = when {
                 todayPrayer != null && todayPrayer.timestampMillis > nowMillis + 5000L -> todayPrayer
-                tomorrowPrayer != null -> tomorrowPrayer
-                else -> null
+                tomorrowPrayer != null && tomorrowPrayer.timestampMillis > nowMillis + 5000L -> tomorrowPrayer
+                else -> {
+                    val dayAfterTomorrow = today.plusDays(2)
+                    val scheduleDayAfter = PrayerTimesCalculator.calculatePrayerSchedule(dayAfterTomorrow, district, isHanafi)
+                    scheduleDayAfter.prayers.find { it.name == prayerName }
+                }
             }
 
-            if (targetPrayer != null) {
+            if (targetPrayer != null && targetPrayer.timestampMillis > nowMillis + 3000L) {
                 scheduleAlarmForPrayer(context, alarmManager, targetPrayer, district)
             }
         }
 
         // Schedule midnight schedule refresh alarm
-        scheduleDailyMidnightRefresher(context, alarmManager)
+        scheduleDailyMidnightRefresher(context, alarmManager, zoneId)
     }
 
     private fun scheduleAlarmForPrayer(
@@ -148,6 +158,11 @@ object PrayerNotificationHelper {
         prayer: SinglePrayerTime,
         district: DistrictInfo
     ) {
+        val nowMillis = System.currentTimeMillis()
+        if (prayer.timestampMillis <= nowMillis + 3000L) {
+            return
+        }
+
         val requestCode = getRequestCodeForPrayer(prayer.name)
         val intent = Intent(context, PrayerNotificationReceiver::class.java).apply {
             action = "com.example.ACTION_PRAYER_NOTIFICATION"
@@ -191,7 +206,7 @@ object PrayerNotificationHelper {
         }
     }
 
-    private fun scheduleDailyMidnightRefresher(context: Context, alarmManager: AlarmManager) {
+    private fun scheduleDailyMidnightRefresher(context: Context, alarmManager: AlarmManager, zoneId: ZoneId) {
         val midnightIntent = Intent(context, PrayerNotificationReceiver::class.java).apply {
             action = "com.example.ACTION_REFRESH_PRAYER_ALARMS"
         }
@@ -202,9 +217,12 @@ object PrayerNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val tomorrowMidnight = LocalDateTime.now().plusDays(1).withHour(0).withMinute(5).withSecond(0)
-        val zoneId = ZoneId.systemDefault()
+        val tomorrowMidnight = LocalDate.now(zoneId).plusDays(1).atStartOfDay().plusMinutes(5)
         val triggerMillis = tomorrowMidnight.atZone(zoneId).toInstant().toEpochMilli()
+
+        if (triggerMillis <= System.currentTimeMillis()) {
+            return
+        }
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

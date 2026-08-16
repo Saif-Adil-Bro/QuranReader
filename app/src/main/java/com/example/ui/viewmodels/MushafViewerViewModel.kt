@@ -60,7 +60,7 @@ class MushafViewerViewModel(
     val pageHeightScale: StateFlow<Float> = settingsRepository.mushafPageHeightScaleFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Lazily,
-        initialValue = 1.0f
+        initialValue = 1.2f
     )
 
     private val _currentPagePath = MutableStateFlow<String?>(null)

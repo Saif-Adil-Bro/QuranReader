@@ -36,7 +36,8 @@ fun NotificationScreen(
     onNavigateToSubjectwise: (() -> Unit)? = null,
     onNavigateToCalendar: (() -> Unit)? = null,
     onNavigateToDhikrReminder: ((com.example.utils.DhikrType) -> Unit)? = null,
-    onNavigateToHijriAdjustment: (() -> Unit)? = null
+    onNavigateToHijriAdjustment: (() -> Unit)? = null,
+    onNavigateToPrayerTimes: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val blogPosts by viewModel.rawBlogPosts.collectAsState(initial = emptyList())
@@ -378,7 +379,16 @@ fun NotificationScreen(
                                                 val isIstighfarTarget = post.author == "ইস্তেগফার রিমাইন্ডার" || post.title.contains("ইস্তেগফার")
                                                 val isHijriAdjustmentTarget = post.author == "হিজরি তারিখ সমন্বয়" || post.title.contains("হিজরি") || post.content.contains("হিজরি তারিখ সমন্বয়")
                                                 
-                                                if (isHijriAdjustmentTarget && onNavigateToHijriAdjustment != null) {
+                                                val isPrayerTimesTarget = post.author == "নামাজের সময়সূচি" || 
+                                                                          post.category == "সালাত রিমাইন্ডার" || 
+                                                                          post.author == "সালাত রিমাইন্ডার" ||
+                                                                          post.title.contains("ওয়াক্ত") || 
+                                                                          post.title.contains("সালাত") || 
+                                                                          post.title.contains("নামাজ")
+                                                
+                                                if (isPrayerTimesTarget && onNavigateToPrayerTimes != null) {
+                                                    onNavigateToPrayerTimes()
+                                                } else if (isHijriAdjustmentTarget && onNavigateToHijriAdjustment != null) {
                                                     onNavigateToHijriAdjustment()
                                                 } else if (isDuaTarget && onNavigateToDua != null) {
                                                     var duaId: Int? = null

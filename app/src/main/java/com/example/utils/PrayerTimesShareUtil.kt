@@ -111,7 +111,7 @@ object PrayerTimesShareUtil {
         hijriOffset: Int = 0
     ): Bitmap {
         val width = 1080
-        val height = 1200
+        val height = 1240
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
@@ -248,23 +248,23 @@ object PrayerTimesShareUtil {
 
         val appNamePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#0F172A")
-            textSize = 21f
+            textSize = 22f
             typeface = boldFont
             textAlign = Paint.Align.RIGHT
         }
-        canvas.drawText("Quran Reader", iconRight, iconTop + appIconSize + 22f, appNamePaint)
+        canvas.drawText("Quran Reader", iconRight, iconTop + appIconSize + 24f, appNamePaint)
 
-        // 4. Main Floating White Card in Center (Slightly more compact with clean padding)
-        val cardLeft = 70f
-        val cardTop = 118f
-        val cardRight = width - 70f
-        val cardBottom = height - 94f
+        // 4. Main Floating White Card in Center
+        val cardLeft = 66f
+        val cardTop = 114f
+        val cardRight = width - 66f
+        val cardBottom = height - 88f
         val cardRect = RectF(cardLeft, cardTop, cardRight, cardBottom)
 
         // Card Shadow & Body
         val cardShadowPaint = Paint().apply {
             isAntiAlias = true
-            color = Color.argb(20, 0, 0, 0)
+            color = Color.argb(22, 0, 0, 0)
             style = Paint.Style.FILL
             maskFilter = BlurMaskFilter(16f, BlurMaskFilter.Blur.NORMAL)
         }
@@ -272,7 +272,7 @@ object PrayerTimesShareUtil {
 
         val mainCardBgPaint = Paint().apply {
             isAntiAlias = true
-            color = Color.argb(250, 255, 255, 255)
+            color = Color.argb(252, 255, 255, 255)
             style = Paint.Style.FILL
         }
         val mainCardBorderPaint = Paint().apply {
@@ -315,20 +315,20 @@ object PrayerTimesShareUtil {
         // 6. Header Inside Card: Weekday, 3 Dates & Location
         val weekdayPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#114D38")
-            textSize = 42f
+            textSize = 44f
             typeface = boldFont
             textAlign = Paint.Align.LEFT
         }
-        canvas.drawText(weekdayStr, cardLeft + 30f, cardTop + 50f, weekdayPaint)
+        canvas.drawText(weekdayStr, cardLeft + 30f, cardTop + 52f, weekdayPaint)
 
         val datesSubtitlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#475569")
-            textSize = 19f
+            textSize = 20.5f
             typeface = regularFont
             textAlign = Paint.Align.LEFT
         }
         val datesCombinedStr = "$engDateStr  •  $hijriDateStr হিজরী  •  $banglaDateStr"
-        canvas.drawText(datesCombinedStr, cardLeft + 30f, cardTop + 82f, datesSubtitlePaint)
+        canvas.drawText(datesCombinedStr, cardLeft + 30f, cardTop + 86f, datesSubtitlePaint)
 
         // Location Right Side (Pin + District)
         val locPinPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -339,20 +339,20 @@ object PrayerTimesShareUtil {
 
         val locTitlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#0F172A")
-            textSize = 23f
+            textSize = 24f
             typeface = boldFont
             textAlign = Paint.Align.LEFT
         }
         val locSubPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#64748B")
-            textSize = 17.5f
+            textSize = 18.5f
             typeface = regularFont
             textAlign = Paint.Align.LEFT
         }
         val districtName = schedule.district.nameEn.ifEmpty { schedule.district.nameBn }
         val countryName = schedule.district.countryEn.ifEmpty { schedule.district.countryBn }
         canvas.drawText(districtName, cardRight - 185f, cardTop + 52f, locTitlePaint)
-        canvas.drawText(countryName, cardRight - 185f, cardTop + 78f, locSubPaint)
+        canvas.drawText(countryName, cardRight - 185f, cardTop + 80f, locSubPaint)
 
         // 7. Table Setup Definitions
         val tableMargin = 26f
@@ -360,24 +360,24 @@ object PrayerTimesShareUtil {
         val tableRight = cardRight - tableMargin
         val tableWidth = tableRight - tableLeft
 
-        val col1X = tableLeft + 22f
-        val col2X = tableLeft + (tableWidth * 0.62f)
-        val col3X = tableRight - 36f
+        val vCol1 = tableLeft + (tableWidth * 0.44f)
+        val vCol2 = tableLeft + (tableWidth * 0.72f)
 
-        val vCol1 = tableLeft + (tableWidth * 0.50f)
-        val vCol2 = tableLeft + (tableWidth * 0.75f)
+        val col1X = tableLeft + 24f
+        val col2X = (vCol1 + vCol2) / 2f
+        val col3X = (vCol2 + tableRight) / 2f
 
         // Clear, high-contrast crisp grid lines & table border paints
         val tableBorderPaint = Paint().apply {
             isAntiAlias = true
-            color = Color.parseColor("#8ECCAE") // Distinct, crisp mint border
+            color = Color.parseColor("#8ECCAE")
             style = Paint.Style.STROKE
-            strokeWidth = 1.8f
+            strokeWidth = 2.0f
         }
         val tableInnerGridPaint = Paint().apply {
             isAntiAlias = true
-            color = Color.parseColor("#A8D8C0") // Clear visible grid lines
-            strokeWidth = 1.5f
+            color = Color.parseColor("#A8D8C0")
+            strokeWidth = 1.6f
         }
         val rowBgEven = Paint().apply {
             isAntiAlias = true
@@ -387,24 +387,24 @@ object PrayerTimesShareUtil {
 
         val rowNamePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#0F172A")
-            textSize = 20.5f
+            textSize = 23.5f
             typeface = boldFont
             textAlign = Paint.Align.LEFT
         }
         val rowTimePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#1E293B")
-            textSize = 20.5f
+            textSize = 24.5f
             typeface = boldFont
             textAlign = Paint.Align.CENTER
         }
 
-        var currentY = cardTop + 104f
+        var currentY = cardTop + 108f
 
         // ==========================================
         // 8. TABLE GROUP 1: ওয়াক্তের সময়সূচি (7 Rows)
         // ==========================================
-        val thHeight = 38f
-        val t1RowHeight = 38f
+        val thHeight = 42f
+        val t1RowHeight = 42f
         val fajrItem = schedule.prayers.find { it.name == PrayerName.FAJR }
         val dhuhrItem = schedule.prayers.find { it.name == PrayerName.DHUHR }
         val asrItem = schedule.prayers.find { it.name == PrayerName.ASR }
@@ -416,6 +416,30 @@ object PrayerTimesShareUtil {
         val sahri = schedule.sahriTimeDigits.ifEmpty { "০৪:১০" }
         val iftar = schedule.iftarTimeDigits.ifEmpty { "০৬:৩২" }
 
+        // Duha time clean extraction (without 'সকাল' / 'AM' / 'PM')
+        fun cleanTimeDigits(raw: String): String {
+            return raw.replace(" AM", "")
+                .replace(" PM", "")
+                .replace("সকাল", "")
+                .replace("দুপুর", "")
+                .replace("বিকাল", "")
+                .replace("সন্ধ্যা", "")
+                .replace("রাত", "")
+                .trim()
+        }
+
+        val duhaParts = schedule.duhaRange.split("-")
+        val duhaStart = if (duhaParts.isNotEmpty() && duhaParts[0].isNotBlank()) {
+            cleanTimeDigits(duhaParts[0])
+        } else {
+            cleanTimeDigits(schedule.ishraqStartTimeFormatted)
+        }
+        val duhaEnd = if (duhaParts.size > 1 && duhaParts[1].isNotBlank()) {
+            cleanTimeDigits(duhaParts[1])
+        } else {
+            cleanTimeDigits(schedule.zawalStartTime.ifEmpty { "১১:৫৬" })
+        }
+
         data class TableRowItem(val name: String, val start: String, val end: String)
         val t1Rows = listOf(
             TableRowItem("ফজর", fajrItem?.timeDigits ?: "০৪:১০", sunrise),
@@ -423,8 +447,8 @@ object PrayerTimesShareUtil {
             TableRowItem("আসর", asrItem?.timeDigits ?: "০৪:৩৮", maghribItem?.timeDigits ?: "০৬:৩১"),
             TableRowItem("মাগরিব", maghribItem?.timeDigits ?: "০৬:৩২", ishaItem?.timeDigits ?: "০৭:৫১"),
             TableRowItem("ইশা", ishaItem?.timeDigits ?: "০৭:৫২", fajrItem?.timeDigits ?: "০৪:১০"),
-            TableRowItem("দুহা", schedule.ishraqStartTimeFormatted.replace(" AM", "").replace(" PM", ""), schedule.zawalStartTime.ifEmpty { "১১:৫৬" }),
-            TableRowItem("তাহাজ্জুদ", ishaItem?.timeDigits ?: "০৮:১৫", sahri)
+            TableRowItem("দুহা", duhaStart, duhaEnd),
+            TableRowItem("তাহাজ্জুদ", ishaItem?.timeDigits ?: "০৭:৫২", sahri)
         )
 
         val t1TotalH = thHeight + t1Rows.size * t1RowHeight
@@ -454,27 +478,27 @@ object PrayerTimesShareUtil {
 
         val thTextLeft = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#114D38")
-            textSize = 21f
+            textSize = 23.5f
             typeface = boldFont
             textAlign = Paint.Align.LEFT
         }
         val thTextCol = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#114D38")
-            textSize = 21f
+            textSize = 23.5f
             typeface = boldFont
             textAlign = Paint.Align.CENTER
         }
-        canvas.drawText("ওয়াক্ত", col1X, currentY + 26f, thTextLeft)
-        canvas.drawText("শুরু", col2X, currentY + 26f, thTextCol)
-        canvas.drawText("শেষ", col3X - 20f, currentY + 26f, thTextCol)
+        canvas.drawText("ওয়াক্ত", col1X, currentY + 29f, thTextLeft)
+        canvas.drawText("শুরু", col2X, currentY + 29f, thTextCol)
+        canvas.drawText("শেষ", col3X, currentY + 29f, thTextCol)
 
         // Draw Rows
         var rowTopY = currentY + thHeight
         t1Rows.forEachIndexed { index, row ->
-            val centerY = rowTopY + 26f
+            val centerY = rowTopY + 29f
             canvas.drawText(row.name, col1X, centerY, rowNamePaint)
             canvas.drawText(row.start, col2X, centerY, rowTimePaint)
-            canvas.drawText(row.end, col3X - 20f, centerY, rowTimePaint)
+            canvas.drawText(row.end, col3X, centerY, rowTimePaint)
 
             // Horizontal divider line
             val lineY = rowTopY + t1RowHeight
@@ -499,7 +523,7 @@ object PrayerTimesShareUtil {
         // =========================================================================
         // 9. TABLE GROUP 2: সাহরি, ইফতার, সূর্যোদয় ও সূর্যাস্ত (Separate Table Box)
         // =========================================================================
-        val t2RowHeight = 37f
+        val t2RowHeight = 41f
         val t2Rows = listOf(
             Pair("সাহরি শেষ", sahri),
             Pair("ইফতার শুরু", iftar),
@@ -512,11 +536,12 @@ object PrayerTimesShareUtil {
         // Draw Table 2 Container
         canvas.drawRoundRect(t2BoxRect, 14f, 14f, rowBgEven)
 
+        val rightColCenter = (vCol1 + tableRight) / 2f
         var t2RowTopY = currentY
         t2Rows.forEachIndexed { index, item ->
-            val centerY = t2RowTopY + 25f
+            val centerY = t2RowTopY + 28f
             canvas.drawText(item.first, col1X, centerY, rowNamePaint)
-            canvas.drawText(item.second, col3X - 20f, centerY, rowTimePaint)
+            canvas.drawText(item.second, rightColCenter, centerY, rowTimePaint)
 
             val lineY = t2RowTopY + t2RowHeight
             if (index < t2Rows.size - 1) {
@@ -531,31 +556,42 @@ object PrayerTimesShareUtil {
         // Outer border for Table 2
         canvas.drawRoundRect(t2BoxRect, 14f, 14f, tableBorderPaint)
 
-        currentY += t2TotalH + 14f
+        currentY += t2TotalH + 16f
 
         // ==================================================================================
         // 10. TABLE GROUP 3: ৩টি নিষিদ্ধ সময় (মাকরূহ) (Separate Table Box)
         // ==================================================================================
-        val t3HeaderHeight = 32f
-        val t3RowHeight = 33f
+        val t3HeaderHeight = 38f
+        val t3RowHeight = 40f
+
+        val fMorningStr = schedule.forbiddenMorningRange.ifEmpty {
+            cleanTimeDigits(schedule.forbiddenSunriseFormatted)
+        }
+        val fNoonStr = schedule.forbiddenNoonRange.ifEmpty {
+            cleanTimeDigits(schedule.forbiddenMiddayFormatted)
+        }
+        val fEveStr = schedule.forbiddenEveningRange.ifEmpty {
+            cleanTimeDigits(schedule.forbiddenSunsetFormatted)
+        }
+
         val t3Rows = listOf(
-            Pair("১. সূর্যোদয়ের সময়", schedule.forbiddenSunriseFormatted),
-            Pair("২. দ্বিপ্রহরের সময় (জাওয়াল)", schedule.forbiddenMiddayFormatted),
-            Pair("৩. সূর্যাস্তের সময়", schedule.forbiddenSunsetFormatted)
+            Pair("১. সূর্যোদয়ের সময়", fMorningStr),
+            Pair("২. দ্বিপ্রহরের সময় (জাওয়াল)", fNoonStr),
+            Pair("৩. সূর্যাস্তের সময়", fEveStr)
         )
         val t3TotalH = t3HeaderHeight + t3Rows.size * t3RowHeight
         val t3BoxRect = RectF(tableLeft, currentY, tableRight, currentY + t3TotalH)
 
         val forbiddenTableBorderPaint = Paint().apply {
             isAntiAlias = true
-            color = Color.parseColor("#FCA5A5") // Subtle reddish border
+            color = Color.parseColor("#FCA5A5")
             style = Paint.Style.STROKE
-            strokeWidth = 1.8f
+            strokeWidth = 2.0f
         }
         val forbiddenGridPaint = Paint().apply {
             isAntiAlias = true
             color = Color.parseColor("#FECACA")
-            strokeWidth = 1.4f
+            strokeWidth = 1.6f
         }
         val forbiddenBg = Paint().apply {
             isAntiAlias = true
@@ -587,33 +623,34 @@ object PrayerTimesShareUtil {
 
         val fTitlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#B91C1C")
-            textSize = 18.5f
+            textSize = 21f
             typeface = boldFont
             textAlign = Paint.Align.LEFT
         }
-        canvas.drawText("⚠️ নামাজের ৩টি নিষিদ্ধ সময় (মাকরূহ):", tableLeft + 18f, currentY + 22f, fTitlePaint)
+        canvas.drawText("⚠️ নামাজের ৩টি নিষিদ্ধ সময় (মাকরূহ):", tableLeft + 18f, currentY + 27f, fTitlePaint)
 
         // Header bottom divider line
         canvas.drawLine(tableLeft, currentY + t3HeaderHeight, tableRight, currentY + t3HeaderHeight, forbiddenGridPaint)
 
         val fRowNamePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#7F1D1D")
-            textSize = 19f
+            textSize = 22f
             typeface = boldFont
             textAlign = Paint.Align.LEFT
         }
         val fRowTimePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#991B1B")
-            textSize = 19f
+            textSize = 23f
             typeface = boldFont
             textAlign = Paint.Align.CENTER
         }
 
         var t3RowTopY = currentY + t3HeaderHeight
         t3Rows.forEachIndexed { index, item ->
-            val centerY = t3RowTopY + 23f
+            val centerY = t3RowTopY + 28f
             canvas.drawText(item.first, col1X, centerY, fRowNamePaint)
-            canvas.drawText(item.second, col3X - 20f, centerY, fRowTimePaint)
+            // Perfectly centered within the right column
+            canvas.drawText(item.second, rightColCenter, centerY, fRowTimePaint)
 
             val lineY = t3RowTopY + t3RowHeight
             if (index < t3Rows.size - 1) {
@@ -631,12 +668,12 @@ object PrayerTimesShareUtil {
         // =========================================================================
         // 11. Footer Credit & Social Links (Original Facebook & Telegram Icons)
         // =========================================================================
-        val footerY = height - 48f
+        val footerY = height - 42f
 
         // App Name on Left
         val footerAppPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#0F172A")
-            textSize = 24f
+            textSize = 25f
             typeface = boldFont
             textAlign = Paint.Align.LEFT
         }
@@ -649,7 +686,7 @@ object PrayerTimesShareUtil {
 
         val fbBgPaint = Paint().apply {
             isAntiAlias = true
-            color = Color.parseColor("#1877F2") // Official FB Blue
+            color = Color.parseColor("#1877F2")
             style = Paint.Style.FILL
         }
         canvas.drawCircle(fbX, fbY, fbRadius, fbBgPaint)
@@ -682,20 +719,20 @@ object PrayerTimesShareUtil {
 
         val socialTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#1E293B")
-            textSize = 19f
+            textSize = 21f
             typeface = boldFont
             textAlign = Paint.Align.LEFT
         }
         canvas.drawText("/MuslimsLibrary", fbX + fbRadius + 7f, footerY - 5f, socialTextPaint)
 
         // 13. DRAW OFFICIAL TELEGRAM ICON + TEXT
-        val tgX = 500f
+        val tgX = 515f
         val tgY = footerY - 12f
         val tgRadius = 15f
 
         val tgBgPaint = Paint().apply {
             isAntiAlias = true
-            color = Color.parseColor("#2AABEE") // Official Telegram Blue
+            color = Color.parseColor("#2AABEE")
             style = Paint.Style.FILL
         }
         canvas.drawCircle(tgX, tgY, tgRadius, tgBgPaint)
