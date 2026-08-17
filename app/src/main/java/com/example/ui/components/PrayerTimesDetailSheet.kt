@@ -290,7 +290,16 @@ fun PrayerTimesDetailSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 1.5 Top Visual Sun Path Hero Card
+            if (isToday) {
+                com.example.ui.components.PrayerSunPathCard(
+                    schedule = activeSchedule,
+                    onDetailsClick = { /* Already in detail view */ }
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+            }
 
             // 2. Date Header & Weekly 7-Day Selector Bar
             Surface(

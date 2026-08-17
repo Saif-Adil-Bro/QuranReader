@@ -789,7 +789,7 @@ fun HeroSection(
     onDuaClick: (com.example.data.DuaItem) -> Unit = {},
     onPrayerTimesClick: () -> Unit = {}
 ) {
-    val totalSlides = 4
+    val totalSlides = 5
     val pagerState = rememberPagerState(pageCount = { totalSlides })
     
     // Auto-scroll loop: whenever user changes the page manually (or page scrolls), 
@@ -857,15 +857,22 @@ fun HeroSection(
                 ) {
                         when (page) {
                             0 -> {
-                                // Slide 1: Prayer Times Dynamic Card
+                                com.example.ui.components.PrayerSunPathCard(
+                                    schedule = prayerSchedule,
+                                    onDetailsClick = onPrayerTimesClick,
+                                    onNotificationClick = onPrayerTimesClick
+                                )
+                            }
+                            1 -> {
+                                // Slide 2: Prayer Times Dynamic Card
                                 com.example.ui.components.PrayerTimesBannerSlide(
                                     schedule = prayerSchedule,
                                     onClick = onPrayerTimesClick,
                                     onLocationClick = onPrayerTimesClick
                                 )
                             }
-                            1 -> {
-                                // Slide 2: Quick Info (Today's Date & Calendars)
+                            2 -> {
+                                // Slide 3: Quick Info (Today's Date & Calendars)
                                 val bengaliDate = com.example.utils.DateUtil.getTodayBengaliDateStr()
                                 Column(
                                     modifier = Modifier
@@ -962,8 +969,8 @@ fun HeroSection(
                                     }
                                 }
                             }
-                            2 -> {
-                                // Slide 3: Dua of the day
+                            3 -> {
+                                // Slide 4: Dua of the day
                                 val duaItem = com.example.data.DuaData.getDuaItemOfTheDay()
                                 val banglaDigits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
                                 val banglaNumber = duaItem.id.toString().map { char ->
@@ -1026,8 +1033,8 @@ fun HeroSection(
                                     }
                                 }
                             }
-                            3 -> {
-                                // Slide 4: Ayah of the day
+                            4 -> {
+                                // Slide 5: Ayah of the day
                                 Column(
                                     modifier = Modifier
                                         .fillMaxSize()

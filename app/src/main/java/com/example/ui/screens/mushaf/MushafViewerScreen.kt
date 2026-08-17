@@ -176,21 +176,12 @@ fun MushafViewerScreen(
                     )
                 },
                 navigationIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack, 
-                                contentDescription = "Back",
-                                tint = if (isDark) Color.White else Color.Black
-                            )
-                        }
-                        IconButton(onClick = { showSettingsSheet = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "পড়ার সেটিংস",
-                                tint = Color(0xFF10B981)
-                            )
-                        }
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack, 
+                            contentDescription = "Back",
+                            tint = if (isDark) Color.White else Color.Black
+                        )
                     }
                 },
                 actions = {
@@ -217,6 +208,13 @@ fun MushafViewerScreen(
                         Icon(
                             imageVector = Icons.Default.List, 
                             contentDescription = "সূচী", 
+                            tint = Color(0xFF10B981)
+                        )
+                    }
+                    IconButton(onClick = { showSettingsSheet = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "পড়ার সেটিংস",
                             tint = Color(0xFF10B981)
                         )
                     }
