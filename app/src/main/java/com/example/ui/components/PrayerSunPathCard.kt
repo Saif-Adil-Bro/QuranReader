@@ -590,7 +590,7 @@ private fun VisualSunPathSection(
 
         // Arc & Nodes Drawing
         Canvas(modifier = Modifier.fillMaxSize()) {
-            if (prayers.size < 2) return@Canvas
+            if (size.width <= 0f || size.height <= 0f || size.width.isNaN() || size.height.isNaN() || size.width.isInfinite() || size.height.isInfinite() || prayers.size < 2) return@Canvas
 
             val pathStart = Offset(x = size.width * 0.05f, y = size.height * 0.85f)
             val pathEnd = Offset(x = size.width * 0.95f, y = size.height * 0.85f)
@@ -870,6 +870,7 @@ private fun DynamicSkyBackground(
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
+        if (w <= 0f || h <= 0f || w.isNaN() || h.isNaN() || w.isInfinite() || h.isInfinite()) return@Canvas
         
         if (isNight) {
             val moonCenter = Offset(w * 0.85f, h * 0.25f)
@@ -877,9 +878,9 @@ private fun DynamicSkyBackground(
                 brush = Brush.radialGradient(
                     colors = listOf(Color(0xFFE2E8F0).copy(alpha = 0.25f), Color.Transparent),
                     center = moonCenter,
-                    radius = w * 0.4f
+                    radius = (w * 0.4f).coerceAtLeast(1f)
                 ),
-                radius = w * 0.4f,
+                radius = (w * 0.4f).coerceAtLeast(1f),
                 center = moonCenter
             )
             drawCircle(
@@ -907,9 +908,9 @@ private fun DynamicSkyBackground(
                 brush = Brush.radialGradient(
                     colors = listOf(sunGlow.copy(alpha = 0.4f), Color.Transparent),
                     center = sunCenter,
-                    radius = w * 0.45f
+                    radius = (w * 0.45f).coerceAtLeast(1f)
                 ),
-                radius = w * 0.45f,
+                radius = (w * 0.45f).coerceAtLeast(1f),
                 center = sunCenter
             )
             drawCircle(
@@ -924,7 +925,7 @@ private fun DynamicSkyBackground(
             for (i in 0..15) {
                 val x = random.nextFloat() * w
                 val y = random.nextFloat() * (h * 0.6f)
-                val starRadius = (random.nextFloat() * 1.5f + 0.5f).dp.toPx()
+                val starRadius = ((random.nextFloat() * 1.5f + 0.5f)).dp.toPx().coerceAtLeast(1f)
                 val alpha = random.nextFloat() * 0.5f + 0.2f
                 drawCircle(
                     color = if (isDark) Color.White.copy(alpha=alpha) else Color.Black.copy(alpha = alpha),

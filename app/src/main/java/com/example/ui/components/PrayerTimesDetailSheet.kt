@@ -69,11 +69,11 @@ private val AmberBullet: Color @Composable get() = if (isSystemInDarkTheme()) Co
 private val GreenBullet: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF34D399) else Color(0xFF10B981)
 private val AmberWarning: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFF59E0B) else Color(0xFFD97706)
 private val DarkModalBg: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF182228) else Color.White
-private val DividerColor: Color @Composable get() = if (isSystemInDarkTheme()) DividerColor else Color(0xFFE5E7EB)
-private val TrackColor: Color @Composable get() = if (isSystemInDarkTheme()) TrackColor else if (isSystemInDarkTheme()) Color(0xFFCBD5E1) else Color(0xFF64748B)
+private val DividerColor: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF2D3748) else Color(0xFFE5E7EB)
+private val TrackColor: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFCBD5E1) else Color(0xFF64748B)
 private val MainTextColor: Color @Composable get() = if (isSystemInDarkTheme()) Color.White else Color(0xFF111827)
-private val SubTextColor: Color @Composable get() = if (isSystemInDarkTheme()) SubTextColor else TrackColor
-private val IconTint: Color @Composable get() = if (isSystemInDarkTheme()) SubTextColor else Color(0xFF475569)
+private val SubTextColor: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFA0AEC0) else Color(0xFF718096)
+private val IconTint: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFA0AEC0) else Color(0xFF475569)
 
 enum class ReferenceType(val title: String) {
     FARD_PRAYERS("সালাতের ওয়াক্ত সম্পর্কিত হাদিস ও রেফারেন্স"),
