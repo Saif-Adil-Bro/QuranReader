@@ -296,7 +296,29 @@ fun PrayerTimesDetailSheet(
             if (isToday) {
                 com.example.ui.components.PrayerSunPathCard(
                     schedule = activeSchedule,
-                    onDetailsClick = { /* Already in detail view */ }
+                    onDetailsClick = { /* Already in detail view */ },
+                    notificationStates = mapOf(
+                        com.example.data.model.PrayerName.FAJR to isNotifFajr,
+                        com.example.data.model.PrayerName.DHUHR to isNotifDhuhr,
+                        com.example.data.model.PrayerName.ASR to isNotifAsr,
+                        com.example.data.model.PrayerName.MAGHRIB to isNotifMaghrib,
+                        com.example.data.model.PrayerName.ISHA to isNotifIsha,
+                        com.example.data.model.PrayerName.SAHRI to isNotifSahri,
+                        com.example.data.model.PrayerName.IFTAR to isNotifIftar
+                    ),
+                    onToggleNotification = { prayerName, isEnabled ->
+                        com.example.utils.PrayerNotificationHelper.setPrayerEnabled(context, prayerName, isEnabled)
+                        when (prayerName) {
+                            com.example.data.model.PrayerName.FAJR -> isNotifFajr = isEnabled
+                            com.example.data.model.PrayerName.DHUHR -> isNotifDhuhr = isEnabled
+                            com.example.data.model.PrayerName.ASR -> isNotifAsr = isEnabled
+                            com.example.data.model.PrayerName.MAGHRIB -> isNotifMaghrib = isEnabled
+                            com.example.data.model.PrayerName.ISHA -> isNotifIsha = isEnabled
+                            com.example.data.model.PrayerName.SAHRI -> isNotifSahri = isEnabled
+                            com.example.data.model.PrayerName.IFTAR -> isNotifIftar = isEnabled
+                            else -> { /* No-op */ }
+                        }
+                    }
                 )
                 Spacer(modifier = Modifier.height(14.dp))
             }

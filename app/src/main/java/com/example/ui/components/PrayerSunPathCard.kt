@@ -54,7 +54,8 @@ fun PrayerSunPathCard(
     schedule: DailyPrayerSchedule,
     modifier: Modifier = Modifier,
     onDetailsClick: () -> Unit = {},
-    onNotificationClick: () -> Unit = {}
+    notificationStates: Map<com.example.data.model.PrayerName, Boolean> = emptyMap(),
+    onToggleNotification: (com.example.data.model.PrayerName, Boolean) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val currentDate = remember(schedule) { schedule.dateStrBn }
@@ -101,7 +102,6 @@ fun PrayerSunPathCard(
     }
 
     // Toggle states for notification
-    var isNotificationOn by remember { mutableStateOf(true) }
 
     Box(
         modifier = modifier
@@ -475,12 +475,12 @@ fun PrayerSunPathCard(
                         )
 
                         // Right: Notification Toggle
+                        val isNotificationOn = notificationStates[next.iconType] ?: true
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                             modifier = Modifier.clickable { 
-                                isNotificationOn = !isNotificationOn
-                                onNotificationClick()
+                                onToggleNotification(next.iconType, !isNotificationOn)
                             }
                         ) {
                             Text(
@@ -693,7 +693,8 @@ private fun VisualSunPathSection(
             // X position is aligned exactly to the node center
             val xOffset = width * relativeOffset.x
             // Y position is placed just above the node center
-            val verticalY = (height * relativeOffset.y) - 34.dp
+            // Place column such that the icon is directly on the node (icon height/2 = 8dp max)
+            val verticalY = (height * relativeOffset.y) - 8.dp
 
             Column(
                 modifier = Modifier
@@ -701,25 +702,7 @@ private fun VisualSunPathSection(
                     .width(64.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = prayer.bengaliName,
-                    color = if (isCurrent) GoldBright else Color.White,
-                    fontSize = if (isCurrent) 8.5.sp else 7.5.sp,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1
-                )
-                Text(
-                    text = prayer.timeString.replace(" ", "\n"),
-                    color = if (isCurrent) Color.White else SoftWhite.copy(alpha = 0.85f),
-                    fontSize = if (isCurrent) 7.5.sp else 6.5.sp,
-                    fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 8.sp,
-                    maxLines = 2
-                )
-                Spacer(modifier = Modifier.height(3.dp))
-                // Minimal icon circle
+                // Minimal icon circle (AT TOP NOW)
                 Box(
                     modifier = Modifier
                         .size(if (isCurrent) 16.dp else 13.dp)
@@ -748,6 +731,24 @@ private fun VisualSunPathSection(
                         modifier = Modifier.size(if (isCurrent) 10.dp else 8.dp)
                     )
                 }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = prayer.bengaliName,
+                    color = if (isCurrent) GoldBright else Color.White,
+                    fontSize = if (isCurrent) 8.5.sp else 7.5.sp,
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
+                Text(
+                    text = prayer.timeString.replace(" ", "\n"),
+                    color = if (isCurrent) Color.White else SoftWhite.copy(alpha = 0.85f),
+                    fontSize = if (isCurrent) 7.5.sp else 6.5.sp,
+                    fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 8.sp,
+                    maxLines = 2
+                )
             }
         }
         
@@ -759,7 +760,7 @@ private fun VisualSunPathSection(
             val relY = (oneMinusT * oneMinusT * 0.85f) + (2f * oneMinusT * t * -0.30f) + (t * t * 0.85f)
             
             val xOffset = width * relX
-            val verticalY = (height * relY) - 34.dp
+            val verticalY = (height * relY) - 8.dp
             
             Column(
                 modifier = Modifier
@@ -767,22 +768,6 @@ private fun VisualSunPathSection(
                     .width(64.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "তাহাজ্জুদ",
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 7.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "রাতের\nশেষাংশ",
-                    color = SoftWhite.copy(alpha = 0.75f),
-                    fontSize = 6.5.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 7.5.sp,
-                    maxLines = 2
-                )
-                Spacer(modifier = Modifier.height(3.dp))
                 // Minimal icon circle
                 Box(
                     modifier = Modifier
@@ -803,6 +788,22 @@ private fun VisualSunPathSection(
                         modifier = Modifier.size(8.dp)
                     )
                 }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "তাহাজ্জুদ",
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 7.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "রাতের\nশেষাংশ",
+                    color = SoftWhite.copy(alpha = 0.75f),
+                    fontSize = 6.5.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 7.5.sp,
+                    maxLines = 2
+                )
             }
         }
     }
