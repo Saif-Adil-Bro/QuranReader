@@ -22,7 +22,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,11 +37,9 @@ import java.util.Calendar
 
 private val GoldAccent = Color(0xFFD4AF37)
 private val GoldBright = Color(0xFFFFDF78)
-private val SoftWhite: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFD6EAE0) else Color(0xFF64748B)
-private val GlassBg: Color @Composable get() = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.04f)
-
-private val GlassBorder: Color @Composable get() = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.White.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.08f)
-
+private val SoftWhite = Color(0xFFD6EAE0)
+private val GlassBg = Color.White.copy(alpha = 0.08f)
+private val GlassBorder = Color.White.copy(alpha = 0.14f)
 
 data class VisualPrayerPoint(
     val name: String,
@@ -60,7 +57,6 @@ fun PrayerSunPathCard(
     notificationStates: Map<com.example.data.model.PrayerName, Boolean> = emptyMap(),
     onToggleNotification: (com.example.data.model.PrayerName, Boolean) -> Unit = { _, _ -> }
 ) {
-    val isDark = isSystemInDarkTheme()
     val context = LocalContext.current
     val currentDate = remember(schedule) { schedule.dateStrBn }
     val hijriDate = remember { DateUtil.getTodayHijriDateStr(0) }
@@ -95,24 +91,13 @@ fun PrayerSunPathCard(
     val currentMinutes by rememberCurrentMinutes()
     val currentIndex = findCurrentPrayerIndex(prayers, currentMinutes)
 
-    
-    val dynamicColors = remember(currentIndex, isDark) {
-        if (isDark) {
-            when (currentIndex) {
-                0, 1 -> listOf(Color(0xFF0C2B3C), Color(0xFF071922)) // Fajr/Sunrise: Dawn Blues
-                2 -> listOf(Color(0xFF084B5B), Color(0xFF04262E)) // Dhuhr: Bright Midday
-                3 -> listOf(Color(0xFF4A3415), Color(0xFF2B1D0B)) // Asr: Afternoon Warm
-                4 -> listOf(Color(0xFF441818), Color(0xFF220A0A)) // Maghrib: Sunset Deep Orange/Red
-                else -> listOf(Color(0xFF0B1120), Color(0xFF060912)) // Isha/Night: Midnight
-            }
-        } else {
-            when (currentIndex) {
-                0, 1 -> listOf(Color(0xFFE0F2FE), Color(0xFFBAE6FD)) // Fajr/Sunrise: Light Dawn
-                2 -> listOf(Color(0xFFBAE6FD), Color(0xFF7DD3FC)) // Dhuhr: Clear Day
-                3 -> listOf(Color(0xFFFEF3C7), Color(0xFFFDE68A)) // Asr: Afternoon Golden
-                4 -> listOf(Color(0xFFFFEDD5), Color(0xFFFDBA74)) // Maghrib: Sunset Peach
-                else -> listOf(Color(0xFF1E3A8A), Color(0xFF172554)) // Isha/Night: Still darkish blue but lighter than dark mode
-            }
+    val dynamicColors = remember(currentIndex) {
+        when (currentIndex) {
+            0, 1 -> listOf(Color(0xFF0C2B3C), Color(0xFF071922)) // Fajr/Sunrise: Dawn Blues
+            2 -> listOf(Color(0xFF084B5B), Color(0xFF04262E)) // Dhuhr: Bright Midday
+            3 -> listOf(Color(0xFF4A3415), Color(0xFF2B1D0B)) // Asr: Afternoon Warm
+            4 -> listOf(Color(0xFF441818), Color(0xFF220A0A)) // Maghrib: Sunset Deep Orange/Red
+            else -> listOf(Color(0xFF0B1120), Color(0xFF060912)) // Isha/Night: Midnight
         }
     }
 
@@ -162,7 +147,7 @@ fun PrayerSunPathCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = currentDate,
-                            color = if (isDark) Color.White else Color(0xFF111827),
+                            color = Color.White,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -180,7 +165,7 @@ fun PrayerSunPathCard(
                     modifier = Modifier
                         .clip(RoundedCornerShape(100.dp))
                         .background(Color.Black.copy(alpha = 0.3f))
-                        .border(0.8.dp, if (isDark) Color.White else Color.Black.copy(alpha = 0.15f), RoundedCornerShape(100.dp))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(100.dp))
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -193,7 +178,7 @@ fun PrayerSunPathCard(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = selectedLocation,
-                            color = if (isDark) Color.White else Color(0xFF111827),
+                            color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -236,7 +221,7 @@ fun PrayerSunPathCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
-                        .background(if (isDark) Color.White else Color.Black.copy(alpha = 0.12f))
+                        .background(Color.White.copy(alpha = 0.12f))
                         .padding(horizontal = 14.dp, vertical = 3.dp)
                 ) {
                     Text(
@@ -253,7 +238,7 @@ fun PrayerSunPathCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = current.bengaliName,
-                        color = if (isDark) Color.White else Color(0xFF111827),
+                        color = Color.White,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -267,7 +252,7 @@ fun PrayerSunPathCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = current.timeString,
-                        color = if (isDark) Color.White else Color(0xFF111827),
+                        color = Color.White,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -281,7 +266,7 @@ fun PrayerSunPathCard(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color.Black.copy(alpha = 0.35f)) // Slightly darker for contrast
-                        .border(0.8.dp, if (isDark) Color.White else Color.Black.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
                         .height(58.dp)
                         .padding(horizontal = 16.dp)
                 ) {
@@ -301,7 +286,7 @@ fun PrayerSunPathCard(
                             Column(verticalArrangement = Arrangement.spacedBy((-1).dp)) {
                                 Text(
                                     text = "শুরু হয়েছে",
-                                    color = if (isDark) Color.White else Color(0xFF111827),
+                                    color = Color.White,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium,
                                     lineHeight = 10.sp
@@ -329,7 +314,7 @@ fun PrayerSunPathCard(
                                     .fillMaxWidth()
                                     .height(8.dp) // made progress bar thicker
                                     .clip(RoundedCornerShape(50))
-                                    .background(if (isDark) Color.White else Color.Black.copy(alpha = 0.15f)),
+                                    .background(Color.White.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 // Progress fill
@@ -380,7 +365,7 @@ fun PrayerSunPathCard(
                             ) {
                                 Text(
                                     text = "ওয়াক্ত শেষ",
-                                    color = if (isDark) Color.White else Color(0xFF111827),
+                                    color = Color.White,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium,
                                     lineHeight = 10.sp
@@ -412,7 +397,7 @@ fun PrayerSunPathCard(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color.Black.copy(alpha = 0.35f))
-                        .border(0.8.dp, if (isDark) Color.White else Color.Black.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
                         .height(58.dp)
                         .padding(horizontal = 16.dp)
                 ) {
@@ -426,20 +411,20 @@ fun PrayerSunPathCard(
                             Icon(
                                 imageVector = Icons.Outlined.AccessTime,
                                 contentDescription = null,
-                                tint = if (isDark) Color.White else Color.Black.copy(alpha = 0.6f),
+                                tint = Color.White.copy(alpha = 0.6f),
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Column(verticalArrangement = Arrangement.spacedBy((-1).dp)) {
                                 Text(
                                     text = "পরবর্তী ওয়াক্ত",
-                                    color = if (isDark) Color.White else Color.Black.copy(alpha = 0.8f),
+                                    color = Color.White.copy(alpha = 0.8f),
                                     fontSize = 9.sp,
                                     lineHeight = 10.sp
                                 )
                                 Text(
                                     text = "${next.bengaliName} • ${next.timeString}",
-                                    color = if (isDark) Color.White else Color(0xFF111827),
+                                    color = Color.White,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     lineHeight = 12.sp
@@ -452,7 +437,7 @@ fun PrayerSunPathCard(
                             modifier = Modifier
                                 .width(1.dp)
                                 .height(26.dp)
-                                .background(if (isDark) Color.White else Color.Black.copy(alpha = 0.15f))
+                                .background(Color.White.copy(alpha = 0.15f))
                         )
 
                         // Middle: Azaan Time
@@ -467,13 +452,13 @@ fun PrayerSunPathCard(
                             Column(verticalArrangement = Arrangement.spacedBy((-1).dp)) {
                                 Text(
                                     text = "আজানের সময়",
-                                    color = if (isDark) Color.White else Color.Black.copy(alpha = 0.8f),
+                                    color = Color.White.copy(alpha = 0.8f),
                                     fontSize = 9.sp,
                                     lineHeight = 10.sp
                                 )
                                 Text(
                                     text = next.timeString, // This matches alarm logic natively
-                                    color = if (isDark) Color.White else Color(0xFF111827),
+                                    color = Color.White,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     lineHeight = 12.sp
@@ -486,7 +471,7 @@ fun PrayerSunPathCard(
                             modifier = Modifier
                                 .width(1.dp)
                                 .height(26.dp)
-                                .background(if (isDark) Color.White else Color.Black.copy(alpha = 0.15f))
+                                .background(Color.White.copy(alpha = 0.15f))
                         )
 
                         // Right: Notification Toggle
@@ -500,7 +485,7 @@ fun PrayerSunPathCard(
                         ) {
                             Text(
                                 text = "নোটিফিকেশন",
-                                color = if (isDark) Color.White else Color.Black.copy(alpha = 0.8f),
+                                color = Color.White.copy(alpha = 0.8f),
                                 fontSize = 9.sp
                             )
                             // Custom Pill Toggle
@@ -509,15 +494,15 @@ fun PrayerSunPathCard(
                                     .width(36.dp)
                                     .height(18.dp)
                                     .clip(RoundedCornerShape(50))
-                                    .background(if (isNotificationOn) Color(0xFF34D399).copy(alpha = 0.2f) else if (isDark) Color.White else Color.Black.copy(alpha = 0.1f))
-                                    .border(1.dp, if (isNotificationOn) Color(0xFF34D399) else if (isDark) Color.White else Color.Black.copy(alpha = 0.3f), RoundedCornerShape(50))
+                                    .background(if (isNotificationOn) Color(0xFF34D399).copy(alpha = 0.2f) else Color.White.copy(alpha = 0.1f))
+                                    .border(1.dp, if (isNotificationOn) Color(0xFF34D399) else Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
                                     .padding(2.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .size(14.dp)
                                         .clip(CircleShape)
-                                        .background(if (isNotificationOn) Color(0xFF34D399) else if (isDark) Color.White else Color.Black.copy(alpha = 0.5f))
+                                        .background(if (isNotificationOn) Color(0xFF34D399) else Color.White.copy(alpha = 0.5f))
                                         .align(if (isNotificationOn) Alignment.CenterEnd else Alignment.CenterStart)
                                 )
                             }
@@ -559,7 +544,6 @@ private fun VisualSunPathSection(
     currentMinutes: Int,
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
     BoxWithConstraints(modifier = modifier) {
         val width = maxWidth
         val height = maxHeight
@@ -590,7 +574,7 @@ private fun VisualSunPathSection(
 
         // Arc & Nodes Drawing
         Canvas(modifier = Modifier.fillMaxSize()) {
-            if (size.width <= 0f || size.height <= 0f || size.width.isNaN() || size.height.isNaN() || size.width.isInfinite() || size.height.isInfinite() || prayers.size < 2) return@Canvas
+            if (prayers.size < 2) return@Canvas
 
             val pathStart = Offset(x = size.width * 0.05f, y = size.height * 0.85f)
             val pathEnd = Offset(x = size.width * 0.95f, y = size.height * 0.85f)
@@ -625,7 +609,7 @@ private fun VisualSunPathSection(
                 val isCurrent = index == currentIndex
 
                 drawCircle(
-                    color = if (isCurrent) GoldBright else if (isDark) Color.White.copy(alpha=0.8f) else Color.Black.copy(alpha = 0.8f),
+                    color = if (isCurrent) GoldBright else Color.White.copy(alpha = 0.8f),
                     radius = if (isCurrent) 4.5.dp.toPx() else 3.dp.toPx(),
                     center = Offset(x, y)
                 )
@@ -638,7 +622,7 @@ private fun VisualSunPathSection(
                 val relX = (oneMinusT * oneMinusT * 0.05f) + (2f * oneMinusT * t * 0.50f) + (t * t * 0.95f)
                 val relY = (oneMinusT * oneMinusT * 0.85f) + (2f * oneMinusT * t * -0.30f) + (t * t * 0.85f)
                 drawCircle(
-                    color = if (isDark) Color.White.copy(alpha=0.8f) else Color.Black.copy(alpha = 0.8f),
+                    color = Color.White.copy(alpha = 0.8f),
                     radius = 3.dp.toPx(),
                     center = Offset(size.width * relX, size.height * relY)
                 )
@@ -723,10 +707,10 @@ private fun VisualSunPathSection(
                     modifier = Modifier
                         .size(if (isCurrent) 16.dp else 13.dp)
                         .clip(CircleShape)
-                        .background(if (isCurrent) GoldAccent.copy(alpha = 0.30f) else if (isDark) Color.White.copy(alpha=0.08f) else Color.Black.copy(alpha=0.08f))
+                        .background(if (isCurrent) GoldAccent.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.08f))
                         .border(
                             width = if (isCurrent) 1.5.dp else 0.8.dp,
-                            color = if (isCurrent) GoldBright else if (isDark) Color.White else Color.Black.copy(alpha = 0.35f),
+                            color = if (isCurrent) GoldBright else Color.White.copy(alpha = 0.35f),
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -743,14 +727,14 @@ private fun VisualSunPathSection(
                     Icon(
                         imageVector = fallbackIcon,
                         contentDescription = null,
-                        tint = if (isCurrent) GoldBright else if (isDark) Color.White else Color.Black.copy(alpha = 0.6f),
+                        tint = if (isCurrent) GoldBright else Color.White.copy(alpha = 0.6f),
                         modifier = Modifier.size(if (isCurrent) 10.dp else 8.dp)
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = prayer.bengaliName,
-                    color = if (isCurrent) GoldBright else if (isDark) Color.White else Color(0xFF111827),
+                    color = if (isCurrent) GoldBright else Color.White,
                     fontSize = if (isCurrent) 8.5.sp else 7.5.sp,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
                     textAlign = TextAlign.Center,
@@ -758,7 +742,7 @@ private fun VisualSunPathSection(
                 )
                 Text(
                     text = prayer.timeString.replace(" ", "\n"),
-                    color = if (isCurrent) if (isDark) Color.White else Color(0xFF111827)else SoftWhite.copy(alpha = 0.85f),
+                    color = if (isCurrent) Color.White else SoftWhite.copy(alpha = 0.85f),
                     fontSize = if (isCurrent) 7.5.sp else 6.5.sp,
                     fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
                     textAlign = TextAlign.Center,
@@ -789,10 +773,10 @@ private fun VisualSunPathSection(
                     modifier = Modifier
                         .size(13.dp)
                         .clip(CircleShape)
-                        .background(if (isDark) Color.White.copy(alpha=0.08f) else Color.Black.copy(alpha=0.08f))
+                        .background(Color.White.copy(alpha = 0.08f))
                         .border(
                             width = 0.8.dp,
-                            color = if (isDark) Color.White else Color.Black.copy(alpha = 0.35f),
+                            color = Color.White.copy(alpha = 0.35f),
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -800,14 +784,14 @@ private fun VisualSunPathSection(
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = null,
-                        tint = if (isDark) Color.White else Color.Black.copy(alpha = 0.7f),
+                        tint = Color.White.copy(alpha = 0.7f),
                         modifier = Modifier.size(8.dp)
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "তাহাজ্জুদ",
-                    color = if (isDark) Color.White.copy(alpha=0.9f) else Color.Black.copy(alpha = 0.9f),
+                    color = Color.White.copy(alpha = 0.9f),
                     fontSize = 7.5.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center
@@ -863,14 +847,12 @@ private fun DynamicSkyBackground(
     currentIndex: Int,
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
     val isNight = currentIndex == 5 || currentIndex == 0 // Isha or Fajr
     val isSunset = currentIndex == 4
     
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        if (w <= 0f || h <= 0f || w.isNaN() || h.isNaN() || w.isInfinite() || h.isInfinite()) return@Canvas
         
         if (isNight) {
             val moonCenter = Offset(w * 0.85f, h * 0.25f)
@@ -878,9 +860,9 @@ private fun DynamicSkyBackground(
                 brush = Brush.radialGradient(
                     colors = listOf(Color(0xFFE2E8F0).copy(alpha = 0.25f), Color.Transparent),
                     center = moonCenter,
-                    radius = (w * 0.4f).coerceAtLeast(1f)
+                    radius = w * 0.4f
                 ),
-                radius = (w * 0.4f).coerceAtLeast(1f),
+                radius = w * 0.4f,
                 center = moonCenter
             )
             drawCircle(
@@ -888,12 +870,7 @@ private fun DynamicSkyBackground(
                 radius = 18.dp.toPx(),
                 center = moonCenter
             )
-            
-            val skyColor = if (isDark) {
-                 if (currentIndex == 0) Color(0xFF0C2B3C) else Color(0xFF0B1120)
-            } else {
-                 if (currentIndex == 0) Color(0xFFE0F2FE) else Color(0xFF1E3A8A)
-            }
+            val skyColor = if (currentIndex == 0) Color(0xFF0C2B3C) else Color(0xFF0B1120)
             drawCircle(
                 color = skyColor, 
                 radius = 15.dp.toPx(),
@@ -908,9 +885,9 @@ private fun DynamicSkyBackground(
                 brush = Brush.radialGradient(
                     colors = listOf(sunGlow.copy(alpha = 0.4f), Color.Transparent),
                     center = sunCenter,
-                    radius = (w * 0.45f).coerceAtLeast(1f)
+                    radius = w * 0.45f
                 ),
-                radius = (w * 0.45f).coerceAtLeast(1f),
+                radius = w * 0.45f,
                 center = sunCenter
             )
             drawCircle(
@@ -925,16 +902,16 @@ private fun DynamicSkyBackground(
             for (i in 0..15) {
                 val x = random.nextFloat() * w
                 val y = random.nextFloat() * (h * 0.6f)
-                val starRadius = ((random.nextFloat() * 1.5f + 0.5f)).dp.toPx().coerceAtLeast(1f)
+                val starRadius = (random.nextFloat() * 1.5f + 0.5f).dp.toPx()
                 val alpha = random.nextFloat() * 0.5f + 0.2f
                 drawCircle(
-                    color = if (isDark) Color.White.copy(alpha=alpha) else Color.Black.copy(alpha = alpha),
+                    color = Color.White.copy(alpha = alpha),
                     radius = starRadius,
                     center = Offset(x, y)
                 )
             }
         } else {
-            val cloudColor = if (isDark) Color.White.copy(alpha=0.08f) else Color.Black.copy(alpha=0.08f)
+            val cloudColor = Color.White.copy(alpha = 0.08f)
             drawRoundRect(
                 color = cloudColor,
                 topLeft = Offset(w * 0.1f, h * 0.15f),

@@ -32,13 +32,11 @@ import com.example.data.model.PrayerName
 import com.example.data.model.SinglePrayerTime
 
 // Design Constants matching exact prompt & mockup specs
-import androidx.compose.foundation.isSystemInDarkTheme
-
-private val PrimaryGreenDark: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF1B4D3E) else Color(0xFF047857)
-private val PrimaryGreenLight: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF2E7D32) else Color(0xFF10B981)
-private val AccentGold = Color(0xFFD4AF37) // Gold looks fine in both
-private val TextPrimary: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else Color.White
-private val TextSecondary: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFD7E8DF) else Color(0xFFD1FAE5)
+private val PrimaryGreenDark = Color(0xFF1B4D3E)
+private val PrimaryGreenLight = Color(0xFF2E7D32)
+private val AccentGold = Color(0xFFD4AF37)
+private val TextPrimary = Color(0xFFFFFFFF)
+private val TextSecondary = Color(0xFFD7E8DF)
 
 @Composable
 fun PrayerTimesBannerSlide(
