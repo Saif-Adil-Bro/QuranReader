@@ -55,18 +55,25 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 
-private val DarkBackground = Color(0xFF10171B)
-private val DarkCardSurface = Color(0xFF182228)
-private val EmeraldAccent = Color(0xFF00C288)
-private val EmeraldDarkPill = Color(0xFF0C2D23)
-private val ForbiddenCardBg = Color(0xFF38191C)
-private val ForbiddenCardBorder = Color(0xFF562529)
-private val ForbiddenTextRed = Color(0xFFF87171)
-private val MutedText = Color(0xFF94A3B8)
-private val AmberBullet = Color(0xFFFB923C)
-private val GreenBullet = Color(0xFF34D399)
-private val AmberWarning = Color(0xFFF59E0B)
-private val DarkModalBg = Color(0xFF182228)
+import androidx.compose.foundation.isSystemInDarkTheme
+
+private val DarkBackground: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF10171B) else Color(0xFFF3F4F6)
+private val DarkCardSurface: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF182228) else Color.White
+private val EmeraldAccent: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF00C288) else Color(0xFF059669)
+private val EmeraldDarkPill: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF0C2D23) else Color(0xFFE6F4F1)
+private val ForbiddenCardBg: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF38191C) else Color(0xFFFEE2E2)
+private val ForbiddenCardBorder: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF562529) else Color(0xFFFCA5A5)
+private val ForbiddenTextRed: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFF87171) else Color(0xFFDC2626)
+private val MutedText: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF94A3B8) else Color(0xFF64748B)
+private val AmberBullet: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFFB923C) else Color(0xFFF59E0B)
+private val GreenBullet: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF34D399) else Color(0xFF10B981)
+private val AmberWarning: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFF59E0B) else Color(0xFFD97706)
+private val DarkModalBg: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF182228) else Color.White
+private val DividerColor: Color @Composable get() = if (isSystemInDarkTheme()) DividerColor else Color(0xFFE5E7EB)
+private val TrackColor: Color @Composable get() = if (isSystemInDarkTheme()) TrackColor else if (isSystemInDarkTheme()) Color(0xFFCBD5E1) else Color(0xFF64748B)
+private val MainTextColor: Color @Composable get() = if (isSystemInDarkTheme()) Color.White else Color(0xFF111827)
+private val SubTextColor: Color @Composable get() = if (isSystemInDarkTheme()) SubTextColor else TrackColor
+private val IconTint: Color @Composable get() = if (isSystemInDarkTheme()) SubTextColor else Color(0xFF475569)
 
 enum class ReferenceType(val title: String) {
     FARD_PRAYERS("সালাতের ওয়াক্ত সম্পর্কিত হাদিস ও রেফারেন্স"),
@@ -172,7 +179,7 @@ fun PrayerTimesDetailSheet(
                     .width(38.dp)
                     .height(4.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF334155))
+                    .background(TrackColor)
             )
         }
     ) {
@@ -208,7 +215,7 @@ fun PrayerTimesDetailSheet(
                         text = "ক্যালেন্ডার ও সময়সূচি",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MainTextColor
                     )
                 }
 
@@ -327,7 +334,7 @@ fun PrayerTimesDetailSheet(
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = DarkCardSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26333D)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -341,7 +348,7 @@ fun PrayerTimesDetailSheet(
                             text = DateUtil.getFullHeaderDateStr(selectedDate),
                             fontSize = 14.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MainTextColor
                         )
 
                         IconButton(
@@ -568,7 +575,7 @@ fun PrayerTimesDetailSheet(
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = DarkCardSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26333D)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -692,7 +699,7 @@ fun PrayerTimesDetailSheet(
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = DarkCardSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26333D)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -725,7 +732,7 @@ fun PrayerTimesDetailSheet(
                                     text = "ওয়াক্ত শুরুর নোটিফিকেশন",
                                     fontSize = 14.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = MainTextColor
                                 )
                                 Text(
                                     text = if (isMasterNotifEnabled) "ওয়াক্ত শুরু হলে স্বয়ংক্রিয় অ্যালার্ট আসবে" else "নোটিফিকেশন বন্ধ রয়েছে",
@@ -758,14 +765,14 @@ fun PrayerTimesDetailSheet(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = EmeraldAccent,
                                 uncheckedThumbColor = Color.LightGray,
-                                uncheckedTrackColor = Color(0xFF334155)
+                                uncheckedTrackColor = TrackColor
                             )
                         )
                     }
 
                     if (isMasterNotifEnabled) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        HorizontalDivider(thickness = 0.6.dp, color = Color(0xFF26333D))
+                        HorizontalDivider(thickness = 0.6.dp, color = DividerColor)
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
@@ -796,7 +803,7 @@ fun PrayerTimesDetailSheet(
                                     color = if (isEnabled) EmeraldAccent.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.06f),
                                     border = androidx.compose.foundation.BorderStroke(
                                         1.dp,
-                                        if (isEnabled) EmeraldAccent.copy(alpha = 0.6f) else Color(0xFF334155)
+                                        if (isEnabled) EmeraldAccent.copy(alpha = 0.6f) else TrackColor
                                     ),
                                     modifier = Modifier
                                         .weight(1f)
@@ -858,7 +865,7 @@ fun PrayerTimesDetailSheet(
                                 Text(
                                     text = "সাউন্ড ও ভাইব্রেশন",
                                     fontSize = 12.sp,
-                                    color = Color.White.copy(alpha = 0.85f)
+                                    color = MainTextColor.copy(alpha = 0.85f)
                                 )
                             }
                             Switch(
@@ -872,7 +879,7 @@ fun PrayerTimesDetailSheet(
                                     checkedThumbColor = Color.White,
                                     checkedTrackColor = EmeraldAccent,
                                     uncheckedThumbColor = Color.LightGray,
-                                    uncheckedTrackColor = Color(0xFF334155)
+                                    uncheckedTrackColor = TrackColor
                                 )
                             )
                         }
@@ -886,7 +893,7 @@ fun PrayerTimesDetailSheet(
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = DarkCardSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26333D)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -938,7 +945,7 @@ fun PrayerTimesDetailSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+                border = androidx.compose.foundation.BorderStroke(1.dp, TrackColor)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ContentCopy,
@@ -1036,7 +1043,7 @@ private fun DarkSectionCard(
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = DarkCardSurface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26333D)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -1049,7 +1056,7 @@ private fun DarkSectionCard(
                     text = title,
                     fontSize = 15.5.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MainTextColor
                 )
 
                 if (onReferenceClick != null) {
@@ -1089,7 +1096,7 @@ private fun PrayerDetailRow(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Color(0xFFE2E8F0),
+                    tint = SubTextColor,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -1097,7 +1104,7 @@ private fun PrayerDetailRow(
                     text = name,
                     fontSize = 14.5.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFFF1F5F9)
+                    color = MainTextColor
                 )
             }
 
@@ -1105,7 +1112,7 @@ private fun PrayerDetailRow(
                 text = timeRange,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = MainTextColor
             )
         }
 
@@ -1156,14 +1163,14 @@ private fun ForbiddenTimeBox(
                 text = title,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFFFD1D5)
+                color = if (isSystemInDarkTheme()) Color(0xFFFFD1D5) else Color(0xFF991B1B)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = timeRange,
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = MainTextColor,
                 textAlign = TextAlign.Center
             )
         }
@@ -1173,7 +1180,7 @@ private fun ForbiddenTimeBox(
 @Composable
 private fun PrayerDivider() {
     HorizontalDivider(
-        color = Color(0xFF26333D).copy(alpha = 0.6f),
+        color = DividerColor.copy(alpha = 0.6f),
         thickness = 0.8.dp,
         modifier = Modifier.padding(vertical = 4.dp)
     )
@@ -1191,7 +1198,7 @@ private fun PrayerReferenceDialog(
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = DarkCardSurface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26333D)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
             modifier = Modifier
                 .fillMaxWidth(0.94f)
                 .padding(vertical = 12.dp)
@@ -1250,7 +1257,7 @@ private fun PrayerReferenceDialog(
                 Text(
                     text = referenceContent,
                     fontSize = 12.5.sp,
-                    color = Color(0xFFCBD5E1),
+                    color = if (isSystemInDarkTheme()) Color(0xFFCBD5E1) else Color(0xFF64748B),
                     lineHeight = 18.sp
                 )
 
@@ -1262,7 +1269,7 @@ private fun PrayerReferenceDialog(
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent)
                 ) {
-                    Text("ঠিক আছে", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("ঠিক আছে", color = if (isSystemInDarkTheme()) Color.Black else Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1349,7 +1356,7 @@ private fun DistrictSelectionModal(
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = DarkCardSurface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26333D)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .fillMaxHeight(0.88f)
@@ -1366,7 +1373,7 @@ private fun DistrictSelectionModal(
                         text = "স্থান বা দেশ নির্বাচন করুন",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MainTextColor
                     )
                     IconButton(onClick = onDismiss, modifier = Modifier.size(30.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
@@ -1456,7 +1463,7 @@ private fun DistrictSelectionModal(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
                         focusedBorderColor = EmeraldAccent,
-                        unfocusedBorderColor = Color(0xFF334155),
+                        unfocusedBorderColor = TrackColor,
                         focusedContainerColor = DarkBackground,
                         unfocusedContainerColor = DarkBackground
                     ),
@@ -1635,7 +1642,7 @@ private fun PrayerTimesCalendarDialog(
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = DarkCardSurface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26333D)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .wrapContentHeight()
@@ -1653,7 +1660,7 @@ private fun PrayerTimesCalendarDialog(
                             text = "$displayedMonthName $displayedYearBn",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MainTextColor
                         )
                         Text(
                             text = hijriMonthHeader,
@@ -1717,7 +1724,7 @@ private fun PrayerTimesCalendarDialog(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(color = Color(0xFF26333D), thickness = 1.dp)
+                HorizontalDivider(color = DividerColor, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Days grid calculation (Saturday start)
@@ -1788,7 +1795,7 @@ private fun PrayerTimesCalendarDialog(
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                HorizontalDivider(color = Color(0xFF26333D), thickness = 1.dp)
+                HorizontalDivider(color = DividerColor, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Bottom actions: Go to Today & Done
@@ -1817,7 +1824,7 @@ private fun PrayerTimesCalendarDialog(
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent)
                     ) {
-                        Text("ঠিক আছে", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("ঠিক আছে", color = if (isSystemInDarkTheme()) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1875,7 +1882,7 @@ private fun SawmSettingsDialog(
                             text = "সাওম (রোজা) সেটিংস",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MainTextColor
                         )
                     }
 
@@ -1893,7 +1900,7 @@ private fun SawmSettingsDialog(
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                HorizontalDivider(color = Color(0xFF26333D), thickness = 1.dp)
+                HorizontalDivider(color = DividerColor, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // 1. Sahri Offset Selector
@@ -1901,7 +1908,7 @@ private fun SawmSettingsDialog(
                     text = "সাহরির সতর্কতামূলক অফসেট",
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFF1F5F9)
+                    color = MainTextColor
                 )
                 Text(
                     text = "ফজর ওয়াক্ত শুরুর আগে সাহরি শেষ করার সতর্কতা সময় (ডিফল্ট -৩ মিনিট)",
@@ -1924,7 +1931,7 @@ private fun SawmSettingsDialog(
                             color = if (isSelected) EmeraldAccent.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (isSelected) EmeraldAccent else Color(0xFF334155)
+                                if (isSelected) EmeraldAccent else TrackColor
                             ),
                             modifier = Modifier
                                 .weight(1f)
@@ -1952,7 +1959,7 @@ private fun SawmSettingsDialog(
                     text = "ইফতারের সতর্কতামূলক অফসেট",
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFF1F5F9)
+                    color = MainTextColor
                 )
                 Text(
                     text = "মাগরিব ওয়াক্তের সাথে সতর্কতামূলক অতিরিক্ত সময় (ডিফল্ট ০ মিনিট)",
@@ -1975,7 +1982,7 @@ private fun SawmSettingsDialog(
                             color = if (isSelected) AmberWarning.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (isSelected) AmberWarning else Color(0xFF334155)
+                                if (isSelected) AmberWarning else TrackColor
                             ),
                             modifier = Modifier
                                 .weight(1f)
@@ -1997,7 +2004,7 @@ private fun SawmSettingsDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = Color(0xFF26333D), thickness = 1.dp)
+                HorizontalDivider(color = DividerColor, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // 3. Notification Toggles for Sahri & Iftar
@@ -2011,7 +2018,7 @@ private fun SawmSettingsDialog(
                             text = "সাহরির শেষ সময়ের নোটিফিকেশন",
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color.White
+                            color = MainTextColor
                         )
                         Text(
                             text = "সাহরির শেষ সময় হলে সতর্কবার্তা দেবে",
@@ -2026,7 +2033,7 @@ private fun SawmSettingsDialog(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = EmeraldAccent,
                             uncheckedThumbColor = Color.LightGray,
-                            uncheckedTrackColor = Color(0xFF334155)
+                            uncheckedTrackColor = TrackColor
                         )
                     )
                 }
@@ -2043,7 +2050,7 @@ private fun SawmSettingsDialog(
                             text = "ইফতারের সময়ের নোটিফিকেশন",
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color.White
+                            color = MainTextColor
                         )
                         Text(
                             text = "ইফতারের ওয়াক্ত হওয়ার সাথে সাথে বার্তা পাঠাবে",
@@ -2058,7 +2065,7 @@ private fun SawmSettingsDialog(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = EmeraldAccent,
                             uncheckedThumbColor = Color.LightGray,
-                            uncheckedTrackColor = Color(0xFF334155)
+                            uncheckedTrackColor = TrackColor
                         )
                     )
                 }
@@ -2072,7 +2079,7 @@ private fun SawmSettingsDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("সংরক্ষণ করুন ও বন্ধ করুন", color = Color.Black, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+                    Text("সংরক্ষণ করুন ও বন্ধ করুন", color = if (isSystemInDarkTheme()) Color.Black else Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
