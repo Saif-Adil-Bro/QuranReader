@@ -267,10 +267,11 @@ fun PrayerSunPathCard(
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color.Black.copy(alpha = 0.35f)) // Slightly darker for contrast
                         .border(0.8.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp) // tighter padding
+                        .height(58.dp)
+                        .padding(horizontal = 16.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Left: Started time
@@ -282,7 +283,7 @@ fun PrayerSunPathCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy((-5).dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy((-1).dp)) {
                                 Text(
                                     text = "শুরু হয়েছে",
                                     color = Color.White,
@@ -360,7 +361,7 @@ fun PrayerSunPathCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(
                                 horizontalAlignment = Alignment.End,
-                                verticalArrangement = Arrangement.spacedBy((-5).dp)
+                                verticalArrangement = Arrangement.spacedBy((-1).dp)
                             ) {
                                 Text(
                                     text = "ওয়াক্ত শেষ",
@@ -397,10 +398,11 @@ fun PrayerSunPathCard(
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color.Black.copy(alpha = 0.35f))
                         .border(0.8.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp) // tighter padding
+                        .height(58.dp)
+                        .padding(horizontal = 16.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -413,7 +415,7 @@ fun PrayerSunPathCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy((-5).dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy((-1).dp)) {
                                 Text(
                                     text = "পরবর্তী ওয়াক্ত",
                                     color = Color.White.copy(alpha = 0.8f),
@@ -447,7 +449,7 @@ fun PrayerSunPathCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy((-5).dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy((-1).dp)) {
                                 Text(
                                     text = "আজানের সময়",
                                     color = Color.White.copy(alpha = 0.8f),
