@@ -1,96 +1,21 @@
-package com.example.ui.components
+import re
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.data.model.DailyPrayerSchedule
-import com.example.data.model.PrayerName
-import com.example.utils.DateUtil
-import com.example.utils.HijriCalendarUtil
-import kotlinx.coroutines.delay
-import java.util.Calendar
+with open('app/src/main/java/com/example/ui/components/PrayerSunPathCard.kt', 'r') as f:
+    content = f.read()
 
-private val GoldAccent = Color(0xFFD4AF37)
-private val GoldBright = Color(0xFFFFDF78)
-private val SoftWhite = Color(0xFFD6EAE0)
-private val GlassBg = Color.White.copy(alpha = 0.08f)
-private val GlassBorder = Color.White.copy(alpha = 0.14f)
+def replace_between(start_str, end_str, new_str, text):
+    start_idx = text.find(start_str)
+    end_idx = text.find(end_str)
+    if start_idx == -1 or end_idx == -1:
+        print(f"Could not find bounds: {start_str[:20]}... or {end_str[:20]}...")
+        return text
+    return text[:start_idx] + new_str + text[end_idx:]
 
-data class VisualPrayerPoint(
-    val name: String,
-    val bengaliName: String,
-    val timeMinutes: Int,
-    val timeString: String,
-    val iconType: PrayerName
-)
+# 1. Update Box background colors and next Waqt layout
+start_str = '    Box(\n        modifier = modifier\n            .fillMaxWidth()'
+end_str = '@Composable\nprivate fun VisualSunPathSection'
 
-@Composable
-fun PrayerSunPathCard(
-    schedule: DailyPrayerSchedule,
-    modifier: Modifier = Modifier,
-    onDetailsClick: () -> Unit = {},
-    onNotificationClick: () -> Unit = {}
-) {
-    val context = LocalContext.current
-    val currentDate = remember(schedule) { schedule.dateStrBn }
-    val hijriDate = remember { DateUtil.getTodayHijriDateStr(0) }
-
-    val selectedLocation = if (schedule.district.countryBn == "বাংলাদেশ") {
-        schedule.district.nameBn
-    } else {
-        "${schedule.district.nameBn}, ${schedule.district.countryBn}"
-    }
-
-    val prayers = remember(schedule) {
-        val list = mutableListOf<VisualPrayerPoint>()
-        schedule.prayers.forEach { prayerTime ->
-            if (prayerTime.name != PrayerName.SAHRI && prayerTime.name != PrayerName.IFTAR) {
-                val cal = Calendar.getInstance().apply { timeInMillis = prayerTime.timestampMillis }
-                val minutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
-                
-                list.add(
-                    VisualPrayerPoint(
-                        name = prayerTime.name.name,
-                        bengaliName = prayerTime.name.nameBn,
-                        timeMinutes = minutes,
-                        timeString = "${prayerTime.timeDigits} ${prayerTime.amPm}",
-                        iconType = prayerTime.name
-                    )
-                )
-            }
-        }
-        list.sortedBy { it.timeMinutes }
-    }
-
-    val currentMinutes by rememberCurrentMinutes()
-    val currentIndex = findCurrentPrayerIndex(prayers, currentMinutes)
-
-    val dynamicColors = remember(currentIndex) {
+new_component_body = """    val dynamicColors = remember(currentIndex) {
         when (currentIndex) {
             0, 1 -> listOf(Color(0xFF0C2B3C), Color(0xFF071922)) // Fajr/Sunrise: Dawn Blues
             2 -> listOf(Color(0xFF084B5B), Color(0xFF04262E)) // Dhuhr: Bright Midday
@@ -516,7 +441,16 @@ fun PrayerSunPathCard(
         }
     }
 }
-@Composable
+"""
+
+content = replace_between(start_str, end_str, new_component_body, content)
+
+
+# 2. Update VisualSunPathSection
+start_str = '@Composable\nprivate fun VisualSunPathSection'
+end_str = '@Composable\nprivate fun rememberCurrentMinutes()'
+
+visual_sun_path_body = """@Composable
 private fun VisualSunPathSection(
     prayers: List<VisualPrayerPoint>,
     currentIndex: Int,
@@ -538,7 +472,7 @@ private fun VisualSunPathSection(
         )
 
         // Calculate exact node positions mathematically to align perfectly
-        val nodes = remember(prayers, width, height) {
+        val nodes = remember(prayers, size) {
             prayers.mapIndexed { index, _ ->
                 val fraction = index.toFloat() / (prayers.size - 1).coerceAtLeast(1)
                 // Curve equation matching the quadratic bezier
@@ -631,7 +565,7 @@ private fun VisualSunPathSection(
                     maxLines = 1
                 )
                 Text(
-                    text = prayer.timeString.replace(" ", "\n"),
+                    text = prayer.timeString.replace(" ", "\\n"),
                     color = if (isCurrent) Color.White else SoftWhite.copy(alpha = 0.85f),
                     fontSize = if (isCurrent) 7.5.sp else 6.5.sp,
                     fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
@@ -673,42 +607,9 @@ private fun VisualSunPathSection(
         }
     }
 }
-@Composable
-private fun rememberCurrentMinutes(): State<Int> {
-    val state = remember {
-        val cal = Calendar.getInstance()
-        mutableIntStateOf(cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE))
-    }
+"""
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            val cal = Calendar.getInstance()
-            state.intValue = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
-            delay(30_000L) // update every 30s
-        }
-    }
-    return state
-}
+content = replace_between(start_str, end_str, visual_sun_path_body, content)
 
-private fun findCurrentPrayerIndex(prayers: List<VisualPrayerPoint>, currentMinutes: Int): Int {
-    if (prayers.isEmpty()) return -1
-    for (i in 0 until prayers.lastIndex) {
-        val start = prayers[i].timeMinutes
-        val end = prayers[i + 1].timeMinutes
-        if (currentMinutes in start until end) {
-            return i
-        }
-    }
-    return prayers.lastIndex
-}
-
-private fun formatDurationBangla(minutes: Int): String {
-    val safe = minutes.coerceAtLeast(0)
-    val hours = safe / 60
-    val mins = safe % 60
-    return when {
-        hours > 0 && mins > 0 -> "${DateUtil.toBengaliNumerals(hours)} ঘণ্টা ${DateUtil.toBengaliNumerals(mins)} মি."
-        hours > 0 -> "${DateUtil.toBengaliNumerals(hours)} ঘণ্টা"
-        else -> "${DateUtil.toBengaliNumerals(mins)} মিনিট"
-    }
-}
+with open('app/src/main/java/com/example/ui/components/PrayerSunPathCard.kt', 'w') as f:
+    f.write(content)

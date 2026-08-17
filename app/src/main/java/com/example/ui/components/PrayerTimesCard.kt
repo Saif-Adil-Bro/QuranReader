@@ -444,7 +444,7 @@ private fun GoldenPrayerIcon(
 }
 
 @Composable
-private fun MosqueSilhouetteBackground(modifier: Modifier = Modifier) {
+fun MosqueSilhouetteBackground(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
