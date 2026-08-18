@@ -51,6 +51,14 @@ object SubjectwiseShareUtil {
         context.startActivity(Intent.createChooser(intent, "আয়াত শেয়ার করুন (টেক্সট)"))
     }
 
+    fun createPhotoCardPayload(verse: SubjectwiseVerse, categoryName: String): PhotoCardBridge.QuickCardPayload {
+        return PhotoCardBridge.fromSubjectwiseVerse(verse, categoryName)
+    }
+
+    fun toShortPost(verse: SubjectwiseVerse, categoryName: String): com.example.data.model.ShortPost {
+        return PhotoCardBridge.fromSubjectwiseVerse(verse, categoryName).toShortPost()
+    }
+
     private fun measureAndDrawVerse(
         canvas: Canvas?,
         verse: SubjectwiseVerse,

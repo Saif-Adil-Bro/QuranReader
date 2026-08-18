@@ -120,7 +120,7 @@ object PostNotificationHelper {
                 val cardBitmap = PostShareUtil.generateCardBitmap(
                     context = context,
                     post = post,
-                    theme = PostShareUtil.CardTheme.EMERALD,
+                    template = PostShareUtil.preDefinedTemplates.first(), // Emerald is the first one
                     bgImageUrl = null,
                     overlayAlpha = 0.65f,
                     textAlignName = "CENTER",

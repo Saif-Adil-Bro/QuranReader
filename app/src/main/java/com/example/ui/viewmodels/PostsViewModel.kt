@@ -27,6 +27,40 @@ class PostsViewModel(private val postsRepository: PostsRepository) : ViewModel()
         pendingPhotoCardPost.value = post
     }
 
+    /**
+     * Quick Create Architecture entry point:
+     * Directly launches Photo Card Maker with an Ayah pre-filled and styled.
+     */
+    fun openPhotoCardFromAyah(ayah: com.example.data.model.CombinedAyah, surahName: String) {
+        val payload = com.example.utils.PhotoCardBridge.fromAyah(ayah, surahName)
+        pendingPhotoCardPost.value = payload.toShortPost()
+    }
+
+    /**
+     * Quick Create Architecture entry point:
+     * Directly launches Photo Card Maker with a Dua pre-filled and styled.
+     */
+    fun openPhotoCardFromDua(dua: com.example.data.DuaItem) {
+        val payload = com.example.utils.PhotoCardBridge.fromDua(dua)
+        pendingPhotoCardPost.value = payload.toShortPost()
+    }
+
+    /**
+     * Quick Create Architecture entry point:
+     * Directly launches Photo Card Maker with a Subjectwise verse pre-filled.
+     */
+    fun openPhotoCardFromSubjectwise(verse: com.example.data.SubjectwiseVerse, categoryName: String) {
+        val payload = com.example.utils.PhotoCardBridge.fromSubjectwiseVerse(verse, categoryName)
+        pendingPhotoCardPost.value = payload.toShortPost()
+    }
+
+    /**
+     * Launch Photo Card from generic QuickCardPayload.
+     */
+    fun openPhotoCardFromPayload(payload: com.example.utils.PhotoCardBridge.QuickCardPayload) {
+        pendingPhotoCardPost.value = payload.toShortPost()
+    }
+
     fun setPendingBlogPost(post: BlogPost?) {
         pendingBlogPost.value = post
     }

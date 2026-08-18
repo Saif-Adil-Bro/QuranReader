@@ -76,6 +76,14 @@ object DuaShareUtil {
         context.startActivity(Intent.createChooser(intent, "দোয়া শেয়ার করুন (টেক্সট)"))
     }
 
+    fun createPhotoCardPayload(dua: DuaItem): PhotoCardBridge.QuickCardPayload {
+        return PhotoCardBridge.fromDua(dua)
+    }
+
+    fun toShortPost(dua: DuaItem): com.example.data.model.ShortPost {
+        return PhotoCardBridge.fromDua(dua).toShortPost()
+    }
+
     private fun measureAndDrawDua(canvas: Canvas?, dua: DuaItem, context: Context): Int {
         val width = 1080
         val margin = 72

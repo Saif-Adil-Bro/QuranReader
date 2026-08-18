@@ -2556,6 +2556,7 @@ private fun AyahActionButtonsRow(
 ) {
     val context = LocalContext.current
     var showShareMenu by remember { mutableStateOf(false) }
+    var showPhotoCardDialog by remember { mutableStateOf(false) }
     
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -2691,8 +2692,45 @@ private fun AyahActionButtonsRow(
                             com.example.utils.AyahShareUtil.shareAsImage(context, ayah, surahName)
                         }
                     )
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Palette,
+                                    contentDescription = "Photo Card Maker",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "ফটো কার্ড তৈরি করুন",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        },
+                        onClick = {
+                            showShareMenu = false
+                            showPhotoCardDialog = true
+                        }
+                    )
                 }
             }
+        }
+
+        if (showPhotoCardDialog) {
+            val quickCardPost = remember(ayah, surahName) {
+                com.example.utils.PhotoCardBridge.fromAyah(ayah, surahName).toShortPost()
+            }
+            com.example.ui.screens.PhotoCardCustomizerDialog(
+                post = quickCardPost,
+                onDismiss = { showPhotoCardDialog = false }
+            )
         }
     }
 }

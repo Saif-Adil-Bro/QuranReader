@@ -549,6 +549,25 @@ fun AppNavGraph(
                 }
             )
         }
+
+        composable(
+            route = "quran_video_creator?surah={surah}&ayah={ayah}",
+            arguments = listOf(
+                navArgument("surah") { type = NavType.IntType; defaultValue = 1 },
+                navArgument("ayah") { type = NavType.IntType; defaultValue = 1 }
+            )
+        ) { backStackEntry ->
+            val surah = backStackEntry.arguments?.getInt("surah") ?: 1
+            val ayah = backStackEntry.arguments?.getInt("ayah") ?: 1
+            val videoVm: com.example.ui.viewmodels.QuranVideoViewModel = viewModel()
+            LaunchedEffect(surah, ayah) {
+                videoVm.loadSurah(surah, ayah, ayah)
+            }
+            com.example.ui.screens.QuranVideoCreatorScreen(
+                onNavigateBack = { navController.popBackStack() },
+                viewModel = videoVm
+            )
+        }
     }
 }
 

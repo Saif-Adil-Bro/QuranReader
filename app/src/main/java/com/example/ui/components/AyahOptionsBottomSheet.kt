@@ -41,11 +41,14 @@ fun AyahOptionsBottomSheet(
     theme: String = "Light",
     showTajweed: Boolean = true,
     arabicFontName: String = "Me Quran",
-    arabicFontSize: Float = 22f
+    arabicFontSize: Float = 22f,
+    onOpenPhotoCard: ((CombinedAyah, String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     var showFullTafsirDialog by remember { mutableStateOf(false) }
+    var showPhotoCardDialog by remember { mutableStateOf(false) }
+    var showVideoCreatorDialog by remember { mutableStateOf(false) }
 
     val isDark = theme == "Dark"
     val isSepia = theme == "Sepia"
@@ -298,12 +301,12 @@ fun AyahOptionsBottomSheet(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Bottom Action Row (Play, Copy, Share)
+            // Bottom Action Row (Play, Copy, Share, Photo Card)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Play Audio
@@ -311,7 +314,7 @@ fun AyahOptionsBottomSheet(
                     onClick = { onPlayToggle(ayah) },
                     colors = ButtonDefaults.buttonColors(containerColor = primaryAccent),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1.2f)
+                    modifier = Modifier.weight(1.1f)
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -319,12 +322,12 @@ fun AyahOptionsBottomSheet(
                         tint = Color.White,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if (isPlaying) "বিরতি" else "তিলাওয়াত",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 12.sp
                     )
                 }
 
@@ -335,7 +338,7 @@ fun AyahOptionsBottomSheet(
                         clipboardManager.setText(AnnotatedString(textToCopy))
                         Toast.makeText(context, "আয়াত ও অনুবাদ কপি করা হয়েছে", Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(0.9f),
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, primaryAccent)
                 ) {
@@ -345,8 +348,8 @@ fun AyahOptionsBottomSheet(
                         tint = primaryAccent,
                         modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("কপি", color = primaryAccent, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text("কপি", color = primaryAccent, fontSize = 12.sp)
                 }
 
                 // Share
@@ -360,7 +363,7 @@ fun AyahOptionsBottomSheet(
                         }
                         context.startActivity(Intent.createChooser(sendIntent, "আয়াত শেয়ার করুন"))
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(0.9f),
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, primaryAccent)
                 ) {
@@ -370,10 +373,89 @@ fun AyahOptionsBottomSheet(
                         tint = primaryAccent,
                         modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("শেয়ার", color = primaryAccent, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text("শেয়ার", color = primaryAccent, fontSize = 12.sp)
+                }
+
+                // Photo Card Quick Create
+                Button(
+                    onClick = {
+                        if (onOpenPhotoCard != null) {
+                            onOpenPhotoCard(ayah, surahName)
+                        } else {
+                            showPhotoCardDialog = true
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isDark) Color(0xFFD97706) else Color(0xFFEAB308)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Palette,
+                        contentDescription = "ফটো কার্ড",
+                        tint = Color.Black,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text("কার্ড", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                }
+
+                // Quick Quran Video Creator Button
+                Button(
+                    onClick = {
+                        showVideoCreatorDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFEF4444)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Videocam,
+                        contentDescription = "কুরআন ভিডিও",
+                        tint = Color.White,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text("ভিডিও", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
                 }
             }
+        }
+    }
+
+    // Photo Card Customizer Dialog (Quick Create Flow)
+    if (showPhotoCardDialog) {
+        val quickCardPost = remember(ayah, surahName) {
+            com.example.utils.PhotoCardBridge.fromAyah(ayah, surahName).toShortPost()
+        }
+        com.example.ui.screens.PhotoCardCustomizerDialog(
+            post = quickCardPost,
+            onDismiss = { showPhotoCardDialog = false }
+        )
+    }
+
+    // Quick Quran Video Creator Dialog
+    if (showVideoCreatorDialog) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showVideoCreatorDialog = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            val videoVm: com.example.ui.viewmodels.QuranVideoViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+            LaunchedEffect(ayah, surahName) {
+                videoVm.loadFromQuickCreate(
+                    surahNumber = ayah.surahNumber,
+                    ayahNumber = ayah.numberInSurah,
+                    ayah = ayah,
+                    surahName = surahName
+                )
+            }
+            com.example.ui.screens.QuranVideoCreatorScreen(
+                onNavigateBack = { showVideoCreatorDialog = false },
+                viewModel = videoVm
+            )
         }
     }
 

@@ -56,6 +56,20 @@ object AyahShareUtil {
         context.startActivity(Intent.createChooser(intent, "আয়াত শেয়ার করুন (টেক্সট)"))
     }
 
+    /**
+     * Converts an Ayah to a QuickCardPayload for Photo Card Maker.
+     */
+    fun createPhotoCardPayload(ayah: CombinedAyah, surahName: String): PhotoCardBridge.QuickCardPayload {
+        return PhotoCardBridge.fromAyah(ayah, surahName)
+    }
+
+    /**
+     * Converts an Ayah to a ShortPost for the card creator dialog.
+     */
+    fun toShortPost(ayah: CombinedAyah, surahName: String): com.example.data.model.ShortPost {
+        return PhotoCardBridge.fromAyah(ayah, surahName).toShortPost()
+    }
+
     private fun measureAndDrawAyah(canvas: Canvas?, ayah: CombinedAyah, surahName: String, context: Context): Int {
         val width = 1080
         val margin = 72

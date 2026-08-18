@@ -1097,7 +1097,7 @@ fun MenuDetailDialog(
                     "player" -> "কুরআন অডিও প্লেয়ার"
                     "hifz" -> "হিফজ ট্র্যাকার"
                     "learn" -> "কুরআন শিক্ষা"
-                    "video" -> "ভিডিও ক্লাস"
+                    "video" -> "কুরআন ভিডিও ক্রিয়েটর"
                     "offline_sync" -> "কুরআন অফলাইন ডাউনলোড"
                     "font_settings" -> "ফন্ট ও তাজভীদ"
                     "backup" -> "ব্যাকআপ"
@@ -1205,7 +1205,9 @@ fun MenuDetailDialog(
                         "player" -> PlayerDialogContent()
                         "hifz" -> HifzDialogContent(viewModel)
                         "learn" -> LearnDialogContent()
-                        "video" -> VideoDialogContent()
+                        "video" -> QuranVideoCreatorScreen(
+                            onNavigateBack = { onDismiss() }
+                        )
                         "offline_sync" -> OfflineSyncDialogContent(viewModel)
                         "font_settings" -> FontSettingsContent(viewModel = viewModel, onDismiss = onDismiss)
                         "backup" -> BackupDialogContent()

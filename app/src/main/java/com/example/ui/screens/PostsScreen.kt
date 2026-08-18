@@ -1,4 +1,10 @@
 package com.example.ui.screens
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import com.example.utils.DateUtil
 
 import android.graphics.Bitmap
@@ -885,7 +891,7 @@ fun BlogPostDetailScreen(
                     }
                     IconButton(
                         onClick = {
-                            val shareText = "✨ $fullPostTitle ✨\n\n$displayContent\n\n— $fullPostAuthor\n\n📱 ❝কুরআন রিডার❞ অ্যাপ থেকে"
+                            val shareText = "✨ $fullPostTitle \n\n$displayContent\n\n— $fullPostAuthor\n\n📱 ❝কুরআন রিডার❞ অ্যাপ থেকে"
                             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(android.content.Intent.EXTRA_TEXT, shareText)
@@ -1095,22 +1101,69 @@ fun PhotoCardCustomizerDialog(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var selectedTheme by remember { mutableStateOf(PostShareUtil.CardTheme.EMERALD) }
+    val (initialCategory, initialTemplate) = remember(post) {
+        PostShareUtil.findBestTemplateForPost(post)
+    }
+
+    var selectedCategory by remember { mutableStateOf(initialCategory) }
+    var selectedTemplate by remember { mutableStateOf(initialTemplate) }
+    
     var bgImageUrl by remember { mutableStateOf("") }
-    var overlayAlpha by remember { mutableFloatStateOf(0.70f) }
-    var textAlignName by remember { mutableStateOf("CENTER") } // "LEFT", "CENTER", "RIGHT"
-    var fontName by remember { mutableStateOf("SolaimanLipi") } // "SolaimanLipi", "Hind Siliguri", "Shorif Shishir Unicode", "Default"
-    var fontSizeSp by remember { mutableFloatStateOf(44f) }
-    var lineSpacingMult by remember { mutableFloatStateOf(1.15f) }
+    var aspectRatio by remember { mutableStateOf("1:1") }
+    var overlayAlpha by remember { mutableFloatStateOf(selectedTemplate.defaultOverlayAlpha) }
+    var textAlignName by remember { mutableStateOf(selectedTemplate.defaultTextAlign) }
+    var fontName by remember { mutableStateOf(selectedTemplate.defaultFontName) }
+    var fontSizeSp by remember { mutableFloatStateOf(selectedTemplate.defaultFontSize) }
+    var lineSpacingMult by remember { mutableFloatStateOf(selectedTemplate.defaultLineSpacing) }
+    var textLetterSpacing by remember { mutableFloatStateOf(0f) }
+    var textWidthPercent by remember { mutableFloatStateOf(1f) }
+    var isTextBold by remember { mutableStateOf(false) }
+    var autoFitText by remember { mutableStateOf(true) }
+    var customTitleColor by remember { mutableStateOf<String?>(null) }
+    var customTextColor by remember { mutableStateOf<String?>(null) }
+    var customOverlayColor by remember { mutableStateOf<String?>("#000000") }
+
+    LaunchedEffect(bgImageUrl) {
+        if (bgImageUrl.isNotEmpty()) {
+            overlayAlpha = 0.85f
+            customOverlayColor = "#000000"
+        }
+    }
+    var customRefColor by remember { mutableStateOf<String?>(null) }
+
+    
+    LaunchedEffect(selectedTemplate) {
+        overlayAlpha = selectedTemplate.defaultOverlayAlpha
+        textAlignName = selectedTemplate.defaultTextAlign
+        fontName = selectedTemplate.defaultFontName
+        fontSizeSp = selectedTemplate.defaultFontSize
+        customTitleColor = null
+        customTextColor = null
+        customRefColor = null
+        textLetterSpacing = 0f
+        textWidthPercent = 1f
+        isTextBold = false
+
+        lineSpacingMult = selectedTemplate.defaultLineSpacing
+        // We do not overwrite user's customText/customCategory here intentionally, just the visual style
+    }
+    
     var customCategory by remember { mutableStateOf(post.category) }
     var customText by remember { mutableStateOf(post.text) }
     var customRef by remember { mutableStateOf(post.reference) }
-    var showLogo by remember { mutableStateOf(true) }
-    var showWatermark by remember { mutableStateOf(true) }
+    var showLogo by remember { mutableStateOf(selectedTemplate.showLogo) }
+    var showWatermark by remember { mutableStateOf(selectedTemplate.showWatermark) }
 
     var cardBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isGeneratingPreview by remember { mutableStateOf(false) }
     var isSharing by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var isTemplateExpanded by remember { mutableStateOf(true) }
+    var isContentExpanded by remember { mutableStateOf(true) }
+    var isBackgroundExpanded by remember { mutableStateOf(false) }
+    var isTypographyExpanded by remember { mutableStateOf(false) }
+    var isBrandingExpanded by remember { mutableStateOf(false) }
+    var isLayoutExpanded by remember { mutableStateOf(false) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -1131,26 +1184,52 @@ fun PhotoCardCustomizerDialog(
     }
 
     // Sample background image presets
-    val presetBgUrls = remember {
+    val bgCategories = listOf("সব", "মসজিদ", "প্রকৃতি", "রাত", "কুরআন", "Abstract", "রমজান", "ইসলামিক")
+    var selectedBgCategory by remember { mutableStateOf("সব") }
+    
+    data class PresetBg(val url: String, val category: String)
+    val presetBgList = remember {
         listOf(
-            "https://images.unsplash.com/photo-1542816417-0983cbe33577?w=800&q=80" to "মসজিদ ১",
-            "https://images.unsplash.com/photo-1564769625905-50e93615e769?w=800&q=80" to "মসজিদ ২",
-            "https://images.unsplash.com/photo-1519817650390-64a93db51149?w=800&q=80" to "তারা ও আকাশ",
-            "https://images.unsplash.com/photo-1509021436468-d51030005963?w=800&q=80" to "জ্যামিতিক প্যাটার্ন",
-            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80" to "প্রকৃতি"
+            PresetBg("https://images.unsplash.com/photo-1542816417-0983cbe33577?w=600&q=80", "মসজিদ"),
+            PresetBg("https://images.unsplash.com/photo-1564769625905-50e93615e769?w=600&q=80", "মসজিদ"),
+            PresetBg("https://images.unsplash.com/photo-1519817650390-64a93db51149?w=600&q=80", "মসজিদ"),
+            PresetBg("https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=600&q=80", "মসজিদ"),
+            PresetBg("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80", "প্রকৃতি"),
+            PresetBg("https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=600&q=80", "প্রকৃতি"),
+            PresetBg("https://images.unsplash.com/photo-1444464666168-49b626d49c97?w=600&q=80", "প্রকৃতি"),
+            PresetBg("https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=600&q=80", "প্রকৃতি"),
+            PresetBg("https://images.unsplash.com/photo-1505322022379-7c3353ee6291?w=600&q=80", "রাত"),
+            PresetBg("https://images.unsplash.com/photo-1488866022504-f2584929ca5f?w=600&q=80", "রাত"),
+            PresetBg("https://images.unsplash.com/photo-1503264116251-35a269479413?w=600&q=80", "রাত"),
+            PresetBg("https://images.unsplash.com/photo-1609599006353-e629aaab31f5?w=600&q=80", "কুরআন"),
+            PresetBg("https://images.unsplash.com/photo-1576485290814-1c72aa4bbb8e?w=600&q=80", "কুরআন"),
+            PresetBg("https://images.unsplash.com/photo-1509021436468-d51030005963?w=600&q=80", "Abstract"),
+            PresetBg("https://images.unsplash.com/photo-1604871000636-074fa5117945?w=600&q=80", "Abstract"),
+            PresetBg("https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=600&q=80", "Abstract"),
+            PresetBg("https://images.unsplash.com/photo-1585036156171-384164a8c675?w=600&q=80", "রমজান"),
+            PresetBg("https://images.unsplash.com/photo-1555068228-4b71ab2ab1b5?w=600&q=80", "রমজান"),
+            PresetBg("https://images.unsplash.com/photo-1563852028710-184518485244?w=600&q=80", "ইসলামিক"),
+            PresetBg("https://images.unsplash.com/photo-1582281171801-62a26563deec?w=600&q=80", "ইসলামিক"),
+            PresetBg("https://images.unsplash.com/photo-1558231908-1647ecb6243b?w=600&q=80", "ইসলামিক")
         )
     }
 
     LaunchedEffect(
-        selectedTheme, bgImageUrl, overlayAlpha, textAlignName, fontName, fontSizeSp, lineSpacingMult, customCategory, customText, customRef, showLogo, showWatermark, post
+        selectedTemplate, bgImageUrl, overlayAlpha, customOverlayColor, aspectRatio, textAlignName, fontName, fontSizeSp, lineSpacingMult, customCategory, customText, customRef, customTitleColor, customTextColor, customRefColor, showLogo, showWatermark, autoFitText, textLetterSpacing, textWidthPercent, isTextBold, post
     ) {
+        kotlinx.coroutines.delay(20)
         isGeneratingPreview = true
         cardBitmap = PostShareUtil.generateCardBitmap(
             context = context,
+            customTitleColor = customTitleColor,
+            customTextColor = customTextColor,
+            customRefColor = customRefColor,
             post = post,
-            theme = selectedTheme,
+            template = selectedTemplate,
             bgImageUrl = bgImageUrl.ifBlank { null },
+            aspectRatio = aspectRatio,
             overlayAlpha = overlayAlpha,
+            customOverlayColor = customOverlayColor,
             textAlignName = textAlignName,
             fontName = fontName,
             fontSizeSp = fontSizeSp,
@@ -1159,7 +1238,12 @@ fun PhotoCardCustomizerDialog(
             customText = customText,
             customRef = customRef,
             showLogo = showLogo,
-            showWatermark = showWatermark
+            autoFitText = autoFitText,
+            showWatermark = showWatermark,
+            textWidthPercent = textWidthPercent,
+            textLetterSpacing = textLetterSpacing,
+            isTextBold = isTextBold,
+            isForPreview = true
         )
         isGeneratingPreview = false
     }
@@ -1189,12 +1273,17 @@ fun PhotoCardCustomizerDialog(
                                 if (!isSharing) {
                                     isSharing = true
                                     coroutineScope.launch {
-                                        PostShareUtil.shareAsImage(
+                                        val exportBitmap = PostShareUtil.generateCardBitmap(
                                             context = context,
+                                            customTitleColor = customTitleColor,
+                                            customTextColor = customTextColor,
+                                            customRefColor = customRefColor,
                                             post = post,
-                                            theme = selectedTheme,
+                                            template = selectedTemplate,
                                             bgImageUrl = bgImageUrl.ifBlank { null },
+                                            aspectRatio = aspectRatio,
                                             overlayAlpha = overlayAlpha,
+                                            customOverlayColor = customOverlayColor,
                                             textAlignName = textAlignName,
                                             fontName = fontName,
                                             fontSizeSp = fontSizeSp,
@@ -1203,8 +1292,14 @@ fun PhotoCardCustomizerDialog(
                                             customText = customText,
                                             customRef = customRef,
                                             showLogo = showLogo,
-                                            showWatermark = showWatermark
+                                            autoFitText = autoFitText,
+                                            showWatermark = showWatermark,
+                                            textWidthPercent = textWidthPercent,
+                                            textLetterSpacing = textLetterSpacing,
+                                            isTextBold = isTextBold,
+                                            isForPreview = false
                                         )
+                                        PostShareUtil.shareBitmap(context, exportBitmap)
                                         isSharing = false
                                     }
                                 }
@@ -1238,216 +1333,477 @@ fun PhotoCardCustomizerDialog(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .background(MaterialTheme.colorScheme.background)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Large Live Preview Box
-                Surface(
+                // FIXED TOP SECTION: Live Card Preview + Quick Action
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(340.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    tonalElevation = 4.dp
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                    // Fixed Live Preview Box
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 2.dp,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
                     ) {
-                        if (cardBitmap != null) {
-                            Image(
-                                bitmap = cardBitmap!!.asImageBitmap(),
-                                contentDescription = "Card Preview",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(8.dp)
-                            )
-                        }
-
-                        if (isGeneratingPreview && cardBitmap == null) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = 0.3f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(color = PrimaryGreen)
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (cardBitmap != null) {
+                                Image(
+                                    bitmap = cardBitmap!!.asImageBitmap(),
+                                    contentDescription = "Card Preview",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(6.dp)
+                                )
                             }
+
+                            if (isGeneratingPreview && cardBitmap == null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.3f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = PrimaryGreen)
+                                }
+                            }
+                        }
+                    }
+
+                    // Save to Gallery Action Button
+                    Button(
+                        onClick = {
+                            if (!isSaving) {
+                                isSaving = true
+                                coroutineScope.launch {
+                                    val exportBitmap = PostShareUtil.generateCardBitmap(
+                                        context = context,
+                                        customTitleColor = customTitleColor,
+                                        customTextColor = customTextColor,
+                                        customRefColor = customRefColor,
+                                        post = post,
+                                        template = selectedTemplate,
+                                        bgImageUrl = bgImageUrl.ifBlank { null },
+                                        aspectRatio = aspectRatio,
+                                        overlayAlpha = overlayAlpha,
+                                        customOverlayColor = customOverlayColor,
+                                        textAlignName = textAlignName,
+                                        fontName = fontName,
+                                        fontSizeSp = fontSizeSp,
+                                        lineSpacingMult = lineSpacingMult,
+                                        customCategory = customCategory,
+                                        customText = customText,
+                                        customRef = customRef,
+                                        showLogo = showLogo,
+                                        autoFitText = autoFitText,
+                                        showWatermark = showWatermark,
+                                        textWidthPercent = textWidthPercent,
+                                        textLetterSpacing = textLetterSpacing,
+                                        isTextBold = isTextBold,
+                                        isForPreview = false
+                                    )
+                                    val success = PostShareUtil.saveImageToGallery(context, exportBitmap)
+                                    if (success) {
+                                        Toast.makeText(context, "ছবি গ্যালারিতে সেভ হয়েছে", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "ছবি সেভ করতে সমস্যা হয়েছে", Toast.LENGTH_SHORT).show()
+                                    }
+                                    isSaving = false
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(42.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                        shape = RoundedCornerShape(10.dp),
+                        enabled = !isSaving
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("গ্যালারিতে সংরক্ষণ করুন", fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                         }
                     }
                 }
 
-                // Controls Section
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // 1. Theme Color Presets
-                        Column {
-                            Text(
-                                text = "🎨 ব্যাকগ্রাউন্ড থিম",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                items(PostShareUtil.CardTheme.entries.toTypedArray()) { theme ->
-                                    val isSelected = selectedTheme == theme
-                                    val themeBg = Color(android.graphics.Color.parseColor(theme.bgColors.first))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
 
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(themeBg)
-                                            .border(
-                                                width = if (isSelected) 3.dp else 1.dp,
-                                                color = if (isSelected) PrimaryGreen else Color.Gray.copy(alpha = 0.4f),
-                                                shape = RoundedCornerShape(12.dp)
-                                            )
-                                            .clickable { selectedTheme = theme }
-                                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                                    ) {
-                                        Text(
-                                            text = theme.title,
-                                            fontSize = 12.sp,
-                                            color = Color(android.graphics.Color.parseColor(theme.textColor)),
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
+                // SCROLLABLE CONTROLS SECTION
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Quick Navigation Filter Row
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "⚙️ এডিটর সেটিংস ও কাস্টমাইজেশন",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                        item {
+                            FilterChip(
+                                selected = isTemplateExpanded,
+                                onClick = { isTemplateExpanded = !isTemplateExpanded },
+                                label = { Text("✨ টেমপ্লেট") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryGreen.copy(alpha = 0.15f),
+                                    selectedLabelColor = PrimaryGreen
+                                )
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = isContentExpanded,
+                                onClick = { isContentExpanded = !isContentExpanded },
+                                label = { Text("📝 কনটেন্ট") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryGreen.copy(alpha = 0.15f),
+                                    selectedLabelColor = PrimaryGreen
+                                )
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = isBackgroundExpanded,
+                                onClick = { isBackgroundExpanded = !isBackgroundExpanded },
+                                label = { Text("🎨 ব্যাকগ্রাউন্ড") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryGreen.copy(alpha = 0.15f),
+                                    selectedLabelColor = PrimaryGreen
+                                )
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = isTypographyExpanded,
+                                onClick = { isTypographyExpanded = !isTypographyExpanded },
+                                label = { Text("🔤 টাইপোগ্রাফি") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryGreen.copy(alpha = 0.15f),
+                                    selectedLabelColor = PrimaryGreen
+                                )
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = isBrandingExpanded,
+                                onClick = { isBrandingExpanded = !isBrandingExpanded },
+                                label = { Text("🏷️ ব্র্যান্ডিং") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryGreen.copy(alpha = 0.15f),
+                                    selectedLabelColor = PrimaryGreen
+                                )
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = isLayoutExpanded,
+                                onClick = { isLayoutExpanded = !isLayoutExpanded },
+                                label = { Text("🖼️ সাইজ") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryGreen.copy(alpha = 0.15f),
+                                    selectedLabelColor = PrimaryGreen
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // Section 1: ✨ Template
+                EditorCollapsibleSection(
+                    icon = "✨",
+                    title = "টেমপ্লেট ও স্টাইল",
+                    subtitle = "${selectedTemplate.title} • ${selectedCategory.title}",
+                    isExpanded = isTemplateExpanded,
+                    onToggle = { isTemplateExpanded = !isTemplateExpanded }
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "ক্যাটাগরি অনুযায়ী ফিল্টার করুন:",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        // Category Selector
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(PostShareUtil.TemplateCategory.entries.toTypedArray()) { category ->
+                                FilterChip(
+                                    selected = selectedCategory == category,
+                                    onClick = { selectedCategory = category },
+                                    label = { Text(category.title, fontSize = 12.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f),
+                                        selectedLabelColor = PrimaryGreen
+                                    )
+                                )
                             }
                         }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                        // 2. Background Image URL & Presets & Local Storage
-                        Column {
-                            Text(
-                                text = "🖼️ ব্যাকগ্রাউন্ড পিকচার (গ্যালারি, URL ও প্রিসেট)",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Presets
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                item {
-                                    FilterChip(
-                                        selected = bgImageUrl.isBlank(),
-                                        onClick = { bgImageUrl = "" },
-                                        label = { Text("কোনো ছবি নয়") }
-                                    )
-                                }
-                                items(presetBgUrls) { (url, label) ->
-                                    FilterChip(
-                                        selected = bgImageUrl == url,
-                                        onClick = { bgImageUrl = url },
-                                        label = { Text(label) }
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            val isLocalImage = bgImageUrl.startsWith("content://") || bgImageUrl.startsWith("file://")
-
-                            OutlinedTextField(
-                                value = if (isLocalImage) "📁 লোকাল গ্যালারির কাস্টম ছবি" else bgImageUrl,
-                                onValueChange = { newValue ->
-                                    if (!isLocalImage) {
-                                        bgImageUrl = newValue
-                                    } else {
-                                        bgImageUrl = newValue
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("ছবির URL লিংক দিন অথবা ডানপাশের আইকনে ক্লিক করুন", fontSize = 13.sp) },
-                                singleLine = true,
-                                trailingIcon = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (bgImageUrl.isNotEmpty()) {
-                                            IconButton(onClick = { bgImageUrl = "" }) {
-                                                Icon(Icons.Default.Clear, contentDescription = "Clear")
-                                            }
-                                        }
-                                        IconButton(
-                                            onClick = { imagePickerLauncher.launch("image/*") }
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.AddPhotoAlternate,
-                                                contentDescription = "গ্যালারি থেকে ছবি সিলেক্ট করুন",
-                                                tint = PrimaryGreen
-                                            )
-                                        }
-                                    }
-                                },
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            if (bgImageUrl.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        // Templates Selector
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val filteredTemplates = PostShareUtil.preDefinedTemplates.filter { selectedCategory == PostShareUtil.TemplateCategory.ALL || selectedCategory in it.categories }
+                            items(filteredTemplates) { template ->
+                                val isSelected = selectedTemplate == template
+                                val themeBg = Color(android.graphics.Color.parseColor(template.bgColors.first))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(themeBg)
+                                        .border(
+                                            width = if (isSelected) 3.dp else 1.dp,
+                                            color = if (isSelected) PrimaryGreen else Color.Gray.copy(alpha = 0.4f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                        .clickable { selectedTemplate = template }
+                                        .padding(horizontal = 14.dp, vertical = 10.dp)
                                 ) {
                                     Text(
-                                        text = "কালার ওভারলে অপাসিটি:",
+                                        text = template.title,
                                         fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Slider(
-                                        value = overlayAlpha,
-                                        onValueChange = { overlayAlpha = it },
-                                        valueRange = 0.0f..1.0f,
-                                        modifier = Modifier.weight(1f),
-                                        colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "${(overlayAlpha * 100).toInt()}%",
-                                        fontSize = 12.sp,
+                                        color = Color(android.graphics.Color.parseColor(template.textColor)),
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
                         }
+                    }
+                }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                // Section 2: 📝 Content
+                EditorCollapsibleSection(
+                    icon = "📝",
+                    title = "কনটেন্ট ও টেক্সট",
+                    subtitle = if (customCategory.isNotBlank()) customCategory else "মূল বাণী ও রেফারেন্স",
+                    isExpanded = isContentExpanded,
+                    onToggle = { isContentExpanded = !isContentExpanded }
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = customCategory,
+                            onValueChange = { customCategory = it },
+                            label = { Text("কার্ডের টাইটেল / ক্যাটাগরি (ঐচ্ছিক)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
 
-                        // 3. Bangla Fonts Selection
+                        OutlinedTextField(
+                            value = customText,
+                            onValueChange = { customText = it },
+                            label = { Text("কার্ডের মূল বাণী/নসীহত") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = customRef,
+                            onValueChange = { customRef = it },
+                            label = { Text("সূত্র / রেফারেন্স (ঐচ্ছিক)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                }
+
+                // Section 3: 🎨 Background
+                EditorCollapsibleSection(
+                    icon = "🎨",
+                    title = "ব্যাকগ্রাউন্ড ও কালার",
+                    subtitle = if (bgImageUrl.isNotEmpty()) "কাস্টম ছবি সিলেক্টেড" else "ডিফল্ট থিম ব্যাকগ্রাউন্ড",
+                    isExpanded = isBackgroundExpanded,
+                    onToggle = { isBackgroundExpanded = !isBackgroundExpanded }
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            text = "পছন্দের ক্যাটাগরি সিলেক্ট করুন:",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Background Preset Categories
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(bgCategories) { category ->
+                                FilterChip(
+                                    selected = selectedBgCategory == category,
+                                    onClick = { selectedBgCategory = category },
+                                    label = { Text(category) },
+                                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f), selectedLabelColor = PrimaryGreen)
+                                )
+                            }
+                        }
+
+                        // Background Image Grid
+                        val filteredBgs = presetBgList.filter { selectedBgCategory == "সব" || it.category == selectedBgCategory }
+                        
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (bgImageUrl.isNotEmpty()) {
+                                OutlinedButton(
+                                    onClick = { bgImageUrl = "" },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(16.dp), tint = PrimaryGreen)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("ছবি মুছুন (Clear Background)", color = PrimaryGreen)
+                                }
+                            }
+
+                            filteredBgs.chunked(3).forEach { rowItems ->
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    rowItems.forEach { bg ->
+                                        val isSelected = bgImageUrl == bg.url
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .aspectRatio(1f)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .border(
+                                                    width = if (isSelected) 3.dp else 1.dp,
+                                                    color = if (isSelected) PrimaryGreen else androidx.compose.ui.graphics.Color.LightGray,
+                                                    shape = RoundedCornerShape(8.dp)
+                                                )
+                                                .clickable { bgImageUrl = bg.url }
+                                        ) {
+                                            coil.compose.AsyncImage(
+                                                model = bg.url,
+                                                contentDescription = "Background",
+                                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+                                    }
+                                    val emptySpots = 3 - rowItems.size
+                                    for (i in 0 until emptySpots) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        val isLocalImage = bgImageUrl.startsWith("content://") || bgImageUrl.startsWith("file://")
+
+                        OutlinedTextField(
+                            value = if (isLocalImage) "ডিভাইস গ্যালারির ছবি সিলেক্টেড" else bgImageUrl,
+                            onValueChange = { bgImageUrl = it },
+                            label = { Text("ছবির লিঙ্ক (URL) বা গ্যালারি থেকে নিন") },
+                            readOnly = isLocalImage,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            trailingIcon = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (bgImageUrl.isNotEmpty()) {
+                                        IconButton(onClick = { bgImageUrl = "" }) {
+                                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                        }
+                                    }
+                                    IconButton(
+                                        onClick = { imagePickerLauncher.launch("image/*") }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.AddPhotoAlternate,
+                                            contentDescription = "গ্যালারি থেকে ছবি সিলেক্ট করুন",
+                                            tint = PrimaryGreen
+                                        )
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        if (bgImageUrl.isNotEmpty()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                            Text("ওভারলে ইনটেনসিটি (Overlay Intensity):", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                val intensities = listOf("None" to 0.0f, "Light" to 0.3f, "Medium" to 0.6f, "Dark" to 0.85f)
+                                intensities.forEach { (label, alphaValue) ->
+                                    val isSelected = (overlayAlpha == alphaValue)
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { overlayAlpha = alphaValue },
+                                        label = { Text(label, fontSize = 12.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f), selectedLabelColor = PrimaryGreen)
+                                    )
+                                }
+                            }
+                            
+                            ColorPlateSelector(
+                                label = "ওভারলে কালার (Overlay Color):",
+                                selectedColorHex = customOverlayColor,
+                                onColorSelected = { customOverlayColor = it ?: "#000000" }
+                            )
+                        }
+                    }
+                }
+
+                // Section 4: 🔤 Typography
+                EditorCollapsibleSection(
+                    icon = "🔤",
+                    title = "টাইপোগ্রাফি ও ফন্ট",
+                    subtitle = "$fontName • ${fontSizeSp.toInt()}sp",
+                    isExpanded = isTypographyExpanded,
+                    onToggle = { isTypographyExpanded = !isTypographyExpanded }
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        // Bangla Fonts Selection
                         Column {
                             Text(
-                                text = "🔤 বাংলা ফন্ট সিলেক্ট করুন (প্রিসেট ও কাস্টম)",
-                                fontSize = 14.sp,
+                                text = "বাংলা ফন্ট সিলেক্ট করুন (প্রিসেট ও কাস্টম)",
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-
                             val fontsList = listOf(
                                 "SolaimanLipi" to "সোলাইমান লিপি",
                                 "Hind Siliguri" to "হিন্দ শিলিগুড়ি",
                                 "Shorif Shishir Unicode" to "শরীফ শিশির",
                                 "Default" to "ডিফল্ট ফন্ট"
                             )
-
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxWidth()
@@ -1465,258 +1821,523 @@ fun PhotoCardCustomizerDialog(
                                         )
                                     }
                                 }
-
                                 items(fontsList) { (key, label) ->
                                     FilterChip(
                                         selected = fontName == key,
                                         onClick = { fontName = key },
                                         label = { Text(label, fontWeight = if (fontName == key) FontWeight.Bold else FontWeight.Normal) },
                                         colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = PrimaryGreen,
-                                            selectedLabelColor = Color.White
+                                            selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f),
+                                            selectedLabelColor = PrimaryGreen
                                         )
                                     )
                                 }
                             }
-
                             Spacer(modifier = Modifier.height(8.dp))
-
                             OutlinedButton(
                                 onClick = { fontPickerLauncher.launch("*/*") },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryGreen),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.FileUpload, contentDescription = null, tint = PrimaryGreen)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(customFontName ?: "নিজের বাংলা ফন্ট (.ttf / .otf) আপলোড করুন", fontSize = 12.sp, color = PrimaryGreen)
+                            }
+                        }
+
+                        // Arabic Fonts Selection
+                        Column {
+                            Text(
+                                text = "🕌 আরবি ফন্ট",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val arabicFonts = listOf(
+                                "Scheherazade New" to "শাহরাজাদ (Scheherazade)",
+                                "Amiri" to "আমিরি (Amiri)"
+                            )
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
+                                items(arabicFonts) { (key, label) ->
+                                    FilterChip(
+                                        selected = fontName == key,
+                                        onClick = { fontName = key },
+                                        label = { Text(label, fontWeight = if (fontName == key) FontWeight.Bold else FontWeight.Normal) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f),
+                                            selectedLabelColor = PrimaryGreen
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                        // Text Alignment
+                        Column {
+                            Text(
+                                text = "🔠 টেক্সট এলাইনমেন্ট",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                val aligns = listOf("CENTER" to "মাঝখানে (Center)", "LEFT" to "বামে (Left)", "RIGHT" to "ডানে (Right)")
+                                aligns.forEach { (key, label) ->
+                                    FilterChip(
+                                        selected = textAlignName == key,
+                                        onClick = { textAlignName = key },
+                                        label = { Text(label, fontSize = 12.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f), selectedLabelColor = PrimaryGreen),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                        // Font Size & Auto Fit
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    if (fontName.startsWith("content://") || fontName.startsWith("file://"))
-                                        "📁 কাস্টম ফন্ট ফাইল ফাইল সংযুক্ত (অন্যটি পরিবর্তন করুন)"
-                                    else
-                                        "📁 মেমোরি / স্টোরেজ থেকে ফন্ট ফাইল (.ttf / .otf) নির্বাচন করুন",
+                                    text = "🔠 ফন্ট সাইজ",
                                     fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
+                                Text(
+                                    text = "${fontSizeSp.toInt()} sp",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryGreen
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Slider(
+                                value = fontSizeSp,
+                                onValueChange = { fontSizeSp = it },
+                                valueRange = 32f..58f,
+                                colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("অটো-ফিট (Auto Fit)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Switch(checked = autoFitText, onCheckedChange = { autoFitText = it }, colors = SwitchDefaults.colors(checkedThumbColor = PrimaryGreen, checkedTrackColor = PrimaryGreen.copy(alpha = 0.5f)))
                             }
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        // Bold Text
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("বোল্ড টেক্সট (Bold Text)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Switch(checked = isTextBold, onCheckedChange = { isTextBold = it }, colors = SwitchDefaults.colors(checkedThumbColor = PrimaryGreen, checkedTrackColor = PrimaryGreen.copy(alpha = 0.5f)))
+                        }
 
-                        // 4. Text Alignment Options
+                        // Line Spacing
                         Column {
-                            Text(
-                                text = "📐 টেক্সট এলাইনমেন্ট (পজিশন)",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                FilterChip(
-                                    selected = textAlignName == "LEFT",
-                                    onClick = { textAlignName = "LEFT" },
-                                    label = {
-                                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                Icons.Default.FormatAlignLeft,
-                                                contentDescription = "বাম",
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryGreen,
-                                        selectedLabelColor = Color.White
-                                    ),
-                                    modifier = Modifier.weight(1f)
+                                Text(
+                                    text = "↕️ লাইন স্পেসিং (Line Spacing)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
-                                FilterChip(
-                                    selected = textAlignName == "CENTER",
-                                    onClick = { textAlignName = "CENTER" },
-                                    label = {
-                                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                Icons.Default.FormatAlignCenter,
-                                                contentDescription = "মাঝখানে",
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryGreen,
-                                        selectedLabelColor = Color.White
-                                    ),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                FilterChip(
-                                    selected = textAlignName == "RIGHT",
-                                    onClick = { textAlignName = "RIGHT" },
-                                    label = {
-                                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                Icons.Default.FormatAlignRight,
-                                                contentDescription = "ডান",
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryGreen,
-                                        selectedLabelColor = Color.White
-                                    ),
-                                    modifier = Modifier.weight(1f)
+                                Text(
+                                    text = String.format(java.util.Locale.US, "%.2fx", lineSpacingMult),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryGreen
                                 )
                             }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Slider(
+                                value = lineSpacingMult,
+                                onValueChange = { lineSpacingMult = it },
+                                valueRange = 0.8f..2.2f,
+                                colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
+                            )
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                        // 5. Logo & Credit Watermark Toggles
+                        // Letter Spacing
                         Column {
-                            Text(
-                                text = "🏷️ লোগো ও ক্রেডিট ওয়াটারমার্ক অপশন",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                FilterChip(
-                                    selected = showLogo,
-                                    onClick = { showLogo = !showLogo },
-                                    label = { Text(if (showLogo) "লোগো চালু (Top-Left)" else "লোগো বন্ধ") },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryGreen,
-                                        selectedLabelColor = Color.White
-                                    ),
-                                    modifier = Modifier.weight(1f)
+                                Text(
+                                    text = "↔️ লেটার স্পেসিং (Letter Spacing)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
-                                FilterChip(
-                                    selected = showWatermark,
-                                    onClick = { showWatermark = !showWatermark },
-                                    label = { Text(if (showWatermark) "ক্রেডিট চালু (Bottom)" else "ক্রেডিট বন্ধ") },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PrimaryGreen,
-                                        selectedLabelColor = Color.White
-                                    ),
-                                    modifier = Modifier.weight(1f)
+                                Text(
+                                    text = String.format(java.util.Locale.US, "%.2f", textLetterSpacing),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryGreen
                                 )
                             }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Slider(
+                                value = textLetterSpacing,
+                                onValueChange = { textLetterSpacing = it },
+                                valueRange = -0.1f..0.3f,
+                                colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
+                            )
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        // Text Width
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "📏 টেক্সট প্রস্থ (Text Width)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${(textWidthPercent * 100).toInt()}%",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryGreen
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Slider(
+                                value = textWidthPercent,
+                                onValueChange = { textWidthPercent = it },
+                                valueRange = 0.5f..1f,
+                                colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
+                            )
+                        }
 
-                        // 6. Font Size & Line Spacing Adjustment
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                        // Text Colors
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            // Font Size
-                            Column {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "🔠 ফন্ট সাইজ",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "${fontSizeSp.toInt()} sp",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = PrimaryGreen
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Slider(
-                                    value = fontSizeSp,
-                                    onValueChange = { fontSizeSp = it },
-                                    valueRange = 32f..58f,
-                                    colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
-                                )
-                            }
-
-                            // Line Spacing
-                            Column {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "↕️ লাইন স্পেসিং (Line Spacing)",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = String.format(java.util.Locale.US, "%.2fx", lineSpacingMult),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = PrimaryGreen
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Slider(
-                                    value = lineSpacingMult,
-                                    onValueChange = { lineSpacingMult = it },
-                                    valueRange = 0.8f..2.2f,
-                                    colors = SliderDefaults.colors(thumbColor = PrimaryGreen, activeTrackColor = PrimaryGreen)
-                                )
-                            }
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                        // 7. Title, Text & Reference Customization
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
-                                text = "✏️ টাইটেল ও পোস্টের লেখা কাস্টমাইজ করুন",
-                                fontSize = 14.sp,
+                                text = "🎨 টেক্সট কালার প্যালেট (Color Palette)",
+                                fontSize = 13.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
 
-                            OutlinedTextField(
-                                value = customCategory,
-                                onValueChange = { customCategory = it },
-                                label = { Text("কার্ডের টাইটেল / ক্যাটাগরি (ঐচ্ছিক)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp)
+                            // Title Color
+                            ColorPlateSelector(
+                                label = "টাইটেল / ক্যাটাগরি কালার:",
+                                selectedColorHex = customTitleColor,
+                                onColorSelected = { customTitleColor = it }
                             )
 
-                            OutlinedTextField(
-                                value = customText,
-                                onValueChange = { customText = it },
-                                label = { Text("কার্ডের মূল বাণী/নসীহত") },
-                                modifier = Modifier.fillMaxWidth(),
-                                minLines = 3,
-                                shape = RoundedCornerShape(12.dp)
+                            // Main Content Text Color
+                            ColorPlateSelector(
+                                label = "মূল বাণী / কনটেন্ট কালার:",
+                                selectedColorHex = customTextColor,
+                                onColorSelected = { customTextColor = it }
                             )
 
-                            OutlinedTextField(
-                                value = customRef,
-                                onValueChange = { customRef = it },
-                                label = { Text("সূত্র / রেফারেন্স (ঐচ্ছিক)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp)
+                            // Reference Color
+                            ColorPlateSelector(
+                                label = "রেফারেন্স / সূত্র কালার:",
+                                selectedColorHex = customRefColor,
+                                onColorSelected = { customRefColor = it }
                             )
                         }
                     }
                 }
 
+                // Section 5: 🏷️ Branding
+                EditorCollapsibleSection(
+                    icon = "🏷️",
+                    title = "লোগো ও ব্র্যান্ডিং",
+                    subtitle = "লোগো: ${if (showLogo) "চালু" else "বন্ধ"} • ক্রেডিট: ${if (showWatermark) "চালু" else "বন্ধ"}",
+                    isExpanded = isBrandingExpanded,
+                    onToggle = { isBrandingExpanded = !isBrandingExpanded }
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = showLogo,
+                                onClick = { showLogo = !showLogo },
+                                label = { Text(if (showLogo) "লোগো চালু (Top-Left)" else "লোগো বন্ধ") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryGreen,
+                                    selectedLabelColor = Color.White
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilterChip(
+                                selected = showWatermark,
+                                onClick = { showWatermark = !showWatermark },
+                                label = { Text(if (showWatermark) "ক্রেডিট চালু (Bottom)" else "ক্রেডিট বন্ধ") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryGreen,
+                                    selectedLabelColor = Color.White
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // Section 6: 🖼️ Layout & Size
+                EditorCollapsibleSection(
+                    icon = "🖼️",
+                    title = "কার্ডের সাইজ ও লেআউট",
+                    subtitle = "Aspect Ratio: $aspectRatio",
+                    isExpanded = isLayoutExpanded,
+                    onToggle = { isLayoutExpanded = !isLayoutExpanded }
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "কার্ডের অনুপাত (Aspect Ratio):",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val ratios = listOf("1:1" to "1:1", "4:5" to "4:5", "9:16" to "9:16", "16:9" to "16:9")
+                            ratios.forEach { (label, value) ->
+                                val isSelected = (aspectRatio == value)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { aspectRatio = value },
+                                    label = { Text(label, fontSize = 12.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = PrimaryGreen.copy(alpha = 0.2f), selectedLabelColor = PrimaryGreen),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+}
+}
+
+@Composable
+fun EditorCollapsibleSection(
+    icon: String,
+    title: String,
+    subtitle: String? = null,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isExpanded) 2.dp else 0.5.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isExpanded) PrimaryGreen.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+        )
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggle() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = icon, fontSize = 20.sp)
+                    Column {
+                        Text(
+                            text = title,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (subtitle != null) {
+                            Text(
+                                text = subtitle,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                IconButton(
+                    onClick = onToggle,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isExpanded) "সংকুচিত করুন" else "প্রসারিত করুন",
+                        tint = if (isExpanded) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                    content()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ColorPlateSelector(
+    label: String,
+    selectedColorHex: String?,
+    onColorSelected: (String?) -> Unit,
+    presets: List<PostShareUtil.ColorPreset> = PostShareUtil.TextColorPresets
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            val activeName = if (selectedColorHex == null) {
+                "অটো (ডিফল্ট)"
+            } else {
+                presets.find { it.hex.equals(selectedColorHex, ignoreCase = true) }?.name ?: selectedColorHex
+            }
+            Text(
+                text = activeName,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = PrimaryGreen
+            )
+        }
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            contentPadding = PaddingValues(vertical = 4.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Option 1: Template Default (অটো)
+            item {
+                val isDefault = selectedColorHex == null
+                Box(
+                    modifier = Modifier
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isDefault) PrimaryGreen.copy(alpha = 0.15f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                        )
+                        .border(
+                            width = if (isDefault) 2.dp else 1.dp,
+                            color = if (isDefault) PrimaryGreen else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .clickable { onColorSelected(null) }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = if (isDefault) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "ডিফল্ট",
+                            fontSize = 11.5.sp,
+                            fontWeight = if (isDefault) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isDefault) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Color Plates (Swatches)
+            items(presets) { preset ->
+                val isSelected = selectedColorHex?.equals(preset.hex, ignoreCase = true) == true
+                val parsedColor = try {
+                    Color(android.graphics.Color.parseColor(preset.hex))
+                } catch (e: Exception) {
+                    Color.White
+                }
+                val isBright = (parsedColor.red * 0.299 + parsedColor.green * 0.587 + parsedColor.blue * 0.114) > 0.6
+
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(parsedColor)
+                        .border(
+                            width = if (isSelected) 3.dp else 1.dp,
+                            color = if (isSelected) PrimaryGreen else if (isBright) Color.Black.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.35f),
+                            shape = CircleShape
+                        )
+                        .clickable { onColorSelected(preset.hex) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = preset.name,
+                            tint = if (isBright) Color.Black else Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
         }
     }
