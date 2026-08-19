@@ -178,6 +178,8 @@ object PrayerNotificationHelper {
             putExtra("prayer_time_digits", prayer.timeDigits)
             putExtra("prayer_am_pm", prayer.amPm)
             putExtra("prayer_time_formatted", prayer.timeFormatted)
+            putExtra("prayer_end_formatted", prayer.endTimeFormatted)
+            putExtra("prayer_range_formatted", prayer.timeRangeFormatted)
             putExtra("district_name_bn", district.nameBn)
         }
 

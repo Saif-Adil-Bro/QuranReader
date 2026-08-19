@@ -14,6 +14,7 @@ import android.text.TextPaint
 import androidx.core.content.res.ResourcesCompat
 import com.example.R
 import com.example.data.model.BackgroundOverlay
+import com.example.data.model.PreparedAyahAudio
 import com.example.data.model.QuranVideoConfig
 import com.example.data.model.TextAnimationStyle
 import com.example.data.model.VideoAspectRatio
@@ -48,6 +49,7 @@ object QuranVideoExporter {
         context: Context,
         config: QuranVideoConfig,
         audioFileUrls: List<String>,
+        preparedAudios: List<PreparedAyahAudio> = emptyList(),
         onProgress: (Float) -> Unit
     ): ExportResult = withContext(Dispatchers.IO) {
         val width = config.aspectRatio.width
@@ -65,50 +67,87 @@ object QuranVideoExporter {
         try {
             onProgress(0.05f)
 
-            // Step 1: Download sequential audio files for selected ayahs
+            // Step 1: Collect sequential audio files for selected ayahs
             var totalDurationUs = 0L
             val audioDurations = mutableListOf<Long>()
 
-            for (i in audioFileUrls.indices) {
-                val urlString = audioFileUrls[i]
-                val localAudio = File(context.cacheDir, "ayah_audio_${System.currentTimeMillis()}_$i.mp3")
-                var durationUs = 3_500_000L // 3.5s default
-
-                try {
-                    val url = URL(urlString)
-                    val conn = url.openConnection()
-                    conn.connectTimeout = 10000
-                    conn.readTimeout = 15000
-                    conn.getInputStream().use { input ->
-                        FileOutputStream(localAudio).use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-
-                    if (localAudio.exists() && localAudio.length() > 500) {
-                        downloadedAudioFiles.add(localAudio)
-
-                        // Get accurate duration using MediaMetadataRetriever
-                        val mmr = MediaMetadataRetriever()
-                        try {
-                            mmr.setDataSource(localAudio.absolutePath)
-                            val durStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                            val durMs = durStr?.toLongOrNull()
-                            if (durMs != null && durMs > 500) {
-                                durationUs = durMs * 1000L
-                            }
-                        } catch (e: Exception) {
-                            android.util.Log.w("QuranVideoExporter", "Metadata error on audio $i", e)
-                        } finally {
-                            try { mmr.release() } catch (e: Exception) {}
-                        }
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("QuranVideoExporter", "Audio download error $urlString", e)
+            if (preparedAudios.isNotEmpty() && preparedAudios.all { it.localFile.exists() }) {
+                // Reuse already downloaded and verified audio files from Step 2
+                for (prep in preparedAudios) {
+                    downloadedAudioFiles.add(prep.localFile)
+                    val durUs = (prep.durationMs * 1000L).coerceAtLeast(1_000_000L)
+                    audioDurations.add(durUs)
+                    totalDurationUs += durUs
                 }
+            } else {
+                // Fallback to downloading
+                for (i in audioFileUrls.indices) {
+                    val urlString = audioFileUrls[i]
+                    val localAudio = File(context.cacheDir, "ayah_audio_${System.currentTimeMillis()}_$i.mp3")
+                    var durationUs = 3_500_000L // 3.5s default
 
-                audioDurations.add(durationUs)
-                totalDurationUs += durationUs
+                    try {
+                        val url = URL(urlString)
+                        val conn = url.openConnection()
+                        conn.connectTimeout = 10000
+                        conn.readTimeout = 15000
+                        conn.getInputStream().use { input ->
+                            FileOutputStream(localAudio).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+
+                        if (localAudio.exists() && localAudio.length() > 500) {
+                            downloadedAudioFiles.add(localAudio)
+
+                            // Get accurate duration using MediaExtractor
+                            var durationFound = false
+                            val extractor = MediaExtractor()
+                            try {
+                                extractor.setDataSource(localAudio.absolutePath)
+                                for (t in 0 until extractor.trackCount) {
+                                    val format = extractor.getTrackFormat(t)
+                                    val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
+                                    if (mime.startsWith("audio/")) {
+                                        if (format.containsKey(MediaFormat.KEY_DURATION)) {
+                                            val durUs = format.getLong(MediaFormat.KEY_DURATION)
+                                            if (durUs > 300_000L) {
+                                                durationUs = durUs
+                                                durationFound = true
+                                            }
+                                        }
+                                        break
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                // ignore
+                            } finally {
+                                try { extractor.release() } catch (e: Exception) {}
+                            }
+
+                            if (!durationFound) {
+                                val mmr = MediaMetadataRetriever()
+                                try {
+                                    mmr.setDataSource(localAudio.absolutePath)
+                                    val durStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                                    val durMs = durStr?.toLongOrNull()
+                                    if (durMs != null && durMs > 500) {
+                                        durationUs = durMs * 1000L
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.w("QuranVideoExporter", "Metadata error on audio $i", e)
+                                } finally {
+                                    try { mmr.release() } catch (e: Exception) {}
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("QuranVideoExporter", "Audio download error $urlString", e)
+                    }
+
+                    audioDurations.add(durationUs)
+                    totalDurationUs += durationUs
+                }
             }
 
             if (totalDurationUs <= 0L) {
@@ -126,6 +165,35 @@ object QuranVideoExporter {
                     aacAudioFiles.add(aacFile)
                 }
                 onProgress(0.15f + (0.15f * ((i + 1).toFloat() / downloadedAudioFiles.size.coerceAtLeast(1))))
+            }
+
+            // Extract accurate duration directly from transcoded AAC files
+            if (aacAudioFiles.isNotEmpty()) {
+                val accurateAacDurations = mutableListOf<Long>()
+                for (aacFile in aacAudioFiles) {
+                    var durUs = 0L
+                    val extractor = MediaExtractor()
+                    try {
+                        extractor.setDataSource(aacFile.absolutePath)
+                        for (t in 0 until extractor.trackCount) {
+                            val fmt = extractor.getTrackFormat(t)
+                            val mime = fmt.getString(MediaFormat.KEY_MIME) ?: ""
+                            if (mime.startsWith("audio/") && fmt.containsKey(MediaFormat.KEY_DURATION)) {
+                                durUs = fmt.getLong(MediaFormat.KEY_DURATION)
+                                break
+                            }
+                        }
+                    } catch (e: Exception) {
+                    } finally {
+                        try { extractor.release() } catch (e: Exception) {}
+                    }
+                    accurateAacDurations.add(if (durUs > 300_000L) durUs else 3_500_000L)
+                }
+                if (accurateAacDurations.size == audioDurations.size) {
+                    audioDurations.clear()
+                    audioDurations.addAll(accurateAacDurations)
+                    totalDurationUs = audioDurations.sum()
+                }
             }
 
             onProgress(0.30f)
@@ -241,12 +309,17 @@ object QuranVideoExporter {
             for (frame in 0 until totalFrames) {
                 val presentationTimeUs = (frame * 1_000_000L) / frameRate
 
-                // Determine currently active Ayah index based on cumulative timestamps
+                // Ayah synchronization with natural speech lead
+                // Qari audio recordings start with ~400-500ms of room silence/breath before vocalization.
+                // We align the active ayah timing with the recitation speech onset.
+                val syncOffsetUs = 350_000L // 350ms speech onset sync
+                val adjustedTimeUs = (presentationTimeUs - syncOffsetUs).coerceAtLeast(0L)
+
                 var runningUs = 0L
                 var activeAyahIndex = 0
                 for (aIdx in audioDurations.indices) {
                     val dur = audioDurations[aIdx]
-                    if (presentationTimeUs >= runningUs && presentationTimeUs < (runningUs + dur)) {
+                    if (adjustedTimeUs >= runningUs && adjustedTimeUs < (runningUs + dur)) {
                         activeAyahIndex = aIdx
                         break
                     }
@@ -257,21 +330,21 @@ object QuranVideoExporter {
                 // Animation alpha calculation
                 val ayahStartTimeUs = if (activeAyahIndex == 0) 0L else audioDurations.take(activeAyahIndex).sum()
                 val ayahDurationUs = audioDurations.getOrElse(activeAyahIndex) { 3_500_000L }
-                val timeInAyahSec = (presentationTimeUs - ayahStartTimeUs) / 1_000_000f
+                val timeInAyahSec = ((adjustedTimeUs - ayahStartTimeUs).coerceAtLeast(0L)) / 1_000_000f
 
                 val animAlpha = when (config.animationStyle) {
-                    TextAnimationStyle.FADE_IN -> (timeInAyahSec / 0.5f).coerceIn(0.2f, 1.0f)
-                    TextAnimationStyle.SLIDE_UP -> (timeInAyahSec / 0.4f).coerceIn(0.3f, 1.0f)
-                    TextAnimationStyle.SLIDE_DOWN -> (timeInAyahSec / 0.4f).coerceIn(0.3f, 1.0f)
+                    TextAnimationStyle.FADE_IN -> (timeInAyahSec / 0.4f).coerceIn(0.15f, 1.0f)
+                    TextAnimationStyle.SLIDE_UP -> (timeInAyahSec / 0.35f).coerceIn(0.2f, 1.0f)
+                    TextAnimationStyle.SLIDE_DOWN -> (timeInAyahSec / 0.35f).coerceIn(0.2f, 1.0f)
                     TextAnimationStyle.FADE_OUT -> {
-                        val remainingSec = (ayahDurationUs - (presentationTimeUs - ayahStartTimeUs)) / 1_000_000f
-                        (remainingSec / 0.5f).coerceIn(0.2f, 1.0f)
+                        val remainingSec = (ayahDurationUs - (adjustedTimeUs - ayahStartTimeUs)) / 1_000_000f
+                        (remainingSec / 0.4f).coerceIn(0.15f, 1.0f)
                     }
                     TextAnimationStyle.NONE -> 1.0f
                 }
 
                 val ayahProgress = if (ayahDurationUs > 0) {
-                    ((presentationTimeUs - ayahStartTimeUs).toFloat() / ayahDurationUs).coerceIn(0.0f, 1.0f)
+                    ((adjustedTimeUs - ayahStartTimeUs).toFloat() / ayahDurationUs).coerceIn(0.0f, 1.0f)
                 } else 0f
 
                 // Lock Canvas on Surface
@@ -356,8 +429,11 @@ object QuranVideoExporter {
                         isEos = true
                     }
                     val encodedData = encoder.getOutputBuffer(outputIndex)
-                    if (encodedData != null && muxerStarted && bufferInfo.size > 0) {
-                        muxer.writeSampleData(videoTrackIndex, encodedData, bufferInfo)
+                    if (encodedData != null && (bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0 && bufferInfo.size > 0) {
+                        bufferInfo.presentationTimeUs = totalDurationUs
+                        if (muxerStarted) {
+                            muxer.writeSampleData(videoTrackIndex, encodedData, bufferInfo)
+                        }
                     }
                     encoder.releaseOutputBuffer(outputIndex, false)
                 }
@@ -739,24 +815,28 @@ object QuranVideoExporter {
 
         // 5. Draw Reference Badge (সূরা ও আয়াত)
         if (config.showReference) {
-            val currentNumberInSurah = config.selectedAyahs.getOrNull(activeAyahIndex)?.numberInSurah ?: (config.ayahStart + activeAyahIndex)
-            val bnNumerals = currentNumberInSurah.toString().map { ch ->
-                when (ch) {
-                    '0' -> '০'
-                    '1' -> '১'
-                    '2' -> '২'
-                    '3' -> '৩'
-                    '4' -> '৪'
-                    '5' -> '৫'
-                    '6' -> '৬'
-                    '7' -> '৭'
-                    '8' -> '৮'
-                    '9' -> '৯'
-                    else -> ch
-                }
-            }.joinToString("")
-
-            val refText = "সূরা ${config.surahName} • আয়াত $bnNumerals"
+            val activeAyah = config.selectedAyahs.getOrNull(activeAyahIndex)
+            val refText = if (activeAyah != null && activeAyah.surahNumber == 1 && activeAyah.numberInSurah == 1 && config.surahNumber != 1) {
+                "সূরা ${config.surahName} • বিসমিল্লাহ"
+            } else {
+                val currentNumberInSurah = activeAyah?.numberInSurah ?: (config.ayahStart + activeAyahIndex)
+                val bnNumerals = currentNumberInSurah.toString().map { ch ->
+                    when (ch) {
+                        '0' -> '০'
+                        '1' -> '১'
+                        '2' -> '২'
+                        '3' -> '৩'
+                        '4' -> '৪'
+                        '5' -> '৫'
+                        '6' -> '৬'
+                        '7' -> '৭'
+                        '8' -> '৮'
+                        '9' -> '৯'
+                        else -> ch
+                    }
+                }.joinToString("")
+                "সূরা ${config.surahName} • আয়াত $bnNumerals"
+            }
             val refPaint = Paint().apply {
                 color = android.graphics.Color.argb(
                     240,
@@ -797,9 +877,15 @@ object QuranVideoExporter {
             isAntiAlias = true
         }
 
+        // Proportional line spacing multiplier for Arabic fonts in StaticLayout.
+        // Arabic TrueType fonts have large internal ascent/descent (2.5x - 3.2x of font size).
+        // Multiplying by (config.arabicLineSpacing * 0.45f) scales line spacing cleanly and compactly,
+        // preventing massive empty vertical gaps while keeping harakat clear and legible.
+        val arabicSpacingMult = (config.arabicLineSpacing * 0.45f).coerceIn(0.50f, 1.15f)
+
         val arabicLayout = StaticLayout.Builder.obtain(arabicText, 0, arabicText.length, arabicPaint, textWidth)
             .setAlignment(Layout.Alignment.ALIGN_CENTER)
-            .setLineSpacing(0f, 1.80f)
+            .setLineSpacing(0f, arabicSpacingMult)
             .setIncludePad(false)
             .build()
 
@@ -815,10 +901,12 @@ object QuranVideoExporter {
             isAntiAlias = true
         }
 
+        val banglaSpacingMult = (config.translationLineSpacing * 0.70f).coerceIn(0.65f, 1.25f)
+
         val banglaLayout = if (config.showBanglaTranslation && banglaText.isNotBlank()) {
             StaticLayout.Builder.obtain(banglaText, 0, banglaText.length, banglaPaint, textWidth)
                 .setAlignment(Layout.Alignment.ALIGN_CENTER)
-                .setLineSpacing(8f, 1.15f)
+                .setLineSpacing(0f, banglaSpacingMult)
                 .setIncludePad(false)
                 .build()
         } else null

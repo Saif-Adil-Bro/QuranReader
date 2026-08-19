@@ -48,9 +48,11 @@ fun QuranVideoCreatorScreen(
 ) {
     val config by viewModel.config.collectAsState()
     val currentStep by viewModel.currentStep.collectAsState()
+    val audioPrepState by viewModel.audioPrepState.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
     val playbackProgress by viewModel.currentPlaybackProgress.collectAsState()
     val currentAyahIndex by viewModel.currentAyahIndex.collectAsState()
+    val playingAyahNumber by viewModel.playingAyahNumber.collectAsState()
     val isExporting by viewModel.isExporting.collectAsState()
     val exportProgress by viewModel.exportProgress.collectAsState()
     val exportedUri by viewModel.exportedVideoUri.collectAsState()
@@ -62,9 +64,6 @@ fun QuranVideoCreatorScreen(
         if (initialSurah != null && initialSurah > 0) {
             val ayah = initialAyah ?: 1
             viewModel.loadSurah(initialSurah, ayah, ayah)
-            if (initialAyah != null) {
-                viewModel.setStep(2) // Skip directly to customization if opened from specific Ayah
-            }
         }
     }
 
@@ -85,9 +84,9 @@ fun QuranVideoCreatorScreen(
                         )
                         Text(
                             text = when (currentStep) {
-                                1 -> "ধাপ ১: আয়াত ও ক্বারী নির্বাচন"
-                                2 -> "ধাপ ২: টেমপ্লেট ও ডিজাইন কাস্টমাইজ"
-                                3 -> "ধাপ ৩: রিয়েল-টাইম প্রিভিউ"
+                                1 -> "ধাপ ১: আয়াত নির্বাচন"
+                                2 -> "ধাপ ২: অডিও ডাউনলোড ও প্রস্তুতি"
+                                3 -> "ধাপ ৩: ডিজাইন ও লাইভ প্রিভিউ"
                                 else -> "ধাপ ৪: ভিডিও রেন্ডারিং ও শেয়ার"
                             },
                             style = MaterialTheme.typography.bodySmall,
@@ -154,11 +153,26 @@ fun QuranVideoCreatorScreen(
                     1 -> Step1ContentSelection(
                         config = config,
                         onSurahSelected = { surah, start, end -> viewModel.loadSurah(surah, start, end) },
-                        onQariSelected = { qId, qName -> viewModel.setQari(qId, qName) },
+                        onToggleBismillah = { viewModel.toggleIncludeBismillah(it) },
                         onNext = { viewModel.setStep(2) }
                     )
-                    2 -> Step2Customize(
+                    2 -> Step2AudioPreparation(
                         config = config,
+                        audioPrepState = audioPrepState,
+                        playingAyahNumber = playingAyahNumber,
+                        onQariSelected = { qId, qName -> viewModel.setQari(qId, qName) },
+                        onStartPrepare = { viewModel.startAudioPreparation() },
+                        onPlayAyah = { viewModel.playSingleAyahAudio(it) },
+                        onStopAyah = { viewModel.stopSingleAyahAudio() },
+                        onNext = { viewModel.setStep(3) }
+                    )
+                    3 -> Step3DesignAndPreview(
+                        config = config,
+                        isPlaying = isPlaying,
+                        playbackProgress = playbackProgress,
+                        currentAyahIndex = currentAyahIndex,
+                        onTogglePlayPause = { viewModel.togglePlayPause() },
+                        onSeek = { viewModel.seekToProgress(it) },
                         onTemplateSelected = { viewModel.setTemplate(it) },
                         onRatioSelected = { viewModel.setAspectRatio(it) },
                         onOverlaySelected = { viewModel.setOverlay(it) },
@@ -171,20 +185,12 @@ fun QuranVideoCreatorScreen(
                         onToggleCredit = { viewModel.toggleCredit(it) },
                         onToggleWaqfSigns = { viewModel.toggleWaqfSigns(it) },
                         onArabicFontSizeChange = { viewModel.setArabicFontSize(it) },
+                        onArabicLineSpacingChange = { viewModel.setArabicLineSpacing(it) },
                         onTranslationFontSizeChange = { viewModel.setTranslationFontSize(it) },
+                        onTranslationLineSpacingChange = { viewModel.setTranslationLineSpacing(it) },
                         onArabicFontChange = { viewModel.setArabicFontName(it) },
                         onBengaliFontChange = { viewModel.setBengaliFontName(it) },
                         onCreditTextChange = { viewModel.setCreditText(it) },
-                        onNext = { viewModel.setStep(3) }
-                    )
-                    3 -> Step3Preview(
-                        config = config,
-                        isPlaying = isPlaying,
-                        playbackProgress = playbackProgress,
-                        currentAyahIndex = currentAyahIndex,
-                        onTogglePlayPause = { viewModel.togglePlayPause() },
-                        onSeek = { viewModel.seekToProgress(it) },
-                        onEdit = { viewModel.setStep(2) },
                         onExport = { viewModel.startExport() }
                     )
                     4 -> Step4Export(
@@ -205,7 +211,7 @@ fun QuranVideoCreatorScreen(
 fun Step1ContentSelection(
     config: QuranVideoConfig,
     onSurahSelected: (Int, Int, Int) -> Unit,
-    onQariSelected: (String, String) -> Unit,
+    onToggleBismillah: (Boolean) -> Unit,
     onNext: () -> Unit
 ) {
     var expandedSurahDropdown by remember { mutableStateOf(false) }
@@ -237,8 +243,8 @@ fun Step1ContentSelection(
             ) {
                 Icon(Icons.Default.Movie, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(32.dp))
                 Column {
-                    Text("কুরআনের আয়াত থেকে দ্রুত ভিডিও বানান", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text("সূরা, আয়াত এবং ক্বারী নির্বাচন করুন। স্বয়ংক্রিয়ভাবে অডিও এবং টেক্সট প্রস্তুত হবে।", fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("কুরআন ভিডিও ক্রিয়েটর (৪-ধাপ পদ্ধতি)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("১. আয়াত সিলেক্ট ➔ ২. অডিও ডাউনলোড ও প্রিপারেশন ➔ ৩. ডিজাইন ও প্রিভিউ ➔ ৪. রেন্ডারিং ও শেয়ার", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -264,7 +270,7 @@ fun Step1ContentSelection(
                         fontSize = 16.sp
                     )
                     Text(
-                        text = "আয়াত সংখ্যা: ${DateUtil.toBengaliNumerals(totalAyahs)}টি",
+                        text = "মোট আয়াত সংখ্যা: ${DateUtil.toBengaliNumerals(totalAyahs)}টি",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -298,7 +304,7 @@ fun Step1ContentSelection(
         }
 
         // Ayah Range Selection
-        Text("২. আয়াত নির্বাচন করুন (সর্বোচ্চ ${DateUtil.toBengaliNumerals(totalAyahs)}টি)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text("২. আয়াতের পরিসীমা নির্বাচন করুন (১ হতে ${DateUtil.toBengaliNumerals(totalAyahs)})", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -491,24 +497,155 @@ fun Step1ContentSelection(
             }
         }
 
-        // Qari Selection with Dropdown
-        var expandedQariDropdown by remember { mutableStateOf(false) }
-        val currentQariDisplay = com.example.util.QariData.getQariDisplayName(config.qariId)
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("৩. ক্বারী / তেলাওয়াতকারী নির্বাচন", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(
-                "${com.example.util.QariData.list.size} জন ক্বারী",
-                fontSize = 12.sp,
-                color = PrimaryGreen,
-                fontWeight = FontWeight.Medium
-            )
+        // Bismillah Checkbox for Surahs other than Surah Al-Fatiha (Surah 1)
+        if (selectedSurahNumber > 1) {
+            Surface(
+                onClick = {
+                    onToggleBismillah(!config.includeBismillah)
+                },
+                shape = RoundedCornerShape(12.dp),
+                color = if (config.includeBismillah) PrimaryGreen.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                border = BorderStroke(
+                    1.dp,
+                    if (config.includeBismillah) PrimaryGreen.copy(alpha = 0.45f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Checkbox(
+                        checked = config.includeBismillah,
+                        onCheckedChange = { onToggleBismillah(it) },
+                        colors = CheckboxDefaults.colors(checkedColor = PrimaryGreen)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "শুরুতে বিসমিল্লাহ যুক্ত করুন",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "ভিডিওর শুরুতে সূরা আল-ফাতিহার প্রথম আয়াত (বিসমিল্লাহ) তিলাওয়াতসহ যোগ হবে",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
 
+        // Preview of selected verses
+        Text("নির্বাচিত আয়াতসমূহ (${DateUtil.toBengaliNumerals(config.selectedAyahs.size)}টি)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                config.selectedAyahs.forEach { ayah ->
+                    val isBismillah = ayah.surahNumber == 1 && ayah.numberInSurah == 1 && config.surahNumber != 1
+                    Column {
+                        if (isBismillah) {
+                            Surface(
+                                color = PrimaryGreen.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(6.dp),
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            ) {
+                                Text(
+                                    text = "বিসমিল্লাহির রাহমানির রাহিম",
+                                    color = PrimaryGreen,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.5.sp,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = ayah.arabicText,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = PrimaryGreen,
+                            textAlign = TextAlign.Right,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (isBismillah) ayah.bengaliText else "${DateUtil.toBengaliNumerals(ayah.numberInSurah)}. ${ayah.bengaliText}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Next Button
+        Button(
+            onClick = onNext,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("পরবর্তী ধাপ: অডিও প্রস্তুতি ➔", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        }
+    }
+}
+
+@Composable
+fun Step2AudioPreparation(
+    config: QuranVideoConfig,
+    audioPrepState: AudioPreparationState,
+    playingAyahNumber: Int?,
+    onQariSelected: (String, String) -> Unit,
+    onStartPrepare: () -> Unit,
+    onPlayAyah: (PreparedAyahAudio) -> Unit,
+    onStopAyah: () -> Unit,
+    onNext: () -> Unit
+) {
+    var expandedQariDropdown by remember { mutableStateOf(false) }
+    val currentQariDisplay = com.example.util.QariData.getQariDisplayName(config.qariId)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Step Banner
+        Card(
+            colors = CardDefaults.cardColors(containerColor = PrimaryGreen.copy(alpha = 0.08f)),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.25f))
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.GraphicEq, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(30.dp))
+                Column {
+                    Text("ধাপ ২: অডিও ডাউনলোড ও টাইমিং প্রস্তুতি", fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
+                    Text("আগে অডিও ডাউনলোড করে প্রতিটি আয়াতের সঠিক সময়কাল (timing) পরিমাপ করা হবে, যাতে ভিডিওতে কোনো মিস-ম্যাচ না হয়।", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        // Qari Selection
+        Text("১. ক্বারী / তেলাওয়াতকারী নির্বাচন করুন", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         OutlinedCard(
             onClick = { expandedQariDropdown = true },
             modifier = Modifier.fillMaxWidth(),
@@ -531,10 +668,10 @@ fun Step1ContentSelection(
                         Text(
                             text = config.qariName.ifEmpty { currentQariDisplay },
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.5.sp
+                            fontSize = 15.sp
                         )
                         Text(
-                            text = "সব ক্বারীর তালিকা দেখতে স্পর্শ করুন",
+                            text = "ক্বারী পরিবর্তন করতে স্পর্শ করুন",
                             fontSize = 11.5.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -546,7 +683,7 @@ fun Step1ContentSelection(
             DropdownMenu(
                 expanded = expandedQariDropdown,
                 onDismissRequest = { expandedQariDropdown = false },
-                modifier = Modifier.heightIn(max = 380.dp)
+                modifier = Modifier.heightIn(max = 360.dp)
             ) {
                 com.example.util.QariData.list.forEach { item ->
                     val isSelected = config.qariId == item.id
@@ -581,76 +718,172 @@ fun Step1ContentSelection(
             }
         }
 
-        // Online Audio Notice Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, Color(0xFFFDE68A))
-        ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Icon(Icons.Default.CloudDownload, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(24.dp))
-                Column {
-                    Text("অনলাইন অডিও ডাউনলোড নোটিশ", fontWeight = FontWeight.Bold, fontSize = 12.5.sp, color = Color(0xFF92400E))
-                    Text("নির্বাচিত ক্বারীর অডিও স্বয়ংক্রিয়ভাবে অনলাইন থেকে ডাউনলোড করে ভিডিও তৈরি করা হবে। ইন্টারনেট সংযোগ চালু রাখুন।", fontSize = 11.5.sp, color = Color(0xFFB45309))
-                }
-            }
-        }
-
-        // Preview of selected verses
-        Text("নির্বাচিত আয়াতসমূহ (${DateUtil.toBengaliNumerals(config.selectedAyahs.size)}টি)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        // Preparation Status Card
+        Text("২. অডিও প্রস্তুতি ও টাইমিং যাচাই", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                config.selectedAyahs.forEach { ayah ->
-                    Column {
-                        Text(
-                            text = ayah.arabicText,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = PrimaryGreen,
-                            textAlign = TextAlign.Right,
-                            modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "নির্বাচিত আয়াত: ${DateUtil.toBengaliNumerals(config.selectedAyahs.size)}টি",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.5.sp
+                    )
+                    if (audioPrepState.isPrepared) {
+                        val totalSec = audioPrepState.preparedAudios.sumOf { it.durationMs } / 1000f
+                        Surface(
+                            color = PrimaryGreen.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "মোট দৈর্ঘ্য: ${String.format(java.util.Locale.US, "%.1f", totalSec)} সেকেন্ড",
+                                color = PrimaryGreen,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (audioPrepState.isPreparing) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { audioPrepState.progress },
+                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                            color = PrimaryGreen
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "${DateUtil.toBengaliNumerals(ayah.numberInSurah)}. ${ayah.bengaliText}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                            text = "আয়াত ${DateUtil.toBengaliNumerals(audioPrepState.currentAyahNumber)} ডাউনলোড ও কনভার্ট হচ্ছে (${(audioPrepState.progress * 100).toInt()}%)...",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = PrimaryGreen
                         )
                     }
+                } else if (audioPrepState.errorMessage != null) {
+                    Text(
+                        text = "ত্রুটি: ${audioPrepState.errorMessage}",
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.5.sp
+                    )
+                }
+
+                // List of Ayahs with Play Buttons & Duration
+                if (audioPrepState.isPrepared) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        audioPrepState.preparedAudios.forEach { prep ->
+                            val isThisPlaying = playingAyahNumber == prep.ayahNumber
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isThisPlaying) PrimaryGreen.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, if (isThisPlaying) PrimaryGreen else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        IconButton(
+                                            onClick = {
+                                                if (isThisPlaying) onStopAyah() else onPlayAyah(prep)
+                                            },
+                                            modifier = Modifier.size(32.dp).clip(CircleShape).background(PrimaryGreen)
+                                        ) {
+                                            Icon(
+                                                if (isThisPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                                contentDescription = "Play",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        Column {
+                                            val ayahTitle = if (prep.ayahNumber == 1 && config.surahNumber != 1) "বিসমিল্লাহ" else "আয়াত ${DateUtil.toBengaliNumerals(prep.numberInSurah)}"
+                                            Text(ayahTitle, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text(prep.arabicPreview, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
+                                    }
+
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "${String.format(java.util.Locale.US, "%.1f", prep.durationMs / 1000f)} সে.",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Start Prepare / Re-prepare Button
+                Button(
+                    onClick = onStartPrepare,
+                    enabled = !audioPrepState.isPreparing,
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (audioPrepState.isPrepared) MaterialTheme.colorScheme.surfaceVariant else PrimaryGreen,
+                        contentColor = if (audioPrepState.isPrepared) MaterialTheme.colorScheme.onSurface else Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        if (audioPrepState.isPrepared) Icons.Default.Refresh else Icons.Default.CloudDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (audioPrepState.isPrepared) "পুনরায় অডিও ডাউনলোড ও যাচাই করুন" else "📥 অডিও ডাউনলোড ও প্রিপারেশন শুরু করুন",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.5.sp
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Next Button
         Button(
             onClick = onNext,
+            enabled = audioPrepState.isPrepared && !audioPrepState.isPreparing,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("পরবর্তী ধাপ: টেমপ্লেট ও ডিজাইন ➔", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("পরবর্তী ধাপ: টেমপ্লেট ও ডিজাইন প্রিভিউ ➔", fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
     }
 }
 
 @Composable
-fun Step2Customize(
+fun Step3DesignAndPreview(
     config: QuranVideoConfig,
+    isPlaying: Boolean,
+    playbackProgress: Float,
+    currentAyahIndex: Int,
+    onTogglePlayPause: () -> Unit,
+    onSeek: (Float) -> Unit,
     onTemplateSelected: (QuranVideoTemplate) -> Unit,
     onRatioSelected: (VideoAspectRatio) -> Unit,
     onOverlaySelected: (BackgroundOverlay) -> Unit,
@@ -663,12 +896,15 @@ fun Step2Customize(
     onToggleCredit: (Boolean) -> Unit,
     onToggleWaqfSigns: (Boolean) -> Unit,
     onArabicFontSizeChange: (Float) -> Unit,
+    onArabicLineSpacingChange: (Float) -> Unit,
     onTranslationFontSizeChange: (Float) -> Unit,
+    onTranslationLineSpacingChange: (Float) -> Unit,
     onArabicFontChange: (String) -> Unit,
     onBengaliFontChange: (String) -> Unit,
     onCreditTextChange: (String) -> Unit = {},
-    onNext: () -> Unit
+    onExport: () -> Unit
 ) {
+    val t = config.template
     var showAdvanced by remember { mutableStateOf(false) }
     var expandedArabicFontDropdown by remember { mutableStateOf(false) }
     var expandedBengaliFontDropdown by remember { mutableStateOf(false) }
@@ -697,133 +933,320 @@ fun Step2Customize(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Template Picker
-        Text("১. ভিডিও টেমপ্লেট নির্বাচন করুন", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(QuranVideoTemplate.values()) { tmpl ->
-                val isSelected = config.template == tmpl
-                OutlinedCard(
-                    onClick = { onTemplateSelected(tmpl) },
-                    modifier = Modifier.width(130.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(
-                        if (isSelected) 2.dp else 1.dp,
-                        if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                    )
-                ) {
-                    Column(
+        // Video Live Preview Card
+        val previewAspectRatio = when (config.aspectRatio) {
+            VideoAspectRatio.PORTRAIT_9_16 -> 9f / 16f
+            VideoAspectRatio.SQUARE_1_1 -> 1f
+            VideoAspectRatio.LANDSCAPE_16_9 -> 16f / 9f
+        }
+
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(if (config.aspectRatio == VideoAspectRatio.PORTRAIT_9_16) 0.75f else 0.95f)
+                .aspectRatio(previewAspectRatio),
+            shape = RoundedCornerShape(16.dp),
+            shadowElevation = 8.dp,
+            border = BorderStroke(2.dp, t.accentColor.copy(alpha = 0.4f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Brush.verticalGradient(t.gradientColors))
+            ) {
+                // Background Overlay
+                val overlayAlpha = when (config.overlay) {
+                    BackgroundOverlay.NONE -> 0f
+                    BackgroundOverlay.LIGHT -> 0.30f
+                    BackgroundOverlay.MEDIUM -> 0.55f
+                    BackgroundOverlay.DARK -> 0.78f
+                }
+                if (overlayAlpha > 0f) {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(tmpl.gradientColors)
-                            )
-                            .padding(12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = overlayAlpha))
+                    )
+                }
+
+                // Inner Frame Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Header Logo & Reference
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(tmpl.accentColor.copy(alpha = 0.3f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("۞", color = tmpl.arabicColor, fontSize = 18.sp)
+                        if (config.showLogo) {
+                            Text(
+                                text = config.logoText,
+                                color = t.referenceColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        if (config.showReference) {
+                            val activeAyah = config.selectedAyahs.getOrNull(currentAyahIndex)
+                            val refText = if (activeAyah != null && activeAyah.surahNumber == 1 && activeAyah.numberInSurah == 1 && config.surahNumber != 1) {
+                                "সূরা ${config.surahName} • বিসমিল্লাহ"
+                            } else {
+                                "সূরা ${config.surahName} • আয়াত ${DateUtil.toBengaliNumerals(activeAyah?.numberInSurah ?: config.ayahStart)}"
+                            }
+                            Text(
+                                text = refText,
+                                color = t.referenceColor,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    // Main Ayah Content (Live Dynamic Arabic & Bangla Line Spacing)
+                    val activeAyah = config.selectedAyahs.getOrNull(currentAyahIndex)
+                    val rawArabic = activeAyah?.arabicText ?: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+                    val processedArabic = com.example.utils.QuranIndoPakNormalizer.processIndoPakText(
+                        rawText = rawArabic,
+                        showWaqfSigns = config.showWaqfSigns
+                    )
+                    val customArabicFamily = com.example.ui.theme.getArabicFont(config.arabicFontName)
+                    val customBengaliFamily = com.example.ui.theme.getBengaliFont(config.bengaliFontName)
+                    val ayahPreviewScrollState = rememberScrollState()
+
+                    LaunchedEffect(currentAyahIndex, playbackProgress) {
+                        if (ayahPreviewScrollState.maxValue > 0) {
+                            val targetScroll = (ayahPreviewScrollState.maxValue * playbackProgress).toInt()
+                            ayahPreviewScrollState.scrollTo(targetScroll)
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(ayahPreviewScrollState),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = processedArabic,
+                                color = t.arabicColor,
+                                fontSize = (config.arabicFontSize * 0.75f).sp,
+                                fontFamily = customArabicFamily,
+                                textAlign = TextAlign.Center,
+                                lineHeight = (config.arabicFontSize * 0.75f * config.arabicLineSpacing).sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            if (config.showBanglaTranslation && !activeAyah?.bengaliText.isNullOrBlank()) {
+                                Text(
+                                    text = activeAyah?.bengaliText ?: "",
+                                    color = t.translationColor,
+                                    fontSize = (config.translationFontSize * 0.75f).sp,
+                                    fontFamily = customBengaliFamily,
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = (config.translationFontSize * 0.75f * config.translationLineSpacing).sp
+                                )
+                            }
+                        }
+                    }
+
+                    // Footer Credit
+                    if (config.showCredit) {
                         Text(
-                            text = tmpl.title,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            color = tmpl.arabicColor,
+                            text = config.creditText,
+                            color = t.translationColor.copy(alpha = 0.6f),
+                            fontSize = 8.5.sp,
                             textAlign = TextAlign.Center
                         )
-                        Text(
-                            text = tmpl.description,
-                            fontSize = 9.sp,
-                            color = tmpl.translationColor.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                    } else {
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+            }
+        }
+
+        // Playback Timeline Controls
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Default.GraphicEq, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(18.dp))
+                        Text(config.qariName, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    IconButton(
+                        onClick = onTogglePlayPause,
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryGreen)
+                    ) {
+                        Icon(
+                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = "Play/Pause",
+                            tint = Color.White
                         )
+                    }
+                }
+
+                Slider(
+                    value = playbackProgress,
+                    onValueChange = onSeek,
+                    colors = SliderDefaults.colors(
+                        thumbColor = PrimaryGreen,
+                        activeTrackColor = PrimaryGreen
+                    )
+                )
+            }
+        }
+
+        // 1. Template Picker
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("১. ভিডিও টেমপ্লেট নির্বাচন করুন", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(QuranVideoTemplate.values()) { tmpl ->
+                    val isSelected = config.template == tmpl
+                    OutlinedCard(
+                        onClick = { onTemplateSelected(tmpl) },
+                        modifier = Modifier.width(130.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(
+                            if (isSelected) 2.dp else 1.dp,
+                            if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Brush.verticalGradient(tmpl.gradientColors))
+                                .padding(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(tmpl.accentColor.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("۞", color = tmpl.arabicColor, fontSize = 18.sp)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = tmpl.title,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = tmpl.arabicColor,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = tmpl.description,
+                                fontSize = 9.sp,
+                                color = tmpl.translationColor.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
         }
 
         // 2. Aspect Ratio Picker
-        Text("২. আসপেক্ট রেশিও (Aspect Ratio)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            VideoAspectRatio.values().forEach { ratio ->
-                val isSelected = config.aspectRatio == ratio
-                OutlinedButton(
-                    onClick = { onRatioSelected(ratio) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (isSelected) PrimaryGreen.copy(alpha = 0.12f) else Color.Transparent
-                    ),
-                    border = BorderStroke(
-                        if (isSelected) 1.5.dp else 1.dp,
-                        if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                    )
-                ) {
-                    Text(
-                        text = ratio.label.split(" ")[0],
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        fontSize = 13.sp,
-                        color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface
-                    )
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("২. আসপেক্ট রেশিও (Aspect Ratio)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                VideoAspectRatio.values().forEach { ratio ->
+                    val isSelected = config.aspectRatio == ratio
+                    OutlinedButton(
+                        onClick = { onRatioSelected(ratio) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (isSelected) PrimaryGreen.copy(alpha = 0.12f) else Color.Transparent
+                        ),
+                        border = BorderStroke(
+                            if (isSelected) 1.5.dp else 1.dp,
+                            if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        )
+                    ) {
+                        Text(
+                            text = ratio.label.split(" ")[0],
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 13.sp,
+                            color = if (isSelected) PrimaryGreen else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
         }
 
-        // 3. Background Source
-        Text("৩. ব্যাকগ্রাউন্ড ছবি", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            OutlinedButton(
-                onClick = onPickGallery,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(10.dp)
+        // 3. Background Source & Overlay
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("৩. ব্যাকগ্রাউন্ড ছবি ও ওভারলে", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("গ্যালারি ছবি", fontSize = 13.sp)
-            }
-
-            if (config.customImageUri != null || config.backgroundPresetName != null) {
                 OutlinedButton(
-                    onClick = onClearBackground,
+                    onClick = onPickGallery,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("ডিফল্ট গ্রেডিয়েন্ট", fontSize = 13.sp)
+                    Text("গ্যালারি ছবি", fontSize = 13.sp)
+                }
+
+                if (config.customImageUri != null || config.backgroundPresetName != null) {
+                    OutlinedButton(
+                        onClick = onClearBackground,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("ডিফল্ট গ্রেডিয়েন্ট", fontSize = 13.sp)
+                    }
+                }
+            }
+
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(BackgroundOverlay.values()) { ov ->
+                    FilterChip(
+                        selected = config.overlay == ov,
+                        onClick = { onOverlaySelected(ov) },
+                        label = { Text(ov.label, fontSize = 12.sp) }
+                    )
                 }
             }
         }
 
-        // 4. Overlay Selection
-        Text("৪. ব্যাকগ্রাউন্ড ওভারলে (Dark Overlay)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(BackgroundOverlay.values()) { ov ->
-                FilterChip(
-                    selected = config.overlay == ov,
-                    onClick = { onOverlaySelected(ov) },
-                    label = { Text(ov.label, fontSize = 12.sp) }
-                )
-            }
-        }
-
-        // Advanced Options Toggle
+        // 4. Advanced Typography (Arabic & Bangla Line Spacing & Fonts)
         Card(
             onClick = { showAdvanced = !showAdvanced },
             shape = RoundedCornerShape(12.dp),
@@ -838,7 +1261,7 @@ fun Step2Customize(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Tune, contentDescription = null, tint = PrimaryGreen)
-                    Text("অ্যাডভান্সড সেটিংস (ফন্ট, লোগো, রেফারেন্স)", fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                    Text("ফন্ট, লাইন স্পেসিং ও কাস্টমাইজেশন", fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                 }
                 Icon(if (showAdvanced) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
             }
@@ -866,7 +1289,7 @@ fun Step2Customize(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
                 // Arabic Font Selection Dropdown
-                Text("🕌 আরবি ফন্ট নির্বাচন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("🕌 আরবি ফন্ট ও লাইন স্পেসিং", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 OutlinedCard(
                     onClick = { expandedArabicFontDropdown = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -922,10 +1345,26 @@ fun Step2Customize(
                     valueRange = 20f..40f
                 )
 
+                // Arabic Line Spacing Slider (1.4x to 2.4x)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("আরবি লাইন স্পেস (Line Spacing):", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("${String.format(java.util.Locale.US, "%.2f", config.arabicLineSpacing)}x", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                }
+                Slider(
+                    value = config.arabicLineSpacing,
+                    onValueChange = onArabicLineSpacingChange,
+                    valueRange = 1.40f..2.40f,
+                    steps = 10
+                )
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
                 // Bangla Font Selection Dropdown
-                Text("🇧🇩 বাংলা ফন্ট নির্বাচন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("🇧🇩 বাংলা ফন্ট ও লাইন স্পেসিং", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 OutlinedCard(
                     onClick = { expandedBengaliFontDropdown = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -978,6 +1417,22 @@ fun Step2Customize(
                     value = config.translationFontSize,
                     onValueChange = onTranslationFontSizeChange,
                     valueRange = 12f..24f
+                )
+
+                // Bangla Line Spacing Slider
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("অনুবাদ লাইন স্পেস:", fontSize = 13.sp)
+                    Text("${String.format(java.util.Locale.US, "%.2f", config.translationLineSpacing)}x", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                }
+                Slider(
+                    value = config.translationLineSpacing,
+                    onValueChange = onTranslationLineSpacingChange,
+                    valueRange = 1.10f..1.80f,
+                    steps = 7
                 )
 
                 // Toggles
@@ -1045,249 +1500,18 @@ fun Step2Customize(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Next Button
+        // Render Action Button
         Button(
-            onClick = onNext,
+            onClick = onExport,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
+                .height(52.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("ভিডিও প্রিভিউ দেখুন ➔", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-        }
-    }
-}
-
-@Composable
-fun Step3Preview(
-    config: QuranVideoConfig,
-    isPlaying: Boolean,
-    playbackProgress: Float,
-    currentAyahIndex: Int,
-    onTogglePlayPause: () -> Unit,
-    onSeek: (Float) -> Unit,
-    onEdit: () -> Unit,
-    onExport: () -> Unit
-) {
-    val t = config.template
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Video Preview Mock Frame (Exact Aspect Ratio Rendering)
-        val previewAspectRatio = when (config.aspectRatio) {
-            VideoAspectRatio.PORTRAIT_9_16 -> 9f / 16f
-            VideoAspectRatio.SQUARE_1_1 -> 1f
-            VideoAspectRatio.LANDSCAPE_16_9 -> 16f / 9f
-        }
-
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(if (config.aspectRatio == VideoAspectRatio.PORTRAIT_9_16) 0.75f else 0.95f)
-                .aspectRatio(previewAspectRatio),
-            shape = RoundedCornerShape(16.dp),
-            shadowElevation = 8.dp,
-            border = BorderStroke(2.dp, t.accentColor.copy(alpha = 0.4f))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Brush.verticalGradient(t.gradientColors))
-            ) {
-                // Background Overlay
-                val overlayAlpha = when (config.overlay) {
-                    BackgroundOverlay.NONE -> 0f
-                    BackgroundOverlay.LIGHT -> 0.30f
-                    BackgroundOverlay.MEDIUM -> 0.55f
-                    BackgroundOverlay.DARK -> 0.78f
-                }
-                if (overlayAlpha > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = overlayAlpha))
-                    )
-                }
-
-                // Inner Frame Content
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Header Logo & Reference
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        if (config.showLogo) {
-                            Text(
-                                text = config.logoText,
-                                color = t.referenceColor,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
-                            )
-                        }
-                        if (config.showReference) {
-                            val activeAyah = config.selectedAyahs.getOrNull(currentAyahIndex)
-                            Text(
-                                text = "সূরা ${config.surahName} • আয়াত ${DateUtil.toBengaliNumerals(activeAyah?.numberInSurah ?: config.ayahStart)}",
-                                color = t.referenceColor,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-
-                    // Main Ayah Content (Synchronized with Audio + Smooth Scroll for Large Ayahs)
-                    val activeAyah = config.selectedAyahs.getOrNull(currentAyahIndex)
-                    val rawArabic = activeAyah?.arabicText ?: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-                    val processedArabic = com.example.utils.QuranIndoPakNormalizer.processIndoPakText(
-                        rawText = rawArabic,
-                        showWaqfSigns = config.showWaqfSigns
-                    )
-                    val customArabicFamily = com.example.ui.theme.getArabicFont(config.arabicFontName)
-                    val customBengaliFamily = com.example.ui.theme.getBengaliFont(config.bengaliFontName)
-                    val ayahPreviewScrollState = rememberScrollState()
-
-                    LaunchedEffect(currentAyahIndex, playbackProgress) {
-                        if (ayahPreviewScrollState.maxValue > 0) {
-                            val targetScroll = (ayahPreviewScrollState.maxValue * playbackProgress).toInt()
-                            ayahPreviewScrollState.scrollTo(targetScroll)
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f, fill = false)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(ayahPreviewScrollState),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = processedArabic,
-                                color = t.arabicColor,
-                                fontSize = (config.arabicFontSize * 0.75f).sp,
-                                fontFamily = customArabicFamily,
-                                textAlign = TextAlign.Center,
-                                lineHeight = (config.arabicFontSize * 0.75f * 1.8f).sp,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            if (config.showBanglaTranslation && !activeAyah?.bengaliText.isNullOrBlank()) {
-                                Text(
-                                    text = activeAyah?.bengaliText ?: "",
-                                    color = t.translationColor,
-                                    fontSize = (config.translationFontSize * 0.75f).sp,
-                                    fontFamily = customBengaliFamily,
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = (config.translationFontSize * 1.1f).sp
-                                )
-                            }
-                        }
-                    }
-
-                    // Footer Credit
-                    if (config.showCredit) {
-                        Text(
-                            text = config.creditText,
-                            color = t.translationColor.copy(alpha = 0.6f),
-                            fontSize = 8.5.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-                }
-            }
-        }
-
-        // Playback Timeline Controls
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Default.GraphicEq, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(18.dp))
-                        Text(config.qariName, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    IconButton(
-                        onClick = onTogglePlayPause,
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(PrimaryGreen)
-                    ) {
-                        Icon(
-                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = "Play/Pause",
-                            tint = Color.White
-                        )
-                    }
-                }
-
-                Slider(
-                    value = playbackProgress,
-                    onValueChange = onSeek,
-                    colors = SliderDefaults.colors(
-                        thumbColor = PrimaryGreen,
-                        activeTrackColor = PrimaryGreen
-                    )
-                )
-            }
-        }
-
-        // Action Buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            OutlinedButton(
-                onClick = onEdit,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("আবার এডিট করুন", fontSize = 13.sp)
-            }
-
-            Button(
-                onClick = onExport,
-                modifier = Modifier
-                    .weight(1.2f)
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.MovieCreation, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("🎬 ভিডিও তৈরি করুন", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
+            Icon(Icons.Default.MovieCreation, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("🎬 ৭২০p ভিডিও রেন্ডারিং ও শেয়ার শুরু করুন ➔", fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
         }
     }
 }
@@ -1330,7 +1554,7 @@ fun Step4Export(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন। ৭২০p কোয়ালিটিতে আপনার ভিডিও প্রস্তুত করা হচ্ছে।",
+                text = "সঠিক অডিও টাইমিং ও ১.৮x আরবি স্পেসিং সমন্বয়ে ৭২০p কোয়ালিটিতে আপনার ভিডিও প্রস্তুত করা হচ্ছে।",
                 fontSize = 12.5.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

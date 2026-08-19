@@ -34,7 +34,10 @@ data class SinglePrayerTime(
     val timeFormatted: String,      // e.g. "০৪:২২ AM"
     val timestampMillis: Long,
     val isCurrent: Boolean = false,
-    val isNext: Boolean = false
+    val isNext: Boolean = false,
+    val endTimeDigits: String = "",
+    val endTimeFormatted: String = "", // e.g. "৫:৩২ AM"
+    val timeRangeFormatted: String = "" // e.g. "৪:১৬ AM - ৫:৩২ AM"
 )
 
 data class ForbiddenPrayerInterval(

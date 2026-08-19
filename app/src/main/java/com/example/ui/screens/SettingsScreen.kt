@@ -140,18 +140,18 @@ fun SettingsScreen(
                 MenuItem("learn", "কুরআন শিক্ষা", Icons.Default.Book, Color(0xFF4F46E5)),
                 MenuItem("hifz", "কুরআন হিফজ", Icons.Default.CheckCircle, Color(0xFF6366F1)),
                 MenuItem("player", "কুরআন প্লেয়ার", Icons.Default.MusicNote, Color(0xFF06B6D4)),
-                MenuItem("video", "কুরআন ভিডিও", Icons.Default.Videocam, Color(0xFFEF4444))
+                MenuItem("video", "ভিডিও এডিটর", Icons.Default.Videocam, Color(0xFFEF4444))
             )
         ),
         MenuCategory(
             title = "দুআ ও ইবাদত",
             icon = Icons.Default.AutoAwesome,
             items = listOf(
-                MenuItem("prayer_times", "নামাজের সময়সূচি", Icons.Default.AccessTime, Color(0xFF059669)),
                 MenuItem("dua", "কুরআনিক দুআ", Icons.Default.Schedule, Color(0xFF8B5CF6)),
                 MenuItem("morning_evening_dua", "সকাল সন্ধ্যার দুআ", Icons.Default.WbSunny, Color(0xFFF59E0B)),
                 MenuItem("manzil", "মানযিল", Icons.Default.AutoAwesome, Color(0xFF10B981)),
                 MenuItem("qibla", "কিবলা কম্পাস", Icons.Default.Explore, Color(0xFFEAB308)),
+                MenuItem("prayer_times", "নামাজের সময়সূচি", Icons.Default.AccessTime, Color(0xFF059669)),
                 MenuItem("calendar", "ক্যালেন্ডার", Icons.Default.CalendarMonth, Color(0xFF10B981)),
                 MenuItem("planner", "কুরআন প্ল্যানার", Icons.Default.DateRange, Color(0xFF10B981))
             )
@@ -1097,7 +1097,7 @@ fun MenuDetailDialog(
                     "player" -> "কুরআন অডিও প্লেয়ার"
                     "hifz" -> "হিফজ ট্র্যাকার"
                     "learn" -> "কুরআন শিক্ষা"
-                    "video" -> "কুরআন ভিডিও ক্রিয়েটর"
+                    "video" -> "ভিডিও এডিটর"
                     "offline_sync" -> "কুরআন অফলাইন ডাউনলোড"
                     "font_settings" -> "ফন্ট ও তাজভীদ"
                     "backup" -> "ব্যাকআপ"

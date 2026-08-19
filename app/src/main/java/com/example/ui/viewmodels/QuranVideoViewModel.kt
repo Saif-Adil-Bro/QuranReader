@@ -39,6 +39,10 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
     private val _currentStep = MutableStateFlow(1)
     val currentStep: StateFlow<Int> = _currentStep.asStateFlow()
 
+    // Audio Preparation State (Step 2)
+    private val _audioPrepState = MutableStateFlow(AudioPreparationState())
+    val audioPrepState: StateFlow<AudioPreparationState> = _audioPrepState.asStateFlow()
+
     // Audio Player State
     private var exoPlayer: ExoPlayer? = null
     private val _isPlaying = MutableStateFlow(false)
@@ -49,6 +53,9 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _currentAyahIndex = MutableStateFlow(0)
     val currentAyahIndex: StateFlow<Int> = _currentAyahIndex.asStateFlow()
+
+    private val _playingAyahNumber = MutableStateFlow<Int?>(null)
+    val playingAyahNumber: StateFlow<Int?> = _playingAyahNumber.asStateFlow()
 
     // Export State
     private val _isExporting = MutableStateFlow(false)
@@ -67,6 +74,7 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
     val exportError: StateFlow<String?> = _exportError.asStateFlow()
 
     private var progressTrackingJob: Job? = null
+    private var singleAyahPlayer: ExoPlayer? = null
 
     init {
         // Load initial Surah Al-Fatiha
@@ -82,7 +90,8 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun loadSurah(surahNumber: Int, ayahStart: Int = 1, ayahEnd: Int = 1) {
+    fun loadSurah(surahNumber: Int, ayahStart: Int = 1, ayahEnd: Int = 1, includeBismillah: Boolean? = null) {
+        val bismillah = if (surahNumber == 1) false else (includeBismillah ?: _config.value.includeBismillah)
         val totalCount = QuranData.getAyahCount(surahNumber)
         val start = ayahStart.coerceIn(1, totalCount)
         val end = ayahEnd.coerceIn(start, totalCount)
@@ -132,14 +141,60 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
                 }
             }
 
+            val finalAyahs = if (surahNumber > 1 && bismillah) {
+                val bismillahAyah = withContext(Dispatchers.IO) {
+                    try {
+                        offlineDao.getAyahBySurahAndNumber(1, 1)?.let { entity ->
+                            CombinedAyah(
+                                number = entity.globalNumber, // 1
+                                numberInSurah = 1,
+                                page = entity.page,
+                                juz = entity.juz,
+                                surahNumber = 1,
+                                arabicText = entity.arabicText,
+                                bengaliText = entity.bengaliText,
+                                tafsirText = null,
+                                audioUrl = null,
+                                words = emptyList(),
+                                textUthmaniTajweed = null
+                            )
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                } ?: CombinedAyah(
+                    number = 1,
+                    numberInSurah = 1,
+                    page = 1,
+                    juz = 1,
+                    surahNumber = 1,
+                    arabicText = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+                    bengaliText = "শুরু করছি আল্লাহর নামে যিনি পরম করুণাময়, অতি দয়ালু।",
+                    tafsirText = null,
+                    audioUrl = null,
+                    words = emptyList(),
+                    textUthmaniTajweed = null
+                )
+                listOf(bismillahAyah) + surahAyahs
+            } else {
+                surahAyahs
+            }
+
             _config.value = _config.value.copy(
                 surahNumber = surahNumber,
                 surahName = banglaName,
                 ayahStart = start,
                 ayahEnd = end,
-                selectedAyahs = surahAyahs
+                includeBismillah = bismillah,
+                selectedAyahs = finalAyahs
             )
+            _audioPrepState.value = AudioPreparationState()
         }
+    }
+
+    fun toggleIncludeBismillah(include: Boolean) {
+        val current = _config.value
+        loadSurah(current.surahNumber, current.ayahStart, current.ayahEnd, includeBismillah = include)
     }
 
     fun loadFromQuickCreate(surahNumber: Int, ayahNumber: Int, ayah: CombinedAyah, surahName: String) {
@@ -148,8 +203,10 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
             surahName = surahName,
             ayahStart = ayahNumber,
             ayahEnd = ayahNumber,
+            includeBismillah = false,
             selectedAyahs = listOf(ayah)
         )
+        _audioPrepState.value = AudioPreparationState()
         setStep(2) // Jump directly to Customize screen
     }
 
@@ -219,8 +276,16 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
         _config.value = _config.value.copy(arabicFontSize = size)
     }
 
+    fun setArabicLineSpacing(spacing: Float) {
+        _config.value = _config.value.copy(arabicLineSpacing = spacing)
+    }
+
     fun setTranslationFontSize(size: Float) {
         _config.value = _config.value.copy(translationFontSize = size)
+    }
+
+    fun setTranslationLineSpacing(spacing: Float) {
+        _config.value = _config.value.copy(translationLineSpacing = spacing)
     }
 
     fun setArabicFontName(fontName: String) {
@@ -233,23 +298,182 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
 
     fun setQari(qariId: String, qariName: String) {
         _config.value = _config.value.copy(qariId = qariId, qariName = qariName)
-        if (_currentStep.value == 3) {
-            prepareAndPlayPreviewAudio()
+        // Invalidate previous prepared audio if qari changed
+        _audioPrepState.value = AudioPreparationState()
+    }
+
+    // Audio Preparation Workflow (Step 2)
+    fun startAudioPreparation(onComplete: (() -> Unit)? = null) {
+        val ayahs = _config.value.selectedAyahs
+        if (ayahs.isEmpty()) return
+
+        stopSingleAyahAudio()
+        pausePreviewAudio()
+
+        viewModelScope.launch {
+            _audioPrepState.value = AudioPreparationState(
+                isDownloading = true,
+                isDownloaded = false,
+                progress = 0.05f,
+                preparedAudios = emptyList(),
+                error = null
+            )
+
+            val qariId = _config.value.qariId
+            val preparedList = mutableListOf<PreparedAyahAudio>()
+            var totalDuration = 0L
+
+            val downloadDir = File(context.cacheDir, "quran_video_audios").apply { if (!exists()) mkdirs() }
+
+            for (i in ayahs.indices) {
+                val ayah = ayahs[i]
+                _audioPrepState.value = _audioPrepState.value.copy(
+                    currentAyahNumber = ayah.numberInSurah,
+                    progress = 0.05f + (0.90f * (i.toFloat() / ayahs.size))
+                )
+
+                val audioUrl = AudioUtils.getAudioUrl(qariId, ayah.number)
+                val destFile = File(downloadDir, "ayah_${qariId}_${ayah.number}.mp3")
+
+                var durationMs = 3500L
+                var downloadSuccess = false
+
+                withContext(Dispatchers.IO) {
+                    try {
+                        if (destFile.exists() && destFile.length() > 500) {
+                            downloadSuccess = true
+                        } else {
+                            val url = java.net.URL(audioUrl)
+                            val conn = url.openConnection()
+                            conn.connectTimeout = 12000
+                            conn.readTimeout = 20000
+                            conn.getInputStream().use { input ->
+                                java.io.FileOutputStream(destFile).use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                            downloadSuccess = destFile.exists() && destFile.length() > 500
+                        }
+
+                        if (downloadSuccess) {
+                            var durationFound = false
+                            val extractor = android.media.MediaExtractor()
+                            try {
+                                extractor.setDataSource(destFile.absolutePath)
+                                for (t in 0 until extractor.trackCount) {
+                                    val format = extractor.getTrackFormat(t)
+                                    val mime = format.getString(android.media.MediaFormat.KEY_MIME) ?: ""
+                                    if (mime.startsWith("audio/")) {
+                                        if (format.containsKey(android.media.MediaFormat.KEY_DURATION)) {
+                                            val durUs = format.getLong(android.media.MediaFormat.KEY_DURATION)
+                                            if (durUs > 300_000L) { // > 300ms
+                                                durationMs = durUs / 1000L
+                                                durationFound = true
+                                            }
+                                        }
+                                        break
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.w("QuranVideoViewModel", "MediaExtractor failed", e)
+                            } finally {
+                                try { extractor.release() } catch (e: Exception) {}
+                            }
+
+                            if (!durationFound) {
+                                val mmr = android.media.MediaMetadataRetriever()
+                                try {
+                                    mmr.setDataSource(destFile.absolutePath)
+                                    val durStr = mmr.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                                    val dur = durStr?.toLongOrNull()
+                                    if (dur != null && dur > 300) {
+                                        durationMs = dur
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.w("QuranVideoViewModel", "Metadata extraction failed for ${ayah.number}", e)
+                                } finally {
+                                    try { mmr.release() } catch (e: Exception) {}
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("QuranVideoViewModel", "Download error $audioUrl", e)
+                    }
+                }
+
+                val item = PreparedAyahAudio(
+                    ayahNumber = ayah.number,
+                    numberInSurah = ayah.numberInSurah,
+                    localFile = destFile,
+                    durationMs = durationMs,
+                    isReady = downloadSuccess,
+                    arabicPreview = ayah.arabicText.take(50)
+                )
+                preparedList.add(item)
+                totalDuration += durationMs
+            }
+
+            _audioPrepState.value = AudioPreparationState(
+                isDownloading = false,
+                isDownloaded = true,
+                progress = 1.0f,
+                currentAyahNumber = 0,
+                preparedAudios = preparedList,
+                totalDurationMs = totalDuration,
+                error = null
+            )
+
+            onComplete?.invoke()
         }
     }
 
-    // Audio Preview Controls
+    fun playSingleAyahAudio(item: PreparedAyahAudio) {
+        stopSingleAyahAudio()
+        pausePreviewAudio()
+
+        if (!item.localFile.exists()) return
+
+        _playingAyahNumber.value = item.numberInSurah
+        singleAyahPlayer = ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(Uri.fromFile(item.localFile)))
+            prepare()
+            playWhenReady = true
+            addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED) {
+                        _playingAyahNumber.value = null
+                    }
+                }
+            })
+        }
+    }
+
+    fun stopSingleAyahAudio() {
+        singleAyahPlayer?.release()
+        singleAyahPlayer = null
+        _playingAyahNumber.value = null
+    }
+
+    // Audio Preview Controls (Step 3)
     fun prepareAndPlayPreviewAudio() {
+        stopSingleAyahAudio()
         releasePlayer()
+
         val currentAyahs = _config.value.selectedAyahs
         if (currentAyahs.isEmpty()) return
 
-        exoPlayer = ExoPlayer.Builder(context).build().apply {
-            val qari = _config.value.qariId
-            val mediaItems = currentAyahs.map { ayah ->
-                val audioUrl = AudioUtils.getAudioUrl(qari, ayah.number)
+        val preparedList = _audioPrepState.value.preparedAudios
+        val mediaItems = currentAyahs.map { ayah ->
+            val prep = preparedList.find { it.ayahNumber == ayah.number }
+            if (prep != null && prep.localFile.exists()) {
+                MediaItem.fromUri(Uri.fromFile(prep.localFile))
+            } else {
+                val audioUrl = AudioUtils.getAudioUrl(_config.value.qariId, ayah.number)
                 MediaItem.fromUri(audioUrl)
             }
+        }
+
+        exoPlayer = ExoPlayer.Builder(context).build().apply {
             setMediaItems(mediaItems)
             prepare()
             playWhenReady = true
@@ -317,8 +541,9 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    // Export Video
+    // Export Video (Step 4)
     fun startExport() {
+        stopSingleAyahAudio()
         pausePreviewAudio()
         _isExporting.value = true
         _exportProgress.value = 0f
@@ -336,6 +561,7 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
                 context = context,
                 config = _config.value,
                 audioFileUrls = audioUrls,
+                preparedAudios = _audioPrepState.value.preparedAudios,
                 onProgress = { progress ->
                     _exportProgress.value = progress
                 }
@@ -383,5 +609,6 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
     override fun onCleared() {
         super.onCleared()
         releasePlayer()
+        stopSingleAyahAudio()
     }
 }

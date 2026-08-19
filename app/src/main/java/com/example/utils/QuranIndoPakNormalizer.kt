@@ -13,7 +13,7 @@ object QuranIndoPakNormalizer {
      * @param rawText Original Arabic Quran text
      * @param showWaqfSigns If false, strips auxiliary Waqf marks for an ultra-clean reading layout.
      */
-    fun processIndoPakText(rawText: String, showWaqfSigns: Boolean = true): String {
+    fun processIndoPakText(rawText: String, showWaqfSigns: Boolean = false): String {
         if (rawText.isBlank()) return rawText
 
         if (!showWaqfSigns) {

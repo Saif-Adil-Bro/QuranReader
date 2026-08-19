@@ -59,8 +59,29 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
             }
             prefs.edit().putLong(lastNotifiedKey, nowTime).apply()
 
+            var prayerRangeFormatted = intent.getStringExtra("prayer_range_formatted") ?: ""
             val prayerTimeFormatted = intent.getStringExtra("prayer_time_formatted") ?: ""
             val districtNameBn = intent.getStringExtra("district_name_bn") ?: "ঢাকা"
+
+            // Fallback calculation for time range if not passed in intent
+            if (prayerRangeFormatted.isBlank() && prayerName != PrayerName.SAHRI && prayerName != PrayerName.IFTAR) {
+                try {
+                    val prayerRepo = com.example.data.repository.PrayerTimesRepository.getInstance(context)
+                    val district = prayerRepo.selectedDistrict.value
+                    val isHanafi = prayerRepo.isHanafi.value
+                    val schedule = com.example.utils.PrayerTimesCalculator.calculatePrayerSchedule(
+                        LocalDate.now(),
+                        district,
+                        isHanafi
+                    )
+                    val match = schedule.prayers.find { it.name == prayerName }
+                    if (match != null && match.timeRangeFormatted.isNotBlank()) {
+                        prayerRangeFormatted = match.timeRangeFormatted
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
 
             val isFriday = LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY
             val isDhuhrOnFriday = isFriday && prayerName == PrayerName.DHUHR
@@ -77,11 +98,11 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
             }
 
             val prayerDisplayTitle = when (prayerName) {
-                PrayerName.FAJR -> "ফজর"
-                PrayerName.DHUHR -> if (isDhuhrOnFriday) "জুমুআ" else "যুহর"
-                PrayerName.ASR -> "আসর"
-                PrayerName.MAGHRIB -> "মাগরিব"
-                PrayerName.ISHA -> "এশা"
+                PrayerName.FAJR -> "ফজরের"
+                PrayerName.DHUHR -> if (isDhuhrOnFriday) "পবিত্র জুমুআর" else "যুহরের"
+                PrayerName.ASR -> "আসরের"
+                PrayerName.MAGHRIB -> "মাগরিবের"
+                PrayerName.ISHA -> "এশার"
                 PrayerName.SUNRISE -> "সূর্যোদয়"
                 PrayerName.SAHRI -> "সাহরি শেষ"
                 PrayerName.IFTAR -> "ইফতার"
@@ -97,8 +118,14 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
                     else "ইফতারের সময় হয়েছে ($districtNameBn)। দুআ পাঠ করে ইফতার করুন।"
                 }
                 else -> {
-                    if (prayerTimeFormatted.isNotBlank()) {
-                        "$prayerDisplayTitle সালাতের সময়: $prayerTimeFormatted ($districtNameBn)। ওয়াক্তমত সালাত আদায় করার প্রস্তুতি নিন।"
+                    val timeDisplay = if (prayerRangeFormatted.isNotBlank()) {
+                        prayerRangeFormatted
+                    } else if (prayerTimeFormatted.isNotBlank()) {
+                        prayerTimeFormatted
+                    } else ""
+
+                    if (timeDisplay.isNotBlank()) {
+                        "$prayerDisplayTitle সালাতের সময় : $timeDisplay ($districtNameBn)। ওয়াক্তমত সালাত আদায় করার প্রস্তুতি নিন।"
                     } else {
                         "$prayerDisplayTitle সালাতের সময় হয়েছে ($districtNameBn)। ওয়াক্তমত সালাত আদায় করার প্রস্তুতি নিন।"
                     }

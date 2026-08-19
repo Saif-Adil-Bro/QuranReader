@@ -124,6 +124,35 @@ enum class QuranVideoTemplate(
 }
 
 /**
+ * Prepared Ayah Audio Model holding verified local file and duration
+ */
+data class PreparedAyahAudio(
+    val ayahNumber: Int,
+    val numberInSurah: Int,
+    val localFile: java.io.File,
+    val durationMs: Long,
+    val isReady: Boolean = true,
+    val arabicPreview: String = ""
+)
+
+/**
+ * Audio Preparation State for Step 2
+ */
+data class AudioPreparationState(
+    val isDownloading: Boolean = false,
+    val isDownloaded: Boolean = false,
+    val progress: Float = 0f,
+    val currentAyahNumber: Int = 0,
+    val preparedAudios: List<PreparedAyahAudio> = emptyList(),
+    val totalDurationMs: Long = 0L,
+    val error: String? = null
+) {
+    val isPreparing: Boolean get() = isDownloading
+    val isPrepared: Boolean get() = isDownloaded
+    val errorMessage: String? get() = error
+}
+
+/**
  * Quran Video Payload for Creation & Rendering
  */
 data class QuranVideoConfig(
@@ -141,14 +170,17 @@ data class QuranVideoConfig(
     val overlay: BackgroundOverlay = BackgroundOverlay.MEDIUM,
     val overlayColor: Color = Color.Black,
     val arabicFontSize: Float = 28f,
+    val arabicLineSpacing: Float = 1.8f,
     val translationFontSize: Float = 16f,
+    val translationLineSpacing: Float = 1.3f,
     val arabicFontName: String = "Noorehira",
     val bengaliFontName: String = "SolaimanLipi",
     val showBanglaTranslation: Boolean = true,
     val showReference: Boolean = true,
     val showLogo: Boolean = true,
     val showCredit: Boolean = true,
-    val showWaqfSigns: Boolean = true,
+    val showWaqfSigns: Boolean = false,
+    val includeBismillah: Boolean = false,
     val animationStyle: TextAnimationStyle = TextAnimationStyle.FADE_IN,
     val logoText: String = "Quran READER",
     val creditText: String = "MuslimsLibrary"

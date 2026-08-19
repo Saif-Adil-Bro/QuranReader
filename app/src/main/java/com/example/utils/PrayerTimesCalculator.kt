@@ -266,23 +266,39 @@ object PrayerTimesCalculator {
         val now = LocalDateTime.now(zoneId)
         val nowMillis = java.time.ZonedDateTime.now(zoneId).toInstant().toEpochMilli()
 
-        fun createSinglePrayer(name: PrayerName, time: LocalTime): SinglePrayerTime {
+        // Check forbidden prayer times (মাকরূহ সময়)
+        // 1. Sunrise (Sunrise to Sunrise + 15 min)
+        // 2. Solar Noon / Zawal (12 min before Dhuhr to Dhuhr)
+        // 3. Sunset (15 min before Maghrib till Maghrib)
+        val sunriseForbiddenEnd = sunriseTime.plusMinutes(15)
+
+        fun createSinglePrayer(name: PrayerName, time: LocalTime, endTime: LocalTime? = null): SinglePrayerTime {
+            val endDigits = endTime?.let { formatTimeDigits(it) } ?: ""
+            val endFormatted = endTime?.let { formatTime12h(it) } ?: ""
+            val rangeFormatted = if (endTime != null) {
+                "${formatTime12h(time)} - ${formatTime12h(endTime)}"
+            } else {
+                formatTime12h(time)
+            }
             return SinglePrayerTime(
                 name = name,
                 timeDigits = formatTimeDigits(time),
                 amPm = formatAmPm(time),
                 timeFormatted = formatTimeBn(time),
-                timestampMillis = toMillis(time)
+                timestampMillis = toMillis(time),
+                endTimeDigits = endDigits,
+                endTimeFormatted = endFormatted,
+                timeRangeFormatted = rangeFormatted
             )
         }
 
         val rawPrayers = listOf(
-            createSinglePrayer(PrayerName.FAJR, fajrTime),
-            createSinglePrayer(PrayerName.SUNRISE, sunriseTime),
-            createSinglePrayer(PrayerName.DHUHR, dhuhrTime),
-            createSinglePrayer(PrayerName.ASR, asrTime),
-            createSinglePrayer(PrayerName.MAGHRIB, maghribTime),
-            createSinglePrayer(PrayerName.ISHA, ishaTime)
+            createSinglePrayer(PrayerName.FAJR, fajrTime, sunriseTime),
+            createSinglePrayer(PrayerName.SUNRISE, sunriseTime, sunriseForbiddenEnd),
+            createSinglePrayer(PrayerName.DHUHR, dhuhrTime, asrTime),
+            createSinglePrayer(PrayerName.ASR, asrTime, maghribTime),
+            createSinglePrayer(PrayerName.MAGHRIB, maghribTime, ishaTime),
+            createSinglePrayer(PrayerName.ISHA, ishaTime, fajrTime)
         )
 
         // Determine current & next prayer
@@ -346,7 +362,10 @@ object PrayerTimesCalculator {
                         timeDigits = formatTimeDigits(fajrTime),
                         amPm = formatAmPm(fajrTime),
                         timeFormatted = formatTimeBn(fajrTime),
-                        timestampMillis = tomorrowFajrMillis
+                        timestampMillis = tomorrowFajrMillis,
+                        endTimeDigits = formatTimeDigits(sunriseTime),
+                        endTimeFormatted = formatTime12h(sunriseTime),
+                        timeRangeFormatted = "${formatTime12h(fajrTime)} - ${formatTime12h(sunriseTime)}"
                     )
                     remainingMillis = tomorrowFajrMillis - nowMillis
                 }
@@ -364,7 +383,6 @@ object PrayerTimesCalculator {
         // 1. Sunrise (Sunrise to Sunrise + 15 min)
         // 2. Solar Noon / Zawal (12 min before Dhuhr to Dhuhr)
         // 3. Sunset (15 min before Maghrib till Maghrib)
-        val sunriseForbiddenEnd = sunriseTime.plusMinutes(15)
         val zawalForbiddenStart = dhuhrTime.minusMinutes(12)
         val sunsetForbiddenStart = maghribTime.minusMinutes(15)
 
@@ -499,6 +517,18 @@ object PrayerTimesCalculator {
 
     fun formatAmPm(time: LocalTime): String {
         return if (time.hour >= 12) "PM" else "AM"
+    }
+
+    fun formatTime12h(time: LocalTime): String {
+        var hour = time.hour
+        val minute = time.minute
+        val amPm = if (hour >= 12) "PM" else "AM"
+        if (hour > 12) hour -= 12
+        if (hour == 0) hour = 12
+
+        val hourStr = toBengaliDigits(hour)
+        val minuteStr = toBengaliDigits(minute).padStart(2, '০')
+        return "$hourStr:$minuteStr $amPm"
     }
 
     fun formatTimeBn(time: LocalTime): String {
