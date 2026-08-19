@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.view.Surface
 import androidx.core.content.res.ResourcesCompat
 import com.example.R
 import com.example.data.model.BackgroundOverlay
@@ -60,6 +61,7 @@ object QuranVideoExporter {
 
         var encoder: MediaCodec? = null
         var muxer: MediaMuxer? = null
+        var inputSurface: Surface? = null
         val outputVideoFile = File(context.cacheDir, "quran_video_${System.currentTimeMillis()}.mp4")
         val downloadedAudioFiles = mutableListOf<File>()
         val aacAudioFiles = mutableListOf<File>()
@@ -229,7 +231,7 @@ object QuranVideoExporter {
 
             encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
             encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-            val inputSurface = encoder.createInputSurface()
+            inputSurface = encoder.createInputSurface()
             encoder.start()
 
             // Prepare Muxer
@@ -347,27 +349,37 @@ object QuranVideoExporter {
                     ((adjustedTimeUs - ayahStartTimeUs).toFloat() / ayahDurationUs).coerceIn(0.0f, 1.0f)
                 } else 0f
 
-                // Lock Canvas on Surface
-                val canvas = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    inputSurface.lockHardwareCanvas()
-                } else {
-                    inputSurface.lockCanvas(null)
+                // Lock Canvas on Surface (Software lockCanvas is fully reliable and avoids RenderThread / HIDL DEAD_OBJECT crashes on MIUI/HyperOS)
+                val canvas = try {
+                    inputSurface?.lockCanvas(null)
+                } catch (e: Exception) {
+                    android.util.Log.e("QuranVideoExporter", "Failed to lock surface canvas", e)
+                    null
                 }
 
                 if (canvas != null) {
-                    drawVideoFrame(
-                        canvas = canvas,
-                        width = width,
-                        height = height,
-                        config = config,
-                        activeAyahIndex = activeAyahIndex,
-                        bgBitmap = bgBitmap,
-                        arabicTypeface = arabicTypeface,
-                        banglaTypeface = banglaTypeface,
-                        animAlpha = animAlpha,
-                        ayahProgress = ayahProgress
-                    )
-                    inputSurface.unlockCanvasAndPost(canvas)
+                    try {
+                        drawVideoFrame(
+                            canvas = canvas,
+                            width = width,
+                            height = height,
+                            config = config,
+                            activeAyahIndex = activeAyahIndex,
+                            bgBitmap = bgBitmap,
+                            arabicTypeface = arabicTypeface,
+                            banglaTypeface = banglaTypeface,
+                            animAlpha = animAlpha,
+                            ayahProgress = ayahProgress
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("QuranVideoExporter", "Error rendering frame $frame", e)
+                    } finally {
+                        try {
+                            inputSurface?.unlockCanvasAndPost(canvas)
+                        } catch (e: Exception) {
+                            android.util.Log.e("QuranVideoExporter", "Failed to unlock canvas and post", e)
+                        }
+                    }
                 }
 
                 // Drain Encoder output
@@ -530,6 +542,7 @@ object QuranVideoExporter {
                 errorMessage = e.localizedMessage ?: "ভিডিও রেন্ডার করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
             )
         } finally {
+            try { inputSurface?.release() } catch (e: Exception) {}
             try { encoder?.release() } catch (e: Exception) {}
             try { muxer?.release() } catch (e: Exception) {}
             downloadedAudioFiles.forEach { it.delete() }
