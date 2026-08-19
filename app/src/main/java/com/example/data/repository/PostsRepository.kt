@@ -51,18 +51,16 @@ class PostsRepository(private val context: Context) {
         _blogPosts.value = emptyList()
         _shortPosts.value = emptyList()
 
-        // Ensure Anonymous Auth for Firestore Security Rules
+        // Ensure Anonymous Auth for Firestore Security Rules if available
         try {
             val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
             if (auth.currentUser == null) {
-                auth.signInAnonymously().addOnCompleteListener { task ->
-                    if (!task.isSuccessful) {
-                        task.exception?.printStackTrace()
-                    }
+                auth.signInAnonymously().addOnFailureListener {
+                    // Gracefully handled if Google Play Services broker is unavailable
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Silently handle environment without Google Play Services
         }
 
         appFirstInstallTime // force initialization on startup

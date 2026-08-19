@@ -13,6 +13,7 @@ object IslamicCardTemplate {
 
     data class ShareData(
         val badgeTitle: String,
+        val subtitle: String? = null,
         val arabicText: String? = null,
         val transliterationText: String? = null,
         val translationText: String,
@@ -33,7 +34,6 @@ object IslamicCardTemplate {
         canvas.translate(baseX, baseY)
         canvas.rotate(angleDegrees)
 
-        // Leaf shape path
         val leafPath = Path().apply {
             moveTo(0f, 0f)
             cubicTo(length * 0.3f, -width * 0.6f, length * 0.7f, -width * 0.5f, length, 0f)
@@ -41,7 +41,6 @@ object IslamicCardTemplate {
             close()
         }
 
-        // Gradient fill for leaf (Dark emerald base to lighter vibrant green tip)
         val leafGradient = LinearGradient(
             0f, 0f, length, 0f,
             intArrayOf(
@@ -60,7 +59,7 @@ object IslamicCardTemplate {
         }
         canvas.drawPath(leafPath, leafPaint)
 
-        // Center Vein (Light Green/Gold)
+        // Center Vein
         val veinPaint = Paint().apply {
             color = Color.parseColor("#D8F3DC")
             strokeWidth = 2.2f
@@ -86,16 +85,73 @@ object IslamicCardTemplate {
         canvas.restore()
     }
 
+    private fun drawIslamicPatternOverlay(canvas: Canvas, width: Int, height: Int) {
+        val patternPaint = Paint().apply {
+            color = Color.parseColor("#14FFE082") // 8% gold tint pattern
+            style = Paint.Style.STROKE
+            strokeWidth = 1.2f
+            isAntiAlias = true
+        }
+
+        val step = 140f
+        var y = 30f
+        while (y < height) {
+            var x = 30f
+            while (x < width) {
+                // Draw 8-point geometric star
+                val r = 24f
+                val innerR = 12f
+                val starPath = Path()
+                for (i in 0 until 16) {
+                    val radius = if (i % 2 == 0) r else innerR
+                    val angle = Math.toRadians((i * 22.5) - 90)
+                    val px = (x + radius * Math.cos(angle)).toFloat()
+                    val py = (y + radius * Math.sin(angle)).toFloat()
+                    if (i == 0) starPath.moveTo(px, py) else starPath.lineTo(px, py)
+                }
+                starPath.close()
+                canvas.drawPath(starPath, patternPaint)
+
+                // Connecting lines
+                canvas.drawCircle(x, y, 4f, patternPaint)
+                x += step
+            }
+            y += step
+        }
+    }
+
+    private fun drawGoldFloralFlourish(canvas: Canvas, cx: Float, cy: Float, size: Float, paint: Paint) {
+        canvas.save()
+        canvas.translate(cx, cy)
+        for (i in 0 until 8) {
+            val angle = i * 45f
+            canvas.save()
+            canvas.rotate(angle)
+            val p = Path().apply {
+                moveTo(0f, 0f)
+                quadTo(size * 0.35f, -size * 0.25f, size, 0f)
+                quadTo(size * 0.35f, size * 0.25f, 0f, 0f)
+                close()
+            }
+            canvas.drawPath(p, paint)
+            canvas.restore()
+        }
+        canvas.drawCircle(0f, 0f, size * 0.22f, paint)
+        canvas.restore()
+    }
+
     fun generateCardBitmap(context: Context, data: ShareData): Bitmap {
         val width = 1080
         val marginX = 64f
         val cardWidth = width - 2 * marginX // 952px
-        val contentPaddingX = 46f
-        val contentWidth = (cardWidth - 2 * contentPaddingX).toInt() // 860px
+        val contentPaddingX = 54f
+        val contentWidth = (cardWidth - 2 * contentPaddingX).toInt() // 844px
 
         // Custom fonts
         val arabicFont = try {
-            ResourcesCompat.getFont(context, R.font.scheherazade_new) ?: Typeface.DEFAULT
+            ResourcesCompat.getFont(context, R.font.scheherazade_new)
+                ?: ResourcesCompat.getFont(context, R.font.amiri_regular)
+                ?: Typeface.DEFAULT
         } catch (e: Exception) {
             Typeface.DEFAULT
         }
@@ -112,31 +168,35 @@ object IslamicCardTemplate {
             Typeface.DEFAULT_BOLD
         }
 
-        // Measure text heights first
-        // 1. Arabic Text Layout
-        val arabicPaint = TextPaint().apply {
-            color = Color.parseColor("#0F291B")
-            textSize = 48f
-            typeface = arabicFont
-            isAntiAlias = true
-        }
-
+        // 1. Arabic Text Layout (Hero Element)
         val formattedArabic = if (!data.arabicText.isNullOrBlank()) {
             data.arabicText.trim()
         } else ""
 
+        val arabicPaint = TextPaint().apply {
+            color = Color.parseColor("#18352B") // Rich dark emerald
+            textSize = when {
+                formattedArabic.length > 250 -> 48f
+                formattedArabic.length > 120 -> 54f
+                formattedArabic.length > 60 -> 60f
+                else -> 66f
+            }
+            typeface = arabicFont
+            isAntiAlias = true
+        }
+
         val arabicLayout = if (formattedArabic.isNotEmpty()) {
             StaticLayout.Builder.obtain(formattedArabic, 0, formattedArabic.length, arabicPaint, contentWidth)
                 .setAlignment(Layout.Alignment.ALIGN_CENTER)
-                .setLineSpacing(0f, 0.9f)
+                .setLineSpacing(0f, 1.15f)
                 .setIncludePad(true)
                 .build()
         } else null
 
         // 2. Transliteration Layout
         val transliterationPaint = TextPaint().apply {
-            color = Color.parseColor("#2E4436")
-            textSize = 36f
+            color = Color.parseColor("#344E41")
+            textSize = 34f
             typeface = banglaFont
             isAntiAlias = true
         }
@@ -150,17 +210,21 @@ object IslamicCardTemplate {
         } else null
 
         // 3. Translation Layout
-        val translationPaint = TextPaint().apply {
-            color = Color.parseColor("#182B1E")
-            textSize = 40f
-            typeface = banglaFont
-            isAntiAlias = true
-        }
-
         val cleanTranslation = try {
             android.text.Html.fromHtml(data.translationText.trim(), android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim()
         } catch (e: Exception) {
             data.translationText.trim()
+        }
+
+        val translationPaint = TextPaint().apply {
+            color = Color.parseColor("#263D35") // Deep refined forest green
+            textSize = when {
+                cleanTranslation.length > 300 -> 34f
+                cleanTranslation.length > 150 -> 38f
+                else -> 42f
+            }
+            typeface = banglaFont
+            isAntiAlias = true
         }
 
         val translationLayout = StaticLayout.Builder.obtain(cleanTranslation, 0, cleanTranslation.length, translationPaint, contentWidth)
@@ -170,31 +234,31 @@ object IslamicCardTemplate {
             .build()
 
         // Calculate card height required
-        val topPaddingInCard = 110f // Space below arch badge
+        val topPaddingInCard = 145f // Space below Islamic top arch
         var cardInnerContentHeight = topPaddingInCard
 
         if (arabicLayout != null) {
-            cardInnerContentHeight += arabicLayout.height + 35f // Arabic text
-            cardInnerContentHeight += 30f // Divider gap
+            cardInnerContentHeight += arabicLayout.height + 40f // Arabic text
+            cardInnerContentHeight += 38f // Divider gap
         }
 
         if (transliterationLayout != null) {
-            cardInnerContentHeight += transliterationLayout.height + 25f
-            cardInnerContentHeight += 25f // Divider gap
+            cardInnerContentHeight += transliterationLayout.height + 30f
+            cardInnerContentHeight += 30f // Divider gap
         }
 
-        cardInnerContentHeight += translationLayout.height + 40f
+        cardInnerContentHeight += translationLayout.height + 45f
 
         if (!data.referenceText.isNullOrBlank()) {
-            cardInnerContentHeight += 70f // Reference pill
+            cardInnerContentHeight += 80f // Reference pill
         }
 
-        cardInnerContentHeight += 60f // Bottom padding inside card
+        cardInnerContentHeight += 70f // Bottom inner padding
 
-        val cardTop = 150f
-        val cardBottom = cardTop + max(cardInnerContentHeight, 520f)
-        val footerSpace = 250f
-        val totalCanvasHeight = (cardBottom + footerSpace).toInt().coerceAtLeast(1080)
+        val cardTop = 195f
+        val cardBottom = cardTop + max(cardInnerContentHeight, 580f)
+        val footerSpace = 290f
+        val totalCanvasHeight = (cardBottom + footerSpace).toInt().coerceAtLeast(1250)
 
         // Create bitmap and canvas
         val bitmap = Bitmap.createBitmap(width, totalCanvasHeight, Bitmap.Config.ARGB_8888)
@@ -206,118 +270,125 @@ object IslamicCardTemplate {
         val bgGradient = LinearGradient(
             0f, 0f, 0f, totalCanvasHeight.toFloat(),
             intArrayOf(
-                Color.parseColor("#042618"), // Deep Forest Emerald Top
-                Color.parseColor("#093E28"), // Rich Emerald Middle
-                Color.parseColor("#031D12")  // Midnight Emerald Bottom
+                Color.parseColor("#063D2D"), // Top Primary Emerald
+                Color.parseColor("#07523D"), // Middle Rich Emerald
+                Color.parseColor("#02291F")  // Bottom Deep Forest
             ),
-            floatArrayOf(0f, 0.5f, 1f),
+            floatArrayOf(0f, 0.45f, 1f),
             Shader.TileMode.CLAMP
         )
         val bgPaint = Paint().apply { shader = bgGradient }
         canvas.drawRect(0f, 0f, width.toFloat(), totalCanvasHeight.toFloat(), bgPaint)
 
-        // Draw Mosque Silhouette at bottom
+        // Subtle geometric star pattern
+        drawIslamicPatternOverlay(canvas, width, totalCanvasHeight)
+
+        // Draw Mosque Skyline Silhouette at bottom
         val mosquePaint = Paint().apply {
-            color = Color.parseColor("#02140C")
+            color = Color.parseColor("#011710")
             style = Paint.Style.FILL
             isAntiAlias = true
         }
 
         val mosquePath = Path().apply {
-            val base = totalCanvasHeight.toFloat() - 40f
+            val base = totalCanvasHeight.toFloat()
             moveTo(0f, base)
-            lineTo(0f, base - 120f)
-            // Left Minaret spire
-            lineTo(30f, base - 120f)
-            lineTo(40f, base - 220f)
-            lineTo(50f, base - 120f)
-            lineTo(120f, base - 120f)
-            // Left Dome
-            quadTo(200f, base - 250f, 280f, base - 120f)
-            lineTo(800f, base - 120f)
-            // Right Dome
-            quadTo(880f, base - 250f, 960f, base - 120f)
-            lineTo(1030f, base - 120f)
-            // Right Minaret spire
-            lineTo(1040f, base - 220f)
-            lineTo(1050f, base - 120f)
-            lineTo(width.toFloat(), base - 120f)
-            lineTo(width.toFloat(), base + 40f)
-            lineTo(0f, base + 40f)
+            lineTo(0f, base - 140f)
+            // Left Minaret
+            lineTo(45f, base - 140f)
+            lineTo(55f, base - 250f)
+            lineTo(65f, base - 140f)
+            lineTo(140f, base - 140f)
+            // Left Main Dome
+            quadTo(240f, base - 280f, 340f, base - 140f)
+            lineTo(450f, base - 140f)
+            // Center Grand Dome
+            quadTo(540f, base - 290f, 630f, base - 140f)
+            lineTo(740f, base - 140f)
+            // Right Main Dome
+            quadTo(840f, base - 280f, 940f, base - 140f)
+            lineTo(1015f, base - 140f)
+            // Right Minaret
+            lineTo(1025f, base - 250f)
+            lineTo(1035f, base - 140f)
+            lineTo(width.toFloat(), base - 140f)
+            lineTo(width.toFloat(), base)
             close()
         }
         canvas.drawPath(mosquePath, mosquePaint)
 
-        // Draw Hanging Gold Lantern at Top Right
+        // ==========================================
+        // TOP RIGHT HANGING ISLAMIC LANTERN
+        // ==========================================
         val lanternX = 940f
         val chainPaint = Paint().apply {
-            color = Color.parseColor("#D4AF37")
+            color = Color.parseColor("#E8D58A")
             strokeWidth = 3f
             style = Paint.Style.STROKE
             isAntiAlias = true
         }
         canvas.drawLine(lanternX, 0f, lanternX, 130f, chainPaint)
 
-        // Lantern Glow
+        // Lantern Warm Radial Glow
         val lanternGlow = RadialGradient(
-            lanternX, 190f, 90f,
+            lanternX, 205f, 130f,
             intArrayOf(
                 Color.parseColor("#FFFFE0"),
-                Color.parseColor("#FFD700"),
-                Color.parseColor("#00FFD700")
+                Color.parseColor("#F5D77F"),
+                Color.parseColor("#60F5D77F"),
+                Color.parseColor("#00000000")
             ),
-            floatArrayOf(0f, 0.4f, 1f),
+            floatArrayOf(0f, 0.25f, 0.6f, 1f),
             Shader.TileMode.CLAMP
         )
         val glowPaint = Paint().apply {
             shader = lanternGlow
             isAntiAlias = true
         }
-        canvas.drawCircle(lanternX, 190f, 90f, glowPaint)
+        canvas.drawCircle(lanternX, 205f, 130f, glowPaint)
 
-        // Lantern Cap & Body
+        // Lantern Gold Body
         val lanternGoldPaint = Paint().apply {
             color = Color.parseColor("#D4AF37")
             style = Paint.Style.FILL
             isAntiAlias = true
         }
-        // Top Cap
         val capPath = Path().apply {
-            moveTo(lanternX - 25f, 130f)
-            lineTo(lanternX + 25f, 130f)
-            lineTo(lanternX + 35f, 150f)
-            lineTo(lanternX - 35f, 150f)
+            moveTo(lanternX - 28f, 130f)
+            lineTo(lanternX + 28f, 130f)
+            lineTo(lanternX + 38f, 155f)
+            lineTo(lanternX - 38f, 155f)
             close()
         }
         canvas.drawPath(capPath, lanternGoldPaint)
 
         // Glass Body
         val lanternGlassPath = Path().apply {
-            moveTo(lanternX - 35f, 150f)
-            lineTo(lanternX + 35f, 150f)
-            lineTo(lanternX + 25f, 220f)
-            lineTo(lanternX - 25f, 220f)
+            moveTo(lanternX - 38f, 155f)
+            lineTo(lanternX + 38f, 155f)
+            lineTo(lanternX + 26f, 235f)
+            lineTo(lanternX - 26f, 235f)
             close()
         }
         val glassPaint = Paint().apply {
-            color = Color.parseColor("#40FFD700")
+            color = Color.parseColor("#80FFF6C2")
             style = Paint.Style.FILL
             isAntiAlias = true
         }
         canvas.drawPath(lanternGlassPath, glassPaint)
         
         // Lantern Ribs
-        canvas.drawLine(lanternX - 35f, 150f, lanternX - 25f, 220f, chainPaint)
-        canvas.drawLine(lanternX, 150f, lanternX, 220f, chainPaint)
-        canvas.drawLine(lanternX + 35f, 150f, lanternX + 25f, 220f, chainPaint)
+        canvas.drawLine(lanternX - 38f, 155f, lanternX - 26f, 235f, chainPaint)
+        canvas.drawLine(lanternX, 155f, lanternX, 235f, chainPaint)
+        canvas.drawLine(lanternX + 38f, 155f, lanternX + 26f, 235f, chainPaint)
 
         // Lantern Base & Tassel
-        val baseRect = RectF(lanternX - 30f, 220f, lanternX + 30f, 232f)
-        canvas.drawRoundRect(baseRect, 4f, 4f, lanternGoldPaint)
-        canvas.drawLine(lanternX, 232f, lanternX, 255f, chainPaint)
+        val baseRect = RectF(lanternX - 32f, 235f, lanternX + 32f, 248f)
+        canvas.drawRoundRect(baseRect, 5f, 5f, lanternGoldPaint)
+        canvas.drawLine(lanternX, 248f, lanternX, 275f, chainPaint)
 
         // ==========================================
-        // DRAW ELEGANT LUSH VINE & LEAVES AT TOP LEFT
+        // TOP LEFT LUSH LEAVES VINE
         // ==========================================
         val stemPaint = Paint().apply {
             color = Color.parseColor("#123D24")
@@ -327,21 +398,18 @@ object IslamicCardTemplate {
             strokeCap = Paint.Cap.ROUND
         }
 
-        // Main branch stem
         val stemPath = Path().apply {
             moveTo(-20f, -20f)
             cubicTo(30f, 25f, 80f, 50f, 165f, 95f)
         }
         canvas.drawPath(stemPath, stemPaint)
 
-        // Sub-branch stem
         val subStemPath = Path().apply {
             moveTo(55f, 38f)
             cubicTo(85f, 15f, 125f, 10f, 160f, 15f)
         }
         canvas.drawPath(subStemPath, stemPaint)
 
-        // Leaf placements: (baseX, baseY, angleDegrees, length, width)
         val leavesData = listOf(
             listOf(10f, 8f, 30f, 75f, 28f),
             listOf(35f, 25f, 75f, 60f, 24f),
@@ -365,48 +433,55 @@ object IslamicCardTemplate {
             )
         }
 
-
         // ==========================================
-        // 2. INNER IVORY ARCHED CARD (Mihrab Frame)
+        // 2. INNER IVORY SCALLOPED ARCHED CARD
         // ==========================================
         val cardLeft = marginX
         val cardRight = width - marginX
 
-        // Build Islamic Arch Path
+        // Multi-lobed Islamic Arch Path
         val cardPath = Path().apply {
             val shoulderY = cardTop + 140f
             moveTo(cardLeft + 36f, cardBottom)
-            // Bottom-Left rounded corner
             quadTo(cardLeft, cardBottom, cardLeft, cardBottom - 36f)
-            // Left vertical line up to shoulder
             lineTo(cardLeft, shoulderY)
-            // Islamic Arch Peak curve to top center (540, cardTop)
+            
+            // Scalloped multi-lobed arch
             cubicTo(
-                cardLeft + 10f, cardTop + 40f,
-                540f - 120f, cardTop - 10f,
-                540f, cardTop - 35f
+                cardLeft + 15f, cardTop + 60f,
+                cardLeft + 80f, cardTop + 45f,
+                cardLeft + 140f, cardTop + 25f
             )
             cubicTo(
-                540f + 120f, cardTop - 10f,
-                cardRight - 10f, cardTop + 40f,
+                cardLeft + 200f, cardTop + 5f,
+                540f - 120f, cardTop - 45f,
+                540f, cardTop - 55f
+            )
+            cubicTo(
+                540f + 120f, cardTop - 45f,
+                cardRight - 200f, cardTop + 5f,
+                cardRight - 140f, cardTop + 25f
+            )
+            cubicTo(
+                cardRight - 80f, cardTop + 45f,
+                cardRight - 15f, cardTop + 60f,
                 cardRight, shoulderY
             )
-            // Right vertical line down
+            
             lineTo(cardRight, cardBottom - 36f)
-            // Bottom-Right rounded corner
             quadTo(cardRight, cardBottom, cardRight - 36f, cardBottom)
             close()
         }
 
-        // Fill Inner Card with Cream Gradient
+        // Fill Inner Card with Warm Cream/Ivory Gradient
         val cardBgGradient = LinearGradient(
             0f, cardTop, 0f, cardBottom,
             intArrayOf(
-                Color.parseColor("#FFFDF7"), // Cream Light Top
+                Color.parseColor("#FFFDF5"), // Cream Light Top
                 Color.parseColor("#FAF4E8"), // Warm Cream Middle
                 Color.parseColor("#F3ECDC")  // Soft Ivory Bottom
             ),
-            floatArrayOf(0f, 0.6f, 1f),
+            floatArrayOf(0f, 0.65f, 1f),
             Shader.TileMode.CLAMP
         )
         val cardBgPaint = Paint().apply {
@@ -419,10 +494,10 @@ object IslamicCardTemplate {
         val goldShader = LinearGradient(
             cardLeft, cardTop, cardRight, cardBottom,
             intArrayOf(
-                Color.parseColor("#E5C158"),
-                Color.parseColor("#BF953F"),
+                Color.parseColor("#E8D58A"),
+                Color.parseColor("#D4AF37"),
                 Color.parseColor("#FCF6BA"),
-                Color.parseColor("#B38728"),
+                Color.parseColor("#C5A059"),
                 Color.parseColor("#FBF5B7")
             ),
             floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f),
@@ -437,30 +512,40 @@ object IslamicCardTemplate {
         }
         canvas.drawPath(cardPath, goldBorderPaint)
 
-        // Inner Fine Gold Line
+        // Inner Fine Gold Outline Frame
         val innerCardPath = Path().apply {
-            val offset = 12f
+            val offset = 14f
             val iLeft = cardLeft + offset
             val iRight = cardRight - offset
             val iTop = cardTop + offset
             val iBottom = cardBottom - offset
             val shoulderY = iTop + 130f
 
-            moveTo(iLeft + 30f, iBottom)
-            quadTo(iLeft, iBottom, iLeft, iBottom - 30f)
+            moveTo(iLeft + 28f, iBottom)
+            quadTo(iLeft, iBottom, iLeft, iBottom - 28f)
             lineTo(iLeft, shoulderY)
             cubicTo(
-                iLeft + 10f, iTop + 40f,
-                540f - 110f, iTop - 10f,
-                540f, iTop - 32f
+                iLeft + 15f, iTop + 55f,
+                iLeft + 75f, iTop + 40f,
+                iLeft + 130f, iTop + 22f
             )
             cubicTo(
-                540f + 110f, iTop - 10f,
-                iRight - 10f, iTop + 40f,
+                iLeft + 190f, iTop + 4f,
+                540f - 110f, iTop - 42f,
+                540f, iTop - 50f
+            )
+            cubicTo(
+                540f + 110f, iTop - 42f,
+                iRight - 190f, iTop + 4f,
+                iRight - 130f, iTop + 22f
+            )
+            cubicTo(
+                iRight - 75f, iTop + 40f,
+                iRight - 15f, iTop + 55f,
                 iRight, shoulderY
             )
-            lineTo(iRight, iBottom - 30f)
-            quadTo(iRight, iBottom, iRight - 30f, iBottom)
+            lineTo(iRight, iBottom - 28f)
+            quadTo(iRight, iBottom, iRight - 28f, iBottom)
             close()
         }
 
@@ -472,84 +557,146 @@ object IslamicCardTemplate {
         }
         canvas.drawPath(innerCardPath, innerGoldPaint)
 
-        // Corner Flourishes (Gold Ornaments)
-        val ornamentPaint = TextPaint().apply {
-            color = Color.parseColor("#C5A059")
-            textSize = 32f
-            typeface = banglaBoldFont
-            isAntiAlias = true
-            textAlign = Paint.Align.CENTER
-        }
-        // Top Left & Top Right Shoulder Ornaments
-        canvas.drawText("✤", cardLeft + 45f, cardTop + 170f, ornamentPaint)
-        canvas.drawText("✤", cardRight - 45f, cardTop + 170f, ornamentPaint)
-        // Bottom Left & Bottom Right Ornaments
-        canvas.drawText("✤", cardLeft + 45f, cardBottom - 35f, ornamentPaint)
-        canvas.drawText("✤", cardRight - 45f, cardBottom - 35f, ornamentPaint)
-
-
-        // ==========================================
-        // 3. HEADER BADGE (Top Center Peak)
-        // ==========================================
-        val badgeText = data.badgeTitle
-        val badgeTextPaint = TextPaint().apply {
-            color = Color.parseColor("#FCF6BA")
-            textSize = 34f
-            typeface = banglaBoldFont
-            isAntiAlias = true
-            textAlign = Paint.Align.CENTER
-        }
-
-        val badgeTextWidth = badgeTextPaint.measureText(badgeText)
-        val badgeWidth = badgeTextWidth + 90f
-        val badgeRect = RectF(
-            (540f - badgeWidth / 2f),
-            (cardTop - 70f),
-            (540f + badgeWidth / 2f),
-            (cardTop + 10f)
-        )
-
-        val badgeBgPaint = Paint().apply {
-            color = Color.parseColor("#0A3F29")
+        // Corner Gold Floral Flourishes
+        val goldFlourishPaint = Paint().apply {
+            shader = goldShader
             style = Paint.Style.FILL
             isAntiAlias = true
         }
-        val badgeBorderPaint = Paint().apply {
-            shader = goldShader
-            style = Paint.Style.STROKE
-            strokeWidth = 4f
+        drawGoldFloralFlourish(canvas, cardLeft + 52f, cardTop + 160f, 22f, goldFlourishPaint)
+        drawGoldFloralFlourish(canvas, cardRight - 52f, cardTop + 160f, 22f, goldFlourishPaint)
+        drawGoldFloralFlourish(canvas, cardLeft + 52f, cardBottom - 48f, 22f, goldFlourishPaint)
+        drawGoldFloralFlourish(canvas, cardRight - 52f, cardBottom - 48f, 22f, goldFlourishPaint)
+
+        // ==========================================
+        // 3. TOP SCALLOPED ISLAMIC TITLE BADGE
+        // ==========================================
+        // Parse Title and optional Subtitle e.g. "আয়াতে শিফা (রোগমুক্তির আয়াত)"
+        val rawBadge = data.badgeTitle.trim()
+        val parsedTitle: String
+        val parsedSubtitle: String?
+
+        if (data.subtitle != null && data.subtitle.isNotBlank()) {
+            parsedTitle = rawBadge
+            parsedSubtitle = data.subtitle.trim()
+        } else if (rawBadge.contains("(") && rawBadge.contains(")")) {
+            val startIdx = rawBadge.indexOf("(")
+            parsedTitle = rawBadge.substring(0, startIdx).trim()
+            parsedSubtitle = rawBadge.substring(startIdx).trim()
+        } else if (rawBadge.contains("•")) {
+            val parts = rawBadge.split("•", limit = 2)
+            parsedTitle = parts[0].trim()
+            parsedSubtitle = parts[1].trim()
+        } else {
+            parsedTitle = rawBadge
+            parsedSubtitle = null
+        }
+
+        val badgeMainPaint = TextPaint().apply {
+            color = Color.parseColor("#E8D58A") // Soft Metallic Gold
+            textSize = 36f
+            typeface = banglaBoldFont
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+
+        val badgeSubPaint = TextPaint().apply {
+            color = Color.parseColor("#FFFDF5") // Warm Cream
+            textSize = 26f
+            typeface = banglaFont
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+
+        val titleWidth = badgeMainPaint.measureText(parsedTitle)
+        val subWidth = parsedSubtitle?.let { badgeSubPaint.measureText(it) } ?: 0f
+        val maxBadgeTextWidth = max(titleWidth, subWidth)
+
+        val badgeWidth = (maxBadgeTextWidth + 140f).coerceAtLeast(360f)
+        val badgeHeight = if (parsedSubtitle != null) 92f else 66f
+        val badgeCenterY = cardTop - 45f
+
+        val badgeRect = RectF(
+            540f - badgeWidth / 2f,
+            badgeCenterY - badgeHeight / 2f,
+            540f + badgeWidth / 2f,
+            badgeCenterY + badgeHeight / 2f
+        )
+
+        val badgeBgPaint = Paint().apply {
+            color = Color.parseColor("#063D2D")
+            style = Paint.Style.FILL
             isAntiAlias = true
         }
 
-        canvas.drawRoundRect(badgeRect, 35f, 35f, badgeBgPaint)
-        canvas.drawRoundRect(badgeRect, 35f, 35f, badgeBorderPaint)
-        canvas.drawText(badgeText, 540f, cardTop - 23f, badgeTextPaint)
+        val badgeBorderPaint = Paint().apply {
+            shader = goldShader
+            style = Paint.Style.STROKE
+            strokeWidth = 3.5f
+            isAntiAlias = true
+        }
 
+        // Draw Scalloped Arched Badge
+        canvas.drawRoundRect(badgeRect, badgeHeight / 2f, badgeHeight / 2f, badgeBgPaint)
+        canvas.drawRoundRect(badgeRect, badgeHeight / 2f, badgeHeight / 2f, badgeBorderPaint)
+
+        // Side Gold Star Ornaments on Badge
+        val starPaint = TextPaint().apply {
+            color = Color.parseColor("#E8D58A")
+            textSize = 28f
+            typeface = banglaBoldFont
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText("✦", badgeRect.left + 28f, badgeCenterY + 10f, starPaint)
+        canvas.drawText("✦", badgeRect.right - 28f, badgeCenterY + 10f, starPaint)
+
+        if (parsedSubtitle != null) {
+            canvas.drawText(parsedTitle, 540f, badgeCenterY - 6f, badgeMainPaint)
+            canvas.drawText(parsedSubtitle, 540f, badgeCenterY + 28f, badgeSubPaint)
+        } else {
+            canvas.drawText(parsedTitle, 540f, badgeCenterY + 12f, badgeMainPaint)
+        }
 
         // ==========================================
         // 4. DRAW CONTENT INSIDE CARD
         // ==========================================
-        var currentY = cardTop + 75f
+        var currentY = cardTop + 100f
 
-        // 4a. Arabic Text
+        // 4a. Arabic Text & Side Mandala Flourishes
         if (arabicLayout != null) {
+            val arabicCenterY = currentY + arabicLayout.height / 2f
+
+            // Side delicate gold mandala blossoms
+            drawGoldFloralFlourish(canvas, marginX + 38f, arabicCenterY, 18f, goldFlourishPaint)
+            drawGoldFloralFlourish(canvas, width - marginX - 38f, arabicCenterY, 18f, goldFlourishPaint)
+
             canvas.save()
             canvas.translate(marginX + contentPaddingX, currentY)
             arabicLayout.draw(canvas)
             canvas.restore()
 
-            currentY += arabicLayout.height + 25f
+            currentY += arabicLayout.height + 30f
 
-            // Gold Ornament Line below Arabic
-            val linePaint = Paint().apply {
+            // Elegant Gold Ornamental Divider
+            val dividerPaint = Paint().apply {
                 shader = goldShader
-                strokeWidth = 2f
+                strokeWidth = 2.2f
                 style = Paint.Style.STROKE
                 isAntiAlias = true
             }
-            canvas.drawLine(540f - 180f, currentY, 540f + 180f, currentY, linePaint)
-            canvas.drawText("❖", 540f, currentY + 10f, ornamentPaint)
-            currentY += 40f
+            canvas.drawLine(540f - 140f, currentY, 540f - 24f, currentY, dividerPaint)
+            canvas.drawLine(540f + 24f, currentY, 540f + 140f, currentY, dividerPaint)
+
+            val divSymbolPaint = TextPaint().apply {
+                color = Color.parseColor("#D4AF37")
+                textSize = 26f
+                typeface = banglaBoldFont
+                isAntiAlias = true
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText("✦", 540f, currentY + 8f, divSymbolPaint)
+            currentY += 45f
         }
 
         // 4b. Transliteration / Pronunciation
@@ -559,11 +706,11 @@ object IslamicCardTemplate {
             transliterationLayout.draw(canvas)
             canvas.restore()
 
-            currentY += transliterationLayout.height + 20f
+            currentY += transliterationLayout.height + 25f
 
             val smallDotPaint = TextPaint().apply {
                 color = Color.parseColor("#C5A059")
-                textSize = 24f
+                textSize = 22f
                 typeface = banglaFont
                 isAntiAlias = true
                 textAlign = Paint.Align.CENTER
@@ -578,30 +725,33 @@ object IslamicCardTemplate {
         translationLayout.draw(canvas)
         canvas.restore()
 
-        currentY += translationLayout.height + 35f
+        currentY += translationLayout.height + 40f
 
-        // 4d. Reference Pill (e.g. [ 📖 সূরা ত্বোয়া-হা : ১১৪ ])
+        // 4d. Reference Badge with Flourish Wings
         if (!data.referenceText.isNullOrBlank()) {
-            val refText = "📖  ${data.referenceText.trim()}"
+            val refText = data.referenceText.trim()
             val refPaint = TextPaint().apply {
-                color = Color.WHITE
+                color = Color.parseColor("#FFFDF5") // Clean Cream
                 textSize = 32f
                 typeface = banglaBoldFont
                 isAntiAlias = true
                 textAlign = Paint.Align.CENTER
             }
 
-            val refTextWidth = refPaint.measureText(refText)
-            val refPillWidth = refTextWidth + 60f
+            val iconPrefix = "📖  "
+            val fullRefString = "$iconPrefix$refText"
+            val refTextWidth = refPaint.measureText(fullRefString)
+            val refPillWidth = refTextWidth + 64f
+            val refPillHeight = 60f
             val refPillRect = RectF(
                 540f - refPillWidth / 2f,
                 currentY,
                 540f + refPillWidth / 2f,
-                currentY + 56f
+                currentY + refPillHeight
             )
 
             val refPillBg = Paint().apply {
-                color = Color.parseColor("#0C422D")
+                color = Color.parseColor("#063D2D") // Dark Emerald Pill
                 style = Paint.Style.FILL
                 isAntiAlias = true
             }
@@ -612,25 +762,28 @@ object IslamicCardTemplate {
                 isAntiAlias = true
             }
 
-            canvas.drawRoundRect(refPillRect, 28f, 28f, refPillBg)
-            canvas.drawRoundRect(refPillRect, 28f, 28f, refPillBorder)
-            canvas.drawText(refText, 540f, currentY + 38f, refPaint)
-        }
+            // Flourish horizontal wings outside the pill
+            val wingPaint = Paint().apply {
+                shader = goldShader
+                strokeWidth = 2f
+                style = Paint.Style.STROKE
+                isAntiAlias = true
+            }
+            val pillCenterY = currentY + refPillHeight / 2f
+            canvas.drawLine(refPillRect.left - 50f, pillCenterY, refPillRect.left - 8f, pillCenterY, wingPaint)
+            canvas.drawLine(refPillRect.right + 8f, pillCenterY, refPillRect.right + 50f, pillCenterY, wingPaint)
 
+            canvas.drawRoundRect(refPillRect, 30f, 30f, refPillBg)
+            canvas.drawRoundRect(refPillRect, 30f, 30f, refPillBorder)
+            canvas.drawText(fullRefString, 540f, currentY + 41f, refPaint)
+        }
 
         // ==========================================
         // 5. BOTTOM BRANDING & SOCIAL LINKS SECTION
         // ==========================================
         val footerY = cardBottom + 35f
 
-        // Draw App Logo Icon & Name
-        val appNamePaint = TextPaint().apply {
-            color = Color.WHITE
-            textSize = 36f
-            typeface = banglaBoldFont
-            isAntiAlias = true
-        }
-
+        // Draw Quran Reader Logo & Emblem
         val logoBitmap = try {
             BitmapFactory.decodeResource(context.resources, R.drawable.credit)
                 ?: BitmapFactory.decodeResource(context.resources, R.drawable.ic_launcher)
@@ -638,44 +791,45 @@ object IslamicCardTemplate {
             null
         }
 
-        if (logoBitmap != null) {
-            val logoSize = 60f
-            val logoTextGap = 16f
-            val totalFooterWidth = logoSize + logoTextGap + appNamePaint.measureText(data.footerAppName)
-            val footerStartX = (width - totalFooterWidth) / 2f
+        val logoSize = 64f
+        val logoCenterX = 540f
+        val logoCenterY = footerY + logoSize / 2f
 
-            // Logo with rounded gold border
-            val logoDst = RectF(footerStartX, footerY, footerStartX + logoSize, footerY + logoSize)
-            val logoBgRect = RectF(footerStartX - 4f, footerY - 4f, footerStartX + logoSize + 4f, footerY + logoSize + 4f)
+        if (logoBitmap != null) {
+            val logoRect = RectF(logoCenterX - logoSize / 2f, footerY, logoCenterX + logoSize / 2f, footerY + logoSize)
+            val logoBorderRect = RectF(logoCenterX - logoSize / 2f - 4f, footerY - 4f, logoCenterX + logoSize / 2f + 4f, footerY + logoSize + 4f)
 
             val logoBgPaint = Paint().apply {
-                color = Color.parseColor("#0C422D")
+                color = Color.parseColor("#063D2D")
                 style = Paint.Style.FILL
                 isAntiAlias = true
             }
             val logoBorderPaint = Paint().apply {
                 shader = goldShader
                 style = Paint.Style.STROKE
-                strokeWidth = 2f
+                strokeWidth = 2.5f
                 isAntiAlias = true
             }
 
-            canvas.drawRoundRect(logoBgRect, 16f, 16f, logoBgPaint)
-            canvas.drawRoundRect(logoBgRect, 16f, 16f, logoBorderPaint)
-
-            canvas.drawBitmap(logoBitmap, null, logoDst, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
-
-            val textX = footerStartX + logoSize + logoTextGap
-            canvas.drawText(data.footerAppName, textX, footerY + 40f, appNamePaint)
-        } else {
-            appNamePaint.textAlign = Paint.Align.CENTER
-            canvas.drawText(data.footerAppName, width / 2f, footerY + 40f, appNamePaint)
+            canvas.drawRoundRect(logoBorderRect, 22f, 22f, logoBgPaint)
+            canvas.drawRoundRect(logoBorderRect, 22f, 22f, logoBorderPaint)
+            canvas.drawBitmap(logoBitmap, null, logoRect, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
         }
+
+        // "Quran READER" typography in serif display
+        val appNamePaint = TextPaint().apply {
+            color = Color.WHITE
+            textSize = 38f
+            typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText(data.footerAppName, 540f, footerY + logoSize + 42f, appNamePaint)
 
         // ==========================================
         // SOCIAL CREDITS PILL (FB & Telegram Links)
         // ==========================================
-        val socialBarY = footerY + 80f
+        val socialBarY = footerY + logoSize + 70f
         val socialTextPaint = TextPaint().apply {
             color = Color.WHITE
             textSize = 28f
@@ -691,17 +845,17 @@ object IslamicCardTemplate {
 
         val iconSize = 36f
         val iconGap = 12f
-        val itemGap = 28f
-        val sectionDividerWidth = 24f
+        val itemGap = 32f
+        val sectionDividerWidth = 28f
 
-        val totalPillWidth = (iconSize + iconGap + fbTextWidth) + itemGap + sectionDividerWidth + itemGap + (iconSize + iconGap + tgTextWidth) + 50f
-        val pillHeight = 54f
+        val totalPillWidth = (iconSize + iconGap + fbTextWidth) + itemGap + sectionDividerWidth + itemGap + (iconSize + iconGap + tgTextWidth) + 90f
+        val pillHeight = 56f
 
         val pillStartX = (width - totalPillWidth) / 2f
         val pillRect = RectF(pillStartX, socialBarY, pillStartX + totalPillWidth, socialBarY + pillHeight)
 
         val pillBgPaint = Paint().apply {
-            color = Color.parseColor("#072D1C")
+            color = Color.parseColor("#063D2D")
             style = Paint.Style.FILL
             isAntiAlias = true
         }
@@ -712,10 +866,21 @@ object IslamicCardTemplate {
             isAntiAlias = true
         }
 
-        canvas.drawRoundRect(pillRect, 27f, 27f, pillBgPaint)
-        canvas.drawRoundRect(pillRect, 27f, 27f, pillBorderPaint)
+        canvas.drawRoundRect(pillRect, 28f, 28f, pillBgPaint)
+        canvas.drawRoundRect(pillRect, 28f, 28f, pillBorderPaint)
 
-        var currentX = pillStartX + 25f
+        // Side Star Accents on Social Pill
+        val pillStarPaint = TextPaint().apply {
+            color = Color.parseColor("#E8D58A")
+            textSize = 24f
+            typeface = banglaBoldFont
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText("✦", pillStartX + 20f, socialBarY + pillHeight / 2f + 8f, pillStarPaint)
+        canvas.drawText("✦", pillStartX + totalPillWidth - 20f, socialBarY + pillHeight / 2f + 8f, pillStarPaint)
+
+        var currentX = pillStartX + 42f
 
         // Facebook Icon (Blue Circle with white 'f')
         val fbCirclePaint = Paint().apply {
@@ -741,7 +906,7 @@ object IslamicCardTemplate {
 
         // Vertical Divider |
         val dividerPaint = Paint().apply {
-            color = Color.parseColor("#50FFFFFF")
+            color = Color.parseColor("#60D4AF37")
             strokeWidth = 2f
             style = Paint.Style.STROKE
             isAntiAlias = true

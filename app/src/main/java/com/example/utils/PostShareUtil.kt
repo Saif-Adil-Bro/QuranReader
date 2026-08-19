@@ -201,14 +201,13 @@ object PostShareUtil {
         val showWatermark: Boolean = true
     )
     val preDefinedTemplates = listOf(
-        CardTemplate("emerald", "Emerald Islamic", listOf(TemplateCategory.ALL, TemplateCategory.NASIHAT, TemplateCategory.RAMADAN), Pair("#064E3B", "#022C22"), "#FFFFFF", "#FDE047", "#FACC15", "#35FACC15", showBorder = true),
+        CardTemplate("emerald", "Emerald Islamic", listOf(TemplateCategory.ALL, TemplateCategory.QURAN, TemplateCategory.NASIHAT, TemplateCategory.RAMADAN), Pair("#063D2D", "#02291F"), "#263D35", "#E8D58A", "#FFFDF5", "#D4AF37", showBorder = true),
         CardTemplate("royal_night", "Royal Night", listOf(TemplateCategory.ALL, TemplateCategory.QURAN, TemplateCategory.RAMADAN), Pair("#172554", "#0F172A"), "#F8FAFC", "#FBBF24", "#FEF3C7", "#30FBBF24", showBorder = true),
         CardTemplate("classic_cream", "Classic Cream", listOf(TemplateCategory.ALL, TemplateCategory.HADITH, TemplateCategory.QUOTE), Pair("#FFFBEB", "#FEF3C7"), "#064E3B", "#D97706", "#D97706", "#30D97706", showBorder = true, defaultTextAlign = "LEFT", defaultFontName = "Hind Siliguri", defaultFontSize = 40f, defaultOverlayAlpha = 0.85f),
         CardTemplate("minimal", "Minimal", listOf(TemplateCategory.ALL, TemplateCategory.QUOTE), Pair("#F8FAFC", "#F1F5F9"), "#0F172A", "#475569", "#475569", "#00000000", showBorder = false, defaultTextAlign = "LEFT", defaultFontName = "Hind Siliguri", defaultFontSize = 46f, defaultOverlayAlpha = 0.90f),
         CardTemplate("golden_hadith", "Golden Hadith", listOf(TemplateCategory.ALL, TemplateCategory.HADITH), Pair("#3B1700", "#78350F"), "#FEF3C7", "#FBBF24", "#FBBF24", "#30FBBF24", showBorder = true, defaultFontSize = 42f),
         CardTemplate("jumuah", "Jumu'ah", listOf(TemplateCategory.ALL, TemplateCategory.JUMUAH), Pair("#042F2E", "#115E59"), "#CCFBF1", "#2DD4BF", "#2DD4BF", "#302DD4BF", showBorder = true, defaultFontSize = 48f),
         CardTemplate("quran_classic", "Quran Classic", listOf(TemplateCategory.ALL, TemplateCategory.QURAN, TemplateCategory.DUA), Pair("#2E1065", "#4C1D95"), "#F3E8FF", "#C084FC", "#C084FC", "#30C084FC", showBorder = true)
-
     )
 
     /**
@@ -312,11 +311,26 @@ object PostShareUtil {
         val displayRef: String = customRef?.takeIf { it.isNotBlank() } ?: post.reference
 
         if (bgImageUrl.isNullOrBlank() && template.id == "emerald") {
+            var extractedArabic: String? = null
+            var extractedTranslation = displayText
+
+            val paragraphs = displayText.split("\n\n")
+            val arabicParagraphs = paragraphs.filter { p -> p.any { isArabicChar(it) } }
+            val nonArabicParagraphs = paragraphs.filter { p -> !p.any { isArabicChar(it) } }
+
+            if (arabicParagraphs.isNotEmpty() && nonArabicParagraphs.isNotEmpty()) {
+                extractedArabic = arabicParagraphs.joinToString("\n\n").trim()
+                extractedTranslation = nonArabicParagraphs.joinToString("\n\n").trim()
+            } else if (arabicParagraphs.isNotEmpty() && nonArabicParagraphs.isEmpty()) {
+                extractedArabic = displayText.trim()
+                extractedTranslation = ""
+            }
+
             val shareData = IslamicCardTemplate.ShareData(
                 badgeTitle = displayCategory.ifBlank { "আজকের পোস্ট" },
-                arabicText = null,
+                arabicText = extractedArabic,
                 transliterationText = null,
-                translationText = displayText,
+                translationText = extractedTranslation,
                 referenceText = displayRef.ifBlank { null }
             )
             val fullBitmap = IslamicCardTemplate.generateCardBitmap(context, shareData)

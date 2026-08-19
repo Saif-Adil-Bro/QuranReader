@@ -579,20 +579,40 @@ class QuranVideoViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun shareExportedVideo() {
-        val file = _exportedVideoFile.value ?: return
+        val file = _exportedVideoFile.value
+        val mediaUri = _exportedVideoUri.value
+
+        if (file == null && mediaUri == null) {
+            Toast.makeText(context, "শেয়ার করার মতো কোনো ভিডিও পাওয়া যায়নি।", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         try {
-            val uri = androidx.core.content.FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
+            val shareUri: Uri = if (file != null && file.exists()) {
+                androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file
+                )
+            } else if (mediaUri != null) {
+                mediaUri
+            } else {
+                Toast.makeText(context, "ভিডিও ফাইল খুঁজে পাওয়া যায়নি।", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val shareText = "সূরা ${_config.value.surahName} • আয়াত ${_config.value.ayahStart}\nকুরআন রিডার অ্যাপ থেকে তৈরি"
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "video/mp4"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TEXT, "সূরা ${_config.value.surahName} • আয়াত ${_config.value.ayahStart}\nকুরআন রিডার অ্যাপ থেকে তৈরি")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra(Intent.EXTRA_STREAM, shareUri)
+                putExtra(Intent.EXTRA_TEXT, shareText)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "ভিডিও শেয়ার করুন").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+
+            val chooser = Intent.createChooser(intent, "ভিডিও শেয়ার করুন").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
         } catch (e: Exception) {
             Toast.makeText(context, "শেয়ার করতে ব্যর্থ হয়েছে: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
         }

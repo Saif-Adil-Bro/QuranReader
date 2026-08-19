@@ -58,10 +58,24 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
     currentIntentState.value = intent
 
-    try {
-        Firebase.messaging.subscribeToTopic("all")
-    } catch (e: Exception) {
-        e.printStackTrace()
+    val fcmPrefs = getSharedPreferences("fcm_prefs", android.content.Context.MODE_PRIVATE)
+    val isSubscribed = fcmPrefs.getBoolean("subscribed_to_all", false)
+    if (!isSubscribed) {
+        try {
+            val playServicesAvailable = com.google.android.gms.common.GoogleApiAvailability.getInstance()
+                .isGooglePlayServicesAvailable(this) == com.google.android.gms.common.ConnectionResult.SUCCESS
+
+            if (playServicesAvailable) {
+                Firebase.messaging.subscribeToTopic("all")
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            fcmPrefs.edit().putBoolean("subscribed_to_all", true).apply()
+                        }
+                    }
+            }
+        } catch (e: Throwable) {
+            // Handled safely if Play Services / FCM broker is not accessible
+        }
     }
 
     // Request notification permission on Android 13+
